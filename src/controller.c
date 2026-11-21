@@ -242,7 +242,7 @@ static bool begin_draft(Controller *controller, const PointerSample *sample)
 static void flush_pen_draft(Controller *controller)
 {
     Element *draft = &controller->draft;
-    RECT everything = {0, 0, controller->canvas->width, controller->canvas->height};
+    RECT everything = canvas_area(controller->canvas);
     bool opaque = draft->style.opacity >= 0.999f && (draft->style.stroke >> 24) == 0xFF;
     if (opaque) {
         int firstGroup = controller->penGroup > 0 ? controller->penGroup - 1 : 0;

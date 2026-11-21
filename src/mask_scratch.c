@@ -37,3 +37,10 @@ void mask_scratch_release(void)
     scratchBuffer = NULL;
     scratchCapacity = 0;
 }
+
+void mask_scratch_trim(size_t keepBytes)
+{
+    if (scratchCapacity > keepBytes) {
+        mask_scratch_release();
+    }
+}

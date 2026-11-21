@@ -43,7 +43,7 @@ One thread, one message loop, blocking `GetMessage`. Timers exist only while nee
 
 ## Memory
 
-The surface is one 32-bit buffer the size of the drawing monitor. It exists only while the overlay window exists. The reusable mask buffer is released together with the overlay.
+The surface is one 32-bit buffer. While drawing or on the whiteboard it is the size of the drawing monitor; in passthrough it covers only the extent of the annotations (note 0060). It exists only while the overlay window exists. The reusable mask buffer is released together with the overlay and trimmed after a flush when it grows beyond 256 KB. The working set is trimmed at idle moments: before the message loop, when drawing is off and when a trail animation ends (note 0061). Text services are switched off when only plain keyboard layouts are installed (note 0062). Measured numbers are in [measurements.md](measurements.md).
 
 ## Decisions
 

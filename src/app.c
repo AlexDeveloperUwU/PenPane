@@ -26,12 +26,20 @@
 #define HIT_TEST_BACKDROP 0x01000000u
 #define MESSAGE_CLASS L"InkMessageWindow"
 #define SINGLE_INSTANCE_MUTEX L"Local\\InkOverlaySingleInstance"
+#define SCRATCH_KEEP_BYTES (256 * 1024)
+#define PENDING_NOTICE_LIMIT 2
 
 /** @brief A display and its areas in virtual-desktop coordinates. */
 typedef struct Monitor {
     RECT bounds;
     RECT work;
 } Monitor;
+
+/** @brief A notification queued until the tray icon exists. */
+typedef struct Notice {
+    wchar_t title[64];
+    wchar_t text[512];
+} Notice;
 
 /** @brief Whole-application state. */
 typedef struct App {
@@ -57,6 +65,8 @@ typedef struct App {
     uint32_t fadeStartMs;
     bool pointerDown;
     UINT taskbarCreatedMessage;
+    Notice pending[PENDING_NOTICE_LIMIT];
+    int pendingCount;
 } App;
 
 static App app;
@@ -186,7 +196,7 @@ static void render_region(const RECT *region)
  */
 static void render_everything(void)
 {
-    RECT all = {0, 0, app.overlay.canvas.width, app.overlay.canvas.height};
+    RECT all = canvas_area(&app.overlay.canvas);
     render_region(&all);
     overlay_present(&app.overlay, NULL);
 }
@@ -306,6 +316,40 @@ static void app_sync_ui(void)
 /**
  * @brief Starts or stops the trail animation timer according to controller state.
  */
+/**
+ * @brief Surface rectangle the overlay needs: the whole monitor while drawing, otherwise the annotation extent.
+ * @return Rectangle in monitor coordinates; a single pixel when nothing is visible.
+ */
+static RECT wanted_surface(void)
+{
+    const Monitor *monitor = &app.monitors[app.config.drawMonitor];
+    RECT full = {0, 0, monitor->bounds.right - monitor->bounds.left,
+                 monitor->bounds.bottom - monitor->bounds.top};
+    if (app.drawing || app.whiteboard) {
+        return full;
+    }
+    const Scene *scene = active_scene();
+    Dirty extent;
+    dirty_reset(&extent);
+    for (int i = 0; i < scene->count; i++) {
+        dirty_add(&extent, element_bounds(&scene->items[i]));
+    }
+    RECT area;
+    if (extent.empty || !rect_intersect(extent.rect, full, &area)) {
+        RECT single = {0, 0, 1, 1};
+        return single;
+    }
+    return area;
+}
+
+/**
+ * @brief Gives the process working set back to the system; only for idle moments, never on a hot path.
+ */
+static void trim_working_set(void)
+{
+    SetProcessWorkingSetSize(GetCurrentProcess(), (SIZE_T)-1, (SIZE_T)-1);
+}
+
 static void update_animation_timer(void)
 {
     if (app.controller.laser.count > 0 || app.controller.eraser.count > 0) {
@@ -321,7 +365,16 @@ static void app_flush(void)
     if (!app.overlayReady) {
         return;
     }
-    RECT surface = {0, 0, app.overlay.canvas.width, app.overlay.canvas.height};
+    if (!app.drawing && !app.whiteboard && !repaint.empty) {
+        RECT wanted = wanted_surface();
+        RECT current = canvas_area(&app.overlay.canvas);
+        if (!EqualRect(&wanted, &current) && overlay_set_surface(&app.overlay, wanted)) {
+            render_everything();
+            update_animation_timer();
+            return;
+        }
+    }
+    RECT surface = canvas_area(&app.overlay.canvas);
     Dirty total;
     dirty_reset(&total);
     RECT region;
@@ -335,6 +388,7 @@ static void app_flush(void)
     if (!total.empty) {
         overlay_present(&app.overlay, &total.rect);
     }
+    mask_scratch_trim(SCRATCH_KEEP_BYTES);
     update_animation_timer();
 }
 
@@ -361,13 +415,12 @@ static void app_apply_state(void)
         }
         destroy_overlay();
     } else {
-        if (app.overlayReady) {
-            const Monitor *monitor = &app.monitors[app.config.drawMonitor];
-            bool moved = memcmp(&monitor->bounds, &app.overlay.bounds, sizeof(RECT)) != 0;
-            if (moved) {
-                overlay_resize(&app.overlay, monitor->bounds);
-            }
-        } else if (!create_overlay()) {
+        if (!app.overlayReady && !create_overlay()) {
+            return;
+        }
+        overlay_set_bounds(&app.overlay, app.monitors[app.config.drawMonitor].bounds);
+        if (!overlay_set_surface(&app.overlay, wanted_surface())) {
+            destroy_overlay();
             return;
         }
         controller_attach(&app.controller, scene, &app.overlay.canvas);
@@ -390,6 +443,9 @@ static void app_apply_state(void)
         ui_raise(app.ui);
     }
     app_sync_ui();
+    if (!app.drawing) {
+        trim_working_set();
+    }
 }
 
 /**
@@ -641,13 +697,43 @@ static void describe_binding(Binding binding, wchar_t *buffer, int size)
 }
 
 /**
+ * @brief Shows a tray notification, or queues it while the tray icon is not created yet.
+ * @param title Notification title.
+ * @param text Notification body.
+ */
+static void notify(const wchar_t *title, const wchar_t *text)
+{
+    if (app.tray) {
+        tray_notify(app.tray, title, text);
+        return;
+    }
+    if (app.pendingCount < PENDING_NOTICE_LIMIT) {
+        Notice *notice = &app.pending[app.pendingCount++];
+        wcsncpy(notice->title, title, ARRAYSIZE(notice->title) - 1);
+        wcsncpy(notice->text, text, ARRAYSIZE(notice->text) - 1);
+    }
+}
+
+/**
+ * @brief Creates the tray icon and delivers the notifications queued before it existed.
+ */
+static void create_tray(void)
+{
+    app.tray = tray_create(app.messageWindow, WM_APP_TRAY);
+    for (int i = 0; i < app.pendingCount; i++) {
+        notify(app.pending[i].title, app.pending[i].text);
+    }
+    app.pendingCount = 0;
+}
+
+/**
  * @brief Re-registers all hotkeys and reports failures through the tray.
  */
 static void apply_hotkeys(void)
 {
     wchar_t report[512] = L"";
     if (!hotkeys_apply(app.hotkeys, &app.config, report, 512) && report[0]) {
-        tray_notify(app.tray, L"Some buttons could not be registered", report);
+        notify(L"Some buttons could not be registered", report);
     }
 }
 
@@ -663,7 +749,7 @@ static void on_learn_result(void *user, Action action, Binding binding, bool cap
     (void)user;
     app.learning = false;
     if (!captured) {
-        tray_notify(app.tray, L"Learning cancelled", L"No button was bound.");
+        notify(L"Learning cancelled", L"No button was bound.");
         return;
     }
     binding.action = action;
@@ -672,7 +758,7 @@ static void on_learn_result(void *user, Action action, Binding binding, bool cap
     apply_hotkeys();
     wchar_t text[160];
     describe_binding(binding, text, 160);
-    tray_notify(app.tray, L"Button bound", text);
+    notify(L"Button bound", text);
 }
 
 /**
@@ -951,7 +1037,7 @@ static void reload_config(void)
     app.controller.style.width = WIDTH_PRESETS[app.config.defaultWidthIndex];
     app.controller.toolLocked = app.config.toolLock;
     if (errors[0]) {
-        tray_notify(app.tray, L"Configuration warnings", errors);
+        notify(L"Configuration warnings", errors);
     }
     apply_hotkeys();
 }
@@ -999,7 +1085,7 @@ static void handle_tray_event(const TrayEvent *event)
     case TRAY_LEARN_ACTION:
         if (hotkeys_learn_begin(app.hotkeys, event->action)) {
             app.learning = true;
-            tray_notify(app.tray, L"Press a button", L"Press the pen button the way you want to use it. Esc cancels.");
+            notify(L"Press a button", L"Press the pen button the way you want to use it. Esc cancels.");
         }
         break;
     case TRAY_CANCEL_LEARN:
@@ -1046,10 +1132,14 @@ static LRESULT CALLBACK message_procedure(HWND window, UINT message, WPARAM wpar
         break;
     case WM_TIMER:
         if (wparam == TIMER_ANIMATE) {
-            if (!controller_animate(&app.controller, now_ms())) {
+            bool animating = controller_animate(&app.controller, now_ms());
+            if (!animating) {
                 KillTimer(window, TIMER_ANIMATE);
             }
             app_flush();
+            if (!animating) {
+                trim_working_set();
+            }
             return 0;
         }
         if (wparam == TIMER_FADE_WAIT) {
@@ -1186,10 +1276,8 @@ int app_run(HINSTANCE instance)
     config_defaults(&app.config);
     build_config_path(app.configPath);
 
-    app.tray = tray_create(app.messageWindow, WM_APP_TRAY);
     app.hotkeys = hotkeys_create(app.messageWindow, on_hotkey_action, on_learn_result, NULL);
     RegisterHotKey(app.messageWindow, EMERGENCY_HOTKEY_ID, MOD_CONTROL | MOD_ALT | MOD_SHIFT, VK_ESCAPE);
-    WTSRegisterSessionNotification(app.messageWindow, NOTIFY_FOR_THIS_SESSION);
 
     reload_config();
     controller_set_tool(&app.controller, app.config.defaultTool);
@@ -1200,6 +1288,10 @@ int app_run(HINSTANCE instance)
         ui_set_visible(app.ui, true, false);
         app_sync_ui();
     }
+    create_tray();
+    WTSRegisterSessionNotification(app.messageWindow, NOTIFY_FOR_THIS_SESSION);
+
+    trim_working_set();
 
     MSG message;
     while (GetMessageW(&message, NULL, 0, 0) > 0) {

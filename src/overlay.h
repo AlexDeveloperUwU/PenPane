@@ -20,13 +20,13 @@ typedef struct Overlay {
 } Overlay;
 
 /**
- * @brief Creates the overlay window covering a screen rectangle, initially hidden and click-through.
+ * @brief Creates the overlay window for a monitor rectangle, initially hidden and click-through, without a surface.
  * @param overlay Overlay to initialize.
  * @param instance Module instance used to register the window class.
  * @param bounds Screen rectangle in virtual-desktop coordinates.
  * @param procedure Window procedure that receives overlay messages.
  * @param owner Pointer stored as window user data, retrievable with GetWindowLongPtr.
- * @return true on success, false when registration, window or surface creation failed.
+ * @return true on success, false when registration or window creation failed.
  */
 bool overlay_create(Overlay *overlay, HINSTANCE instance, RECT bounds, WNDPROC procedure,
                     void *owner);
@@ -66,15 +66,27 @@ void overlay_set_focusable(Overlay *overlay, bool focusable);
 void overlay_set_opacity(Overlay *overlay, unsigned char opacity);
 
 /**
- * @brief Moves the window to new bounds and reallocates the surface.
+ * @brief Records the screen rectangle of the monitor the overlay belongs to.
+ *
+ * The surface is not touched; call overlay_set_surface afterwards.
  * @param overlay Target overlay.
- * @param bounds New screen rectangle.
- * @return false when the new surface could not be created; the overlay keeps its old surface.
+ * @param bounds New monitor rectangle in virtual-desktop coordinates.
  */
-bool overlay_resize(Overlay *overlay, RECT bounds);
+void overlay_set_bounds(Overlay *overlay, RECT bounds);
 
 /**
- * @brief Pushes the canvas to the screen.
+ * @brief Makes the surface cover a rectangle of the monitor, reallocating it only when the size changes.
+ *
+ * Drawing coordinates stay relative to the monitor; the canvas origin is set to the rectangle corner.
+ * The caller must repaint and present afterwards.
+ * @param overlay Target overlay.
+ * @param area Rectangle in monitor coordinates, from empty to the whole monitor.
+ * @return false when the rectangle is empty or the surface could not be created; the old surface is kept.
+ */
+bool overlay_set_surface(Overlay *overlay, RECT area);
+
+/**
+ * @brief Pushes the canvas to the screen at its origin inside the monitor.
  * @param overlay Target overlay.
  * @param dirty Region that changed since the last present, or NULL for the whole surface.
  */

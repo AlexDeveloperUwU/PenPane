@@ -30,7 +30,7 @@ bool overlay_create(Overlay *overlay, HINSTANCE instance, RECT bounds, WNDPROC p
         return false;
     }
     SetWindowLongPtrW(overlay->window, GWLP_USERDATA, (LONG_PTR)owner);
-    return canvas_create(&overlay->canvas, width, height);
+    return true;
 }
 
 void overlay_destroy(Overlay *overlay)
@@ -57,7 +57,8 @@ void overlay_set_capture(Overlay *overlay, bool capture)
 
 void overlay_present(Overlay *overlay, const RECT *dirty)
 {
-    POINT position = {overlay->bounds.left, overlay->bounds.top};
+    POINT position = {overlay->bounds.left + overlay->canvas.originX,
+                      overlay->bounds.top + overlay->canvas.originY};
     SIZE size = {overlay->canvas.width, overlay->canvas.height};
     POINT source = {0, 0};
     BLENDFUNCTION blend = {AC_SRC_OVER, 0, overlay->opacity, AC_SRC_ALPHA};
@@ -85,18 +86,30 @@ void overlay_set_opacity(Overlay *overlay, unsigned char opacity)
     overlay->opacity = opacity;
 }
 
-bool overlay_resize(Overlay *overlay, RECT bounds)
+void overlay_set_bounds(Overlay *overlay, RECT bounds)
 {
+    overlay->bounds = bounds;
+}
+
+bool overlay_set_surface(Overlay *overlay, RECT area)
+{
+    int width = area.right - area.left;
+    int height = area.bottom - area.top;
+    if (width <= 0 || height <= 0) {
+        return false;
+    }
+    if (overlay->canvas.pixels && overlay->canvas.width == width && overlay->canvas.height == height) {
+        overlay->canvas.originX = area.left;
+        overlay->canvas.originY = area.top;
+        return true;
+    }
     Canvas replacement;
-    int width = bounds.right - bounds.left;
-    int height = bounds.bottom - bounds.top;
     if (!canvas_create(&replacement, width, height)) {
         return false;
     }
+    replacement.originX = area.left;
+    replacement.originY = area.top;
     canvas_destroy(&overlay->canvas);
     overlay->canvas = replacement;
-    overlay->bounds = bounds;
-    SetWindowPos(overlay->window, HWND_TOPMOST, bounds.left, bounds.top, width, height,
-                 SWP_NOACTIVATE);
     return true;
 }

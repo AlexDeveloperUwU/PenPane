@@ -26,4 +26,10 @@ bool mask_scratch_acquire(Mask *mask, RECT area);
  */
 void mask_scratch_release(void);
 
+/**
+ * @brief Frees the shared buffer when it has grown beyond a size worth keeping.
+ * @param keepBytes Largest capacity that is kept for the next borrower.
+ */
+void mask_scratch_trim(size_t keepBytes);
+
 #endif

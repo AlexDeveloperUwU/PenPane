@@ -363,7 +363,7 @@ static void render_text(Canvas *canvas, const Element *element, RECT area)
 
 void render_element(Canvas *canvas, const Element *element, const RECT *clip)
 {
-    RECT canvasRect = {0, 0, canvas->width, canvas->height};
+    RECT canvasRect = canvas_area(canvas);
     RECT area;
     RECT bounds = element_bounds(element);
     if (!rect_intersect(bounds, *clip, &area) || !rect_intersect(area, canvasRect, &area)) {
@@ -391,7 +391,7 @@ void render_element(Canvas *canvas, const Element *element, const RECT *clip)
 
 void render_scene(Canvas *canvas, const Scene *scene, const RECT *clip, Color backdrop)
 {
-    RECT canvasRect = {0, 0, canvas->width, canvas->height};
+    RECT canvasRect = canvas_area(canvas);
     RECT region;
     if (!rect_intersect(*clip, canvasRect, &region)) {
         return;
@@ -421,7 +421,7 @@ RECT render_pen_tail(Canvas *canvas, const Element *element, int firstGroup, con
     }
     touched = rect_from_float(box, element->style.width * 12.0f + 3.0f);
     RECT area;
-    RECT canvasRect = {0, 0, canvas->width, canvas->height};
+    RECT canvasRect = canvas_area(canvas);
     if (!rect_intersect(touched, *clip, &area) || !rect_intersect(area, canvasRect, &area)) {
         return touched;
     }

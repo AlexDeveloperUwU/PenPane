@@ -54,10 +54,14 @@ void canvas_destroy(Canvas *canvas)
 
 void canvas_fill(Canvas *canvas, const RECT *area, Color color)
 {
-    int left = area->left < 0 ? 0 : area->left;
-    int top = area->top < 0 ? 0 : area->top;
-    int right = area->right > canvas->width ? canvas->width : area->right;
-    int bottom = area->bottom > canvas->height ? canvas->height : area->bottom;
+    int left = area->left - canvas->originX;
+    int top = area->top - canvas->originY;
+    int right = area->right - canvas->originX;
+    int bottom = area->bottom - canvas->originY;
+    left = left < 0 ? 0 : left;
+    top = top < 0 ? 0 : top;
+    right = right > canvas->width ? canvas->width : right;
+    bottom = bottom > canvas->height ? canvas->height : bottom;
     uint32_t value = premultiply(color);
     for (int y = top; y < bottom; y++) {
         uint32_t *row = canvas->pixels + (size_t)y * canvas->width;
@@ -70,32 +74,55 @@ void canvas_fill(Canvas *canvas, const RECT *area, Color color)
 void canvas_blend_coverage(Canvas *canvas, int originX, int originY, const uint8_t *coverage,
                            int maskWidth, int maskHeight, Color color)
 {
+    originX -= canvas->originX;
+    originY -= canvas->originY;
     uint32_t colorAlpha = color >> 24;
     uint32_t red = (color >> 16) & 0xFF;
     uint32_t green = (color >> 8) & 0xFF;
     uint32_t blue = color & 0xFF;
+    uint32_t solid = 0xFF000000u | (red << 16) | (green << 8) | blue;
+    int first = originX < 0 ? -originX : 0;
+    int last = originX + maskWidth > canvas->width ? canvas->width - originX : maskWidth;
 
     for (int my = 0; my < maskHeight; my++) {
         int y = originY + my;
         if (y < 0 || y >= canvas->height) {
             continue;
         }
-        uint32_t *row = canvas->pixels + (size_t)y * canvas->width;
+        uint32_t *row = canvas->pixels + (size_t)y * canvas->width + originX;
         const uint8_t *maskRow = coverage + (size_t)my * maskWidth;
-        for (int mx = 0; mx < maskWidth; mx++) {
-            int x = originX + mx;
+        for (int mx = first; mx < last; mx++) {
+            if (mx + 8 <= last) {
+                uint64_t group;
+                memcpy(&group, maskRow + mx, sizeof group);
+                if (group == 0) {
+                    mx += 7;
+                    continue;
+                }
+            }
             uint32_t cover = maskRow[mx];
-            if (cover == 0 || x < 0 || x >= canvas->width) {
+            if (cover == 0) {
+                continue;
+            }
+            if (cover == 255 && colorAlpha == 255) {
+                row[mx] = solid;
                 continue;
             }
             uint32_t srcAlpha = cover * colorAlpha / 255;
             uint32_t inverse = 255 - srcAlpha;
-            uint32_t dst = row[x];
+            uint32_t dst = row[mx];
             uint32_t outAlpha = srcAlpha + (dst >> 24) * inverse / 255;
             uint32_t outRed = (red * srcAlpha + ((dst >> 16) & 0xFF) * inverse) / 255;
             uint32_t outGreen = (green * srcAlpha + ((dst >> 8) & 0xFF) * inverse) / 255;
             uint32_t outBlue = (blue * srcAlpha + (dst & 0xFF) * inverse) / 255;
-            row[x] = (outAlpha << 24) | (outRed << 16) | (outGreen << 8) | outBlue;
+            row[mx] = (outAlpha << 24) | (outRed << 16) | (outGreen << 8) | outBlue;
         }
     }
+}
+
+RECT canvas_area(const Canvas *canvas)
+{
+    RECT area = {canvas->originX, canvas->originY, canvas->originX + canvas->width,
+                 canvas->originY + canvas->height};
+    return area;
 }

@@ -16,7 +16,15 @@ Installs llvm-mingw into `C:\tools`. Only the project folder persists between sa
 powershell -ExecutionPolicy Bypass -File scripts\build.ps1
 ```
 
-Produces `build\ink.exe`. Add `-Debug` for an unoptimized build with symbols.
+Produces `build\ink.exe` (about 99 KB). Each source file is compiled on its own: `-Oz` by default, `-Os` for the rasterizer and `-O2` for the blend loop, with link-time optimization and unwind tables kept (note 0063). Add `-Debug` for an unoptimized build with symbols.
+
+## Measuring
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\measure.ps1 -IdleSeconds 60
+```
+
+Drives the real executable with synthetic input and reports idle CPU, context switches, working set, private working set and private bytes per state, plus startup time, a long stroke and a draw, undo and clear leak cycle. `-Only startup,states,strokes,longstroke,leak,exit` selects parts and `-Exe` measures another build. Results and method are in [measurements.md](measurements.md).
 
 ## Emergency exit
 
