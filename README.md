@@ -93,6 +93,14 @@ Start with [docs/README.md](docs/README.md). Decisions are recorded one per file
 
 Read [CONTRIBUTING.md](CONTRIBUTING.md) first. Please follow the [code of conduct](CODE_OF_CONDUCT.md). Report vulnerabilities as described in [SECURITY.md](SECURITY.md).
 
+## Acknowledgements
+
+- [Excalidraw](https://github.com/excalidraw/excalidraw) (MIT) is the model for the look, sizes, shortcuts and drawing behaviour. The measured values are listed in [docs/excalidraw-reference.md](docs/excalidraw-reference.md).
+- [perfect-freehand](https://github.com/steveruizok/perfect-freehand) (MIT, by Steve Ruiz) is the stroke algorithm behind the pen's width and smoothing, as described in [note 0040](docs/notes/0040-pen-width-model-follows-measured-perfect-freehand.md).
+- [OpenBoard](https://openboard.ch) (GPL-3.0-only, by the Geneva education department) gave the idea of desktop mode: a transparent layer over the screen that you can draw on and interact with.
+
+PenPane reuses only the constants and formulas of Excalidraw and perfect-freehand, and only the idea from OpenBoard. It does not use their code or technology.
+
 ## License
 
 PenPane is free software: you can redistribute it and modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. It is distributed in the hope that it will be useful, but without any warranty. See [LICENSE](LICENSE) and [note 0093](docs/notes/0093-gpl-3-or-later-licence.md). Contributions are accepted under GPL-3.0-or-later.

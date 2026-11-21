@@ -13,7 +13,7 @@ PenPane is a single native executable written in C11 against Win32. There is no 
 | Input | `gesture`, `hotkeys`, `config`, `actions` | Single, double and long gestures, global hotkeys, mouse buttons, learn mode, plain-text configuration |
 | Shell | `app`, `overlay`, `ui`, `tray`, `clipboard`, `jobs`, `main` | State machine, overlay window, floating islands, tray icon, PNG export, background work |
 
-`model`, `gesture`, `config`, `pen` and `hittest` do not depend on Windows state and are covered by tests in `tests/`.
+`gesture`, `pen`, `hittest`, `scene` and `controller` do not include Windows headers. `geometry.h` (which `element.h` includes) and `config.c` still do, and `config.h` includes the shell's `ui.h`; these are open boundary violations. `tests/` covers `config`, `controller`, `gesture` and `scene`; `pen` and `hittest` have no tests.
 
 ## Data flow
 
