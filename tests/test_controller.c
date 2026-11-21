@@ -348,11 +348,86 @@ static void test_style_change_undo(void)
 }
 
 /**
+ * @brief Changing the tool while text is being edited commits the text without leaving a stale tool-finished flag.
+ */
+static void test_tool_change_mid_text_leaves_no_stale_flag(void)
+{
+    Fixture fixture;
+    fixture_init(&fixture);
+    controller_set_tool(&fixture.controller, TOOL_TEXT);
+    PointerSample down = sample_at(&fixture, 100, 100, false);
+    controller_pointer_down(&fixture.controller, &down);
+    assert(controller_text_input(&fixture.controller, L'a'));
+    controller_set_tool(&fixture.controller, TOOL_RECTANGLE);
+    assert(fixture.scene.count == 1);
+    assert(!controller_take_tool_finished(&fixture.controller));
+    controller_set_tool(&fixture.controller, TOOL_TEXT);
+    controller_pointer_down(&fixture.controller, &down);
+    assert(controller_text_input(&fixture.controller, L'b'));
+    controller_text_commit(&fixture.controller);
+    assert(controller_take_tool_finished(&fixture.controller));
+    fixture_destroy(&fixture);
+}
+
+/**
+ * @brief Backspace removes a whole surrogate pair at once and a single unit otherwise.
+ */
+static void test_backspace_removes_surrogate_pair(void)
+{
+    Fixture fixture;
+    fixture_init(&fixture);
+    controller_set_tool(&fixture.controller, TOOL_TEXT);
+    PointerSample down = sample_at(&fixture, 100, 100, false);
+    controller_pointer_down(&fixture.controller, &down);
+    assert(controller_text_input(&fixture.controller, L'a'));
+    assert(controller_text_input(&fixture.controller, 0xD83D));
+    assert(controller_text_input(&fixture.controller, 0xDE00));
+    assert(controller_text_input(&fixture.controller, L'\b'));
+    assert(wcscmp(fixture.controller.draft.text, L"a") == 0);
+    assert(controller_text_input(&fixture.controller, L'\b'));
+    assert(wcscmp(fixture.controller.draft.text, L"") == 0);
+    controller_text_commit(&fixture.controller);
+    fixture_destroy(&fixture);
+}
+
+/**
+ * @brief A preview-and-commit style edit, as a slider drag does, is one undo step however many previews it had.
+ */
+static void test_style_drag_is_one_undo_step(void)
+{
+    Fixture fixture;
+    fixture_init(&fixture);
+    draw_rectangle(&fixture, 100, 100, 300, 200);
+    controller_set_tool(&fixture.controller, TOOL_SELECT);
+    PointerSample down = sample_at(&fixture, 100, 150, false);
+    controller_pointer_down(&fixture.controller, &down);
+    PointerSample up = sample_at(&fixture, 100, 150, false);
+    controller_pointer_up(&fixture.controller, &up);
+    int steps = fixture.scene.undoCount;
+    float original = fixture.scene.items[0].style.opacity;
+    Style style = fixture.scene.items[0].style;
+    for (int i = 1; i <= 5; i++) {
+        style.opacity = 1.0f - 0.1f * (float)i;
+        controller_style_preview(&fixture.controller, &style);
+    }
+    assert(fixture.scene.undoCount == steps);
+    controller_style_commit(&fixture.controller);
+    assert(fixture.scene.undoCount == steps + 1);
+    assert(fabsf(fixture.scene.items[0].style.opacity - 0.5f) < 0.001f);
+    assert(scene_undo(&fixture.scene));
+    assert(fixture.scene.items[0].style.opacity == original);
+    fixture_destroy(&fixture);
+}
+
+/**
  * @brief Entry point.
  * @return 0 when every test passes.
  */
 int main(void)
 {
+    test_tool_change_mid_text_leaves_no_stale_flag();
+    test_backspace_removes_surrogate_pair();
+    test_style_drag_is_one_undo_step();
     test_pen_reaches_release_position();
     test_pen_tap_makes_dot();
     test_deselect_repaints_decoration();

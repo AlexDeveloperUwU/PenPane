@@ -8,7 +8,7 @@ The project builds with clang from llvm-mingw (UCRT, x86-64). Nothing else is re
 powershell -ExecutionPolicy Bypass -File scripts\setup-toolchain.ps1
 ```
 
-Installs llvm-mingw into `C:\tools`. Only the project folder persists between sandbox sessions, so rerun this after a reset.
+Installs llvm-mingw into `C:\tools`. The download is checked against a pinned SHA-256 and discarded on a mismatch (note 0081). Only the project folder persists between sandbox sessions, so rerun this after a reset.
 
 ## Build
 
@@ -28,4 +28,4 @@ Drives the real executable with synthetic input and reports idle CPU, context sw
 
 ## Emergency exit
 
-`Ctrl+Alt+Shift+Esc` always closes the application.
+`Ctrl+Alt+Shift+Esc` closes the application. When another program already owns that combination, the application falls back to `Ctrl+Alt+Shift+F12` and shows a notice; when neither can be registered it says so and the tray menu is the way to quit (note 0072).

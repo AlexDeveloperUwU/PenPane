@@ -29,6 +29,13 @@
 
 #define CONFIG_MAX_BINDINGS GESTURE_MAX_BINDINGS
 
+/** @brief Outcome of reading the configuration file. */
+typedef enum ConfigStatus {
+    CONFIG_MISSING,
+    CONFIG_LOADED,
+    CONFIG_UNREADABLE
+} ConfigStatus;
+
 /** @brief Every persisted setting. */
 typedef struct Config {
     Binding bindings[CONFIG_MAX_BINDINGS];
@@ -57,13 +64,17 @@ void config_defaults(Config *config);
 
 /**
  * @brief Loads a configuration file over the defaults; unknown or malformed lines are skipped.
- * @param config Configuration to fill; reset to defaults first.
+ *
+ * Only a file that does not exist counts as missing. Any other failure to read it (sharing
+ * violation, access denied, I/O error) is reported as unreadable and leaves the configuration
+ * untouched, so the caller never mistakes a locked file for an absent one and overwrites it.
+ * @param config Configuration to fill; reset to defaults first unless the file is unreadable.
  * @param path File path.
  * @param errors Optional buffer receiving a short report of skipped lines, or NULL.
  * @param errorsSize Size of the errors buffer in characters.
- * @return true when the file was read, false when it does not exist or cannot be opened (defaults are kept).
+ * @return CONFIG_LOADED when the file was read, CONFIG_MISSING when it does not exist (defaults applied), CONFIG_UNREADABLE otherwise.
  */
-bool config_load(Config *config, const wchar_t *path, wchar_t *errors, int errorsSize);
+ConfigStatus config_load(Config *config, const wchar_t *path, wchar_t *errors, int errorsSize);
 
 /**
  * @brief Writes the configuration atomically (temporary file then rename).
@@ -77,9 +88,27 @@ bool config_save(const Config *config, const wchar_t *path);
  * @brief Replaces any binding with the same trigger and gesture, or appends a new one.
  * @param config Configuration to modify.
  * @param binding Binding to set.
- * @return true on success, false when the table is full.
+ * @return true on success, false when the table is full or the trigger is not bindable.
  */
 bool config_set_binding(Config *config, Binding binding);
+
+/**
+ * @brief Tells whether a trigger may be bound globally.
+ *
+ * A key that types text (A-Z, 0-9, Space, punctuation) or is needed for editing (Esc, Enter, Tab,
+ * Backspace) is rejected unless Ctrl, Alt or Win is part of the trigger; Shift alone does not
+ * count. Mouse buttons and the remaining keys are always allowed.
+ * @param trigger Trigger to test.
+ * @return true when the trigger can be registered without taking over ordinary typing.
+ */
+bool trigger_is_bindable(Trigger trigger);
+
+/**
+ * @brief Counts the distinct triggers used by the binding table.
+ * @param config Configuration to inspect.
+ * @return Number of different triggers; the gesture engine tracks at most GESTURE_MAX_TRACKED.
+ */
+int config_trigger_count(const Config *config);
 
 /**
  * @brief Removes every binding of an action.

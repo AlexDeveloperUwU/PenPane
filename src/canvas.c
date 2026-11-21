@@ -33,6 +33,11 @@ bool canvas_create(Canvas *canvas, int width, int height)
         return false;
     }
     canvas->dc = CreateCompatibleDC(NULL);
+    if (!canvas->dc) {
+        DeleteObject(canvas->bitmap);
+        memset(canvas, 0, sizeof *canvas);
+        return false;
+    }
     canvas->previousBitmap = SelectObject(canvas->dc, canvas->bitmap);
     canvas->pixels = bits;
     canvas->width = width;

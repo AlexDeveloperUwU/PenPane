@@ -33,3 +33,25 @@ One note per non-obvious decision, written from `_template.md`.
 | [0043](0043-selection-look-and-corner-handles.md) | Selection look: thin outline and four corner handles |
 | [0044](0044-coverage-rasterizer-keeps-linear-blend.md) | Rasterizer keeps linear coverage blending and limits capsule work per row |
 | [0050](0050-pen-width-mode-follows-device-pressure.md) | Pen width follows real device pressure, otherwise stays constant |
+| [0060](0060-passthrough-surface-covers-annotation-extent.md) | The passthrough surface covers only the extent of the annotations |
+| [0061](0061-idle-moments-trim-the-working-set.md) | Idle moments give memory back: working set, mask scratch buffer |
+| [0062](0062-text-services-off-for-plain-layouts.md) | Text services are disabled when only plain keyboard layouts are installed |
+| [0063](0063-per-file-optimization-levels-keep-unwind-tables.md) | Size-optimized build with two faster files; unwind tables stay |
+| [0064](0064-rasterizer-interior-spans-and-blend-fast-paths.md) | Rasterizer fast paths that produce identical pixels |
+| [0065](0065-tray-icon-after-the-toolbar-handle.md) | The tray icon is registered after the toolbar handle is visible |
+| [0066](0066-keep-the-c-runtime-linkage.md) | The C runtime stays linked |
+| [0067](0067-keep-wtsapi32-for-session-unlock.md) | Session notifications stay on wtsapi32 |
+| [0068](0068-rejected-two-window-drawing-and-other-ideas.md) | Rejected: a surface-free capture layer, a custom heap, other micro-savings |
+| [0069](0069-idle-cpu-is-zero-and-how-it-is-measured.md) | Idle CPU is zero; how it is checked and what the stray cycles are |
+| [0070](0070-hidden-toplevel-window-instead-of-message-only.md) | A hidden top-level popup owns timers, hotkeys and system notifications |
+| [0071](0071-tray-icon-object-survives-failed-registration.md) | The tray icon object survives a failed registration and is retried |
+| [0072](0072-emergency-exit-fallback-chain.md) | The emergency exit has a fallback chain and tells the user when it is degraded |
+| [0073](0073-typing-keys-need-a-modifier-to-be-bound.md) | Keys that type text need Ctrl, Alt or Win to be bound globally |
+| [0074](0074-unreadable-configuration-is-not-missing.md) | An unreadable configuration file is not a missing one and is never overwritten |
+| [0075](0075-slow-work-runs-off-the-hook-thread.md) | Disk writes and PNG encoding run on a worker thread |
+| [0076](0076-held-mouse-binding-recovery-without-polling-async-state.md) | A stuck mouse binding is recovered by hook liveness and resume resets, not by polling button state |
+| [0077](0077-monitor-index-fallback-does-not-rewrite-configuration.md) | A missing monitor is handled by a fallback, not by rewriting the configuration |
+| [0078](0078-slider-drag-is-one-undo-step.md) | A slider drag is a single undo step |
+| [0079](0079-pointer-identity-and-stale-pointer-recovery.md) | Only the pointer that started a stroke may continue or end it |
+| [0080](0080-cancel-discards-the-tool-finished-flag.md) | Cancelling an interaction discards the tool-finished flag |
+| [0081](0081-toolchain-download-is-verified-by-checksum.md) | The toolchain download is verified against a pinned SHA-256 |

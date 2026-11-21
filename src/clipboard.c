@@ -139,9 +139,31 @@ static HGLOBAL global_copy(const void *data, size_t size)
         return NULL;
     }
     void *target = GlobalLock(handle);
+    if (!target) {
+        GlobalFree(handle);
+        return NULL;
+    }
     memcpy(target, data, size);
     GlobalUnlock(handle);
     return handle;
+}
+
+/**
+ * @brief Hands a global memory block to the open clipboard, releasing it when the clipboard refuses it.
+ * @param format Clipboard format.
+ * @param handle Block to hand over, may be NULL.
+ * @return true when the clipboard took ownership of the block.
+ */
+static bool clipboard_put(UINT format, HGLOBAL handle)
+{
+    if (!handle) {
+        return false;
+    }
+    if (!SetClipboardData(format, handle)) {
+        GlobalFree(handle);
+        return false;
+    }
+    return true;
 }
 
 bool clipboard_copy_region(HWND owner, const Canvas *canvas, RECT region, bool opaqueBackdrop)
@@ -188,40 +210,47 @@ bool clipboard_copy_region(HWND owner, const Canvas *canvas, RECT region, bool o
         BITMAPINFOHEADER header = {0};
         header.biSize = sizeof header;
         header.biWidth = width;
-        header.biHeight = -height;
+        header.biHeight = height;
         header.biPlanes = 1;
         header.biBitCount = 32;
         header.biCompression = BI_RGB;
         memcpy(dib, &header, sizeof header);
         uint8_t *pixels = dib + sizeof header;
-        for (size_t i = 0; i < (size_t)width * height; i++) {
-            pixels[i * 4] = rgba[i * 4 + 2];
-            pixels[i * 4 + 1] = rgba[i * 4 + 1];
-            pixels[i * 4 + 2] = rgba[i * 4];
-            pixels[i * 4 + 3] = rgba[i * 4 + 3];
+        for (int y = 0; y < height; y++) {
+            const uint8_t *source = rgba + (size_t)(height - 1 - y) * width * 4;
+            uint8_t *target = pixels + (size_t)y * width * 4;
+            for (int x = 0; x < width; x++) {
+                target[x * 4] = source[x * 4 + 2];
+                target[x * 4 + 1] = source[x * 4 + 1];
+                target[x * 4 + 2] = source[x * 4];
+                target[x * 4 + 3] = source[x * 4 + 3];
+            }
         }
     }
     free(rgba);
 
+    HGLOBAL pngHandle = png ? global_copy(png, pngSize) : NULL;
+    HGLOBAL dibHandle = dib ? global_copy(dib, dibSize) : NULL;
+    free(png);
+    free(dib);
+    if (!pngHandle && !dibHandle) {
+        return false;
+    }
     bool ok = false;
     if (OpenClipboard(owner)) {
-        EmptyClipboard();
-        UINT pngFormat = RegisterClipboardFormatW(L"PNG");
-        if (png) {
-            HGLOBAL handle = global_copy(png, pngSize);
-            if (handle && SetClipboardData(pngFormat, handle)) {
-                ok = true;
-            }
-        }
-        if (dib) {
-            HGLOBAL handle = global_copy(dib, dibSize);
-            if (handle && SetClipboardData(CF_DIB, handle)) {
-                ok = true;
-            }
+        if (EmptyClipboard()) {
+            ok = clipboard_put(RegisterClipboardFormatW(L"PNG"), pngHandle);
+            ok = clipboard_put(CF_DIB, dibHandle) || ok;
+            pngHandle = NULL;
+            dibHandle = NULL;
         }
         CloseClipboard();
     }
-    free(png);
-    free(dib);
+    if (pngHandle) {
+        GlobalFree(pngHandle);
+    }
+    if (dibHandle) {
+        GlobalFree(dibHandle);
+    }
     return ok;
 }

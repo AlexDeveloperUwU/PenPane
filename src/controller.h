@@ -52,6 +52,8 @@ typedef struct Controller {
     int selected;
     Element before;
     bool hasBefore;
+    Element styleBefore;
+    bool hasStyleBefore;
     Point dragStart;
     int handle;
     FloatRect startBox;
@@ -136,6 +138,22 @@ void controller_delete_selection(Controller *controller);
  * @param style New style.
  */
 void controller_apply_style_to_selection(Controller *controller, const Style *style);
+
+/**
+ * @brief Applies a style to the selected element without recording history, remembering its original state once.
+ *
+ * Meant for continuous edits such as dragging a slider. Finish with controller_style_commit so the
+ * whole edit becomes a single undo step.
+ * @param controller Controller to drive.
+ * @param style New style.
+ */
+void controller_style_preview(Controller *controller, const Style *style);
+
+/**
+ * @brief Records the edits made by controller_style_preview as one undoable step; does nothing when none are pending.
+ * @param controller Controller to drive.
+ */
+void controller_style_commit(Controller *controller);
 
 /**
  * @brief Types a character into the text being edited.

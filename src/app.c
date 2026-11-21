@@ -4,10 +4,10 @@
 #include <string.h>
 #include <wtsapi32.h>
 
-#include "clipboard.h"
 #include "config.h"
 #include "controller.h"
 #include "hotkeys.h"
+#include "jobs.h"
 #include "mask_scratch.h"
 #include "overlay.h"
 #include "render.h"
@@ -20,6 +20,11 @@
 #define TIMER_ANIMATE 1
 #define TIMER_FADE_WAIT 2
 #define TIMER_FADE_STEP 3
+#define TIMER_TRAY_RETRY 4
+#define TRAY_RETRY_FIRST_MS 2000
+#define TRAY_RETRY_LIMIT_MS 30000
+#define JOBS_SHUTDOWN_WAIT_MS 3000
+#define EMERGENCY_CHOICES 3
 #define ANIMATION_INTERVAL_MS 16
 #define FADE_DURATION_MS 400
 #define DISPLAY_LIMIT TRAY_MAX_MONITORS
@@ -27,7 +32,7 @@
 #define MESSAGE_CLASS L"InkMessageWindow"
 #define SINGLE_INSTANCE_MUTEX L"Local\\InkOverlaySingleInstance"
 #define SCRATCH_KEEP_BYTES (256 * 1024)
-#define PENDING_NOTICE_LIMIT 2
+#define PENDING_NOTICE_LIMIT 4
 
 /** @brief A display and its areas in virtual-desktop coordinates. */
 typedef struct Monitor {
@@ -54,6 +59,11 @@ typedef struct App {
     bool overlayReady;
     bool learning;
     bool quitting;
+    bool configProtected;
+    bool emergencyRegistered;
+    HPOWERNOTIFY powerNotification;
+    UINT trayRetryMs;
+    UINT32 activePointer;
     Overlay overlay;
     Controller controller;
     Ui *ui;
@@ -71,8 +81,13 @@ typedef struct App {
 
 static App app;
 
+/** @brief Brings the windows, surface and interface in line with the drawing and mode flags. */
 static void app_apply_state(void);
+
+/** @brief Repaints the dirty regions of the overlay and presents them. */
 static void app_flush(void);
+
+/** @brief Pushes the current tool, style and history state to the floating interface. */
 static void app_sync_ui(void);
 
 /**
@@ -120,7 +135,7 @@ static BOOL CALLBACK collect_monitor(HMONITOR monitor, HDC context, LPRECT rect,
 }
 
 /**
- * @brief Re-reads the monitor layout and clamps configured monitor indexes.
+ * @brief Re-reads the monitor layout.
  */
 static void refresh_monitors(void)
 {
@@ -131,12 +146,34 @@ static void refresh_monitors(void)
         app.monitors[0].bounds = app.monitors[0].work = screen;
         app.monitorCount = 1;
     }
-    if (app.config.drawMonitor >= app.monitorCount || app.config.drawMonitor < 0) {
-        app.config.drawMonitor = 0;
-    }
-    if (app.config.uiMonitor >= app.monitorCount || app.config.uiMonitor < 0) {
-        app.config.uiMonitor = 0;
-    }
+}
+
+/**
+ * @brief Maps a configured monitor index to one that exists, without touching the configuration.
+ * @param configured Index from the configuration.
+ * @return The index when a monitor with that number is connected, otherwise 0.
+ */
+static int usable_monitor(int configured)
+{
+    return configured >= 0 && configured < app.monitorCount ? configured : 0;
+}
+
+/**
+ * @brief Monitor the overlay currently draws on.
+ * @return Index into the monitor list.
+ */
+static int draw_monitor(void)
+{
+    return usable_monitor(app.config.drawMonitor);
+}
+
+/**
+ * @brief Monitor that hosts the tool panels.
+ * @return Index into the monitor list.
+ */
+static int panel_monitor(void)
+{
+    return usable_monitor(app.config.uiMonitor);
 }
 
 /**
@@ -232,9 +269,13 @@ static bool create_overlay(void);
  */
 static LRESULT CALLBACK overlay_procedure(HWND window, UINT message, WPARAM wparam, LPARAM lparam);
 
+/**
+ * @brief Creates the overlay window on the monitor chosen for drawing.
+ * @return true on success.
+ */
 static bool create_overlay(void)
 {
-    const Monitor *monitor = &app.monitors[app.config.drawMonitor];
+    const Monitor *monitor = &app.monitors[draw_monitor()];
     if (!overlay_create(&app.overlay, app.instance, monitor->bounds, overlay_procedure, NULL)) {
         overlay_destroy(&app.overlay);
         return false;
@@ -295,6 +336,9 @@ static unsigned sections_for_state(void)
     return 0;
 }
 
+/**
+ * @brief Pushes the current tool, style and history state to the floating interface.
+ */
 static void app_sync_ui(void)
 {
     if (!app.ui) {
@@ -314,15 +358,12 @@ static void app_sync_ui(void)
 }
 
 /**
- * @brief Starts or stops the trail animation timer according to controller state.
- */
-/**
  * @brief Surface rectangle the overlay needs: the whole monitor while drawing, otherwise the annotation extent.
  * @return Rectangle in monitor coordinates; a single pixel when nothing is visible.
  */
 static RECT wanted_surface(void)
 {
-    const Monitor *monitor = &app.monitors[app.config.drawMonitor];
+    const Monitor *monitor = &app.monitors[draw_monitor()];
     RECT full = {0, 0, monitor->bounds.right - monitor->bounds.left,
                  monitor->bounds.bottom - monitor->bounds.top};
     if (app.drawing || app.whiteboard) {
@@ -350,6 +391,9 @@ static void trim_working_set(void)
     SetProcessWorkingSetSize(GetCurrentProcess(), (SIZE_T)-1, (SIZE_T)-1);
 }
 
+/**
+ * @brief Starts the trail animation timer while a laser or eraser trail is visible.
+ */
 static void update_animation_timer(void)
 {
     if (app.controller.laser.count > 0 || app.controller.eraser.count > 0) {
@@ -357,6 +401,9 @@ static void update_animation_timer(void)
     }
 }
 
+/**
+ * @brief Repaints the dirty regions of the overlay and presents them, resizing the surface in passthrough when needed.
+ */
 static void app_flush(void)
 {
     Dirty repaint;
@@ -404,8 +451,15 @@ static void cancel_fade(void)
     }
 }
 
+/**
+ * @brief Brings windows, surface, focus and interface in line with the drawing and mode flags.
+ *
+ * The monitor list is read again first so that a layout change that was never announced still
+ * leaves the overlay on a monitor that exists.
+ */
 static void app_apply_state(void)
 {
+    refresh_monitors();
     Scene *scene = active_scene();
     bool wantVisible = app.drawing || (!app.whiteboard && scene->count > 0);
     cancel_fade();
@@ -418,7 +472,7 @@ static void app_apply_state(void)
         if (!app.overlayReady && !create_overlay()) {
             return;
         }
-        overlay_set_bounds(&app.overlay, app.monitors[app.config.drawMonitor].bounds);
+        overlay_set_bounds(&app.overlay, app.monitors[draw_monitor()].bounds);
         if (!overlay_set_surface(&app.overlay, wanted_surface())) {
             destroy_overlay();
             return;
@@ -460,6 +514,7 @@ static void fade_step(void)
     }
     if (elapsed >= FADE_DURATION_MS) {
         KillTimer(app.messageWindow, TIMER_FADE_STEP);
+        controller_deselect(&app.controller);
         scene_clear(&app.scenes[0]);
         app_apply_state();
         return;
@@ -518,7 +573,7 @@ static void copy_drawing_png(void)
     Scene *scene = active_scene();
     RECT region = {0, 0, 0, 0};
     RECT surface = {0, 0, 0, 0};
-    const Monitor *monitor = &app.monitors[app.config.drawMonitor];
+    const Monitor *monitor = &app.monitors[draw_monitor()];
     int width = monitor->bounds.right - monitor->bounds.left;
     int height = monitor->bounds.bottom - monitor->bounds.top;
     surface.right = width;
@@ -541,8 +596,9 @@ static void copy_drawing_png(void)
         return;
     }
     render_scene(&export, scene, &surface, app.whiteboard ? COLOR_CANVAS_DARK : 0);
-    clipboard_copy_region(app.messageWindow, &export, region, app.whiteboard);
-    canvas_destroy(&export);
+    if (!jobs_copy_region(app.messageWindow, &export, region, app.whiteboard)) {
+        canvas_destroy(&export);
+    }
 }
 
 /**
@@ -565,6 +621,32 @@ static void change_style(Style style)
     if (controller_selection(&app.controller)) {
         controller_apply_style_to_selection(&app.controller, &style);
     }
+    app_flush();
+    app_sync_ui();
+}
+
+/**
+ * @brief Applies a style change that belongs to a continuous drag, without adding an undo step.
+ *
+ * The edits are recorded as one step when the drag ends (see finish_style_drag).
+ * @param style New style.
+ */
+static void preview_style(Style style)
+{
+    app.controller.style = style;
+    if (controller_selection(&app.controller)) {
+        controller_style_preview(&app.controller, &style);
+    }
+    app_flush();
+    app_sync_ui();
+}
+
+/**
+ * @brief Ends a continuous style drag and records it as a single undo step.
+ */
+static void finish_style_drag(void)
+{
+    controller_style_commit(&app.controller);
     app_flush();
     app_sync_ui();
 }
@@ -703,27 +785,117 @@ static void describe_binding(Binding binding, wchar_t *buffer, int size)
  */
 static void notify(const wchar_t *title, const wchar_t *text)
 {
-    if (app.tray) {
-        tray_notify(app.tray, title, text);
+    if (app.tray && tray_notify(app.tray, title, text)) {
         return;
     }
-    if (app.pendingCount < PENDING_NOTICE_LIMIT) {
-        Notice *notice = &app.pending[app.pendingCount++];
-        wcsncpy(notice->title, title, ARRAYSIZE(notice->title) - 1);
-        wcsncpy(notice->text, text, ARRAYSIZE(notice->text) - 1);
+    if (app.pendingCount == PENDING_NOTICE_LIMIT) {
+        memmove(app.pending, app.pending + 1, sizeof(Notice) * (PENDING_NOTICE_LIMIT - 1));
+        app.pendingCount--;
+    }
+    Notice *notice = &app.pending[app.pendingCount++];
+    memset(notice, 0, sizeof *notice);
+    wcsncpy(notice->title, title, ARRAYSIZE(notice->title) - 1);
+    wcsncpy(notice->text, text, ARRAYSIZE(notice->text) - 1);
+}
+
+/**
+ * @brief Delivers queued notifications once the tray icon is visible, keeping those the shell refuses.
+ */
+static void flush_notices(void)
+{
+    while (app.pendingCount > 0 && tray_is_registered(app.tray)) {
+        const Notice *first = &app.pending[0];
+        if (!tray_notify(app.tray, first->title, first->text)) {
+            return;
+        }
+        app.pendingCount--;
+        memmove(app.pending, app.pending + 1, sizeof(Notice) * (size_t)app.pendingCount);
     }
 }
 
 /**
- * @brief Creates the tray icon and delivers the notifications queued before it existed.
+ * @brief Arms the one-shot timer that retries the tray icon, backing off up to a limit.
+ */
+static void schedule_tray_retry(void)
+{
+    if (app.trayRetryMs == 0) {
+        app.trayRetryMs = TRAY_RETRY_FIRST_MS;
+    }
+    SetTimer(app.messageWindow, TIMER_TRAY_RETRY, app.trayRetryMs, NULL);
+    app.trayRetryMs = app.trayRetryMs * 2 > TRAY_RETRY_LIMIT_MS ? TRAY_RETRY_LIMIT_MS : app.trayRetryMs * 2;
+}
+
+/**
+ * @brief Registers the tray icon again after the taskbar was recreated or a retry is due.
+ * @param force true to drop the registration first, as after "TaskbarCreated".
+ */
+static void restore_tray(bool force)
+{
+    if (!app.tray) {
+        app.tray = tray_create(app.messageWindow, WM_APP_TRAY);
+    }
+    bool visible = force ? tray_restore(app.tray) : tray_retry(app.tray);
+    if (visible) {
+        KillTimer(app.messageWindow, TIMER_TRAY_RETRY);
+        app.trayRetryMs = 0;
+        flush_notices();
+    } else {
+        schedule_tray_retry();
+    }
+}
+
+/**
+ * @brief Creates the tray icon, retrying later when the shell is not ready, and delivers queued notifications.
  */
 static void create_tray(void)
 {
     app.tray = tray_create(app.messageWindow, WM_APP_TRAY);
-    for (int i = 0; i < app.pendingCount; i++) {
-        notify(app.pending[i].title, app.pending[i].text);
+    if (tray_is_registered(app.tray)) {
+        flush_notices();
+    } else {
+        schedule_tray_retry();
     }
-    app.pendingCount = 0;
+}
+
+/**
+ * @brief Persists the configuration without blocking the message loop; skipped while the file is protected.
+ */
+static void save_config(void)
+{
+    if (app.configProtected || app.configPath[0] == L'\0') {
+        return;
+    }
+    jobs_save_config(&app.config, app.configPath);
+}
+
+/**
+ * @brief Registers the emergency exit, falling back to other combinations when the first is taken.
+ *
+ * Ctrl+Alt+Shift+Esc is tried with auto-repeat suppressed, then without the flag, and finally
+ * Ctrl+Alt+Shift+F12. The user is told when the fallback is active or when nothing could be registered.
+ */
+static void register_emergency_hotkey(void)
+{
+    static const struct {
+        UINT modifiers;
+        UINT key;
+    } CHOICES[EMERGENCY_CHOICES] = {
+        {MOD_CONTROL | MOD_ALT | MOD_SHIFT | MOD_NOREPEAT, VK_ESCAPE},
+        {MOD_CONTROL | MOD_ALT | MOD_SHIFT, VK_ESCAPE},
+        {MOD_CONTROL | MOD_ALT | MOD_SHIFT | MOD_NOREPEAT, VK_F12},
+    };
+    for (int i = 0; i < EMERGENCY_CHOICES; i++) {
+        if (RegisterHotKey(app.messageWindow, EMERGENCY_HOTKEY_ID, CHOICES[i].modifiers, CHOICES[i].key)) {
+            app.emergencyRegistered = true;
+            if (CHOICES[i].key != VK_ESCAPE) {
+                notify(L"Emergency exit changed",
+                       L"Another program uses Ctrl+Alt+Shift+Esc. Press Ctrl+Alt+Shift+F12 to quit Ink.");
+            }
+            return;
+        }
+    }
+    notify(L"Emergency exit unavailable",
+           L"Ctrl+Alt+Shift+Esc and Ctrl+Alt+Shift+F12 are both taken by other programs. Use the tray menu to quit Ink.");
 }
 
 /**
@@ -742,19 +914,26 @@ static void apply_hotkeys(void)
  * @param user Unused.
  * @param action Action being learned.
  * @param binding Captured binding.
- * @param captured false when learn mode ended without a capture.
+ * @param outcome How learn mode ended.
  */
-static void on_learn_result(void *user, Action action, Binding binding, bool captured)
+static void on_learn_result(void *user, Action action, Binding binding, LearnOutcome outcome)
 {
     (void)user;
     app.learning = false;
-    if (!captured) {
+    if (outcome == LEARN_REJECTED) {
+        notify(L"Button not bound", L"A key that types text must be combined with Ctrl, Alt or Win.");
+        return;
+    }
+    if (outcome != LEARN_CAPTURED) {
         notify(L"Learning cancelled", L"No button was bound.");
         return;
     }
     binding.action = action;
-    config_set_binding(&app.config, binding);
-    config_save(&app.config, app.configPath);
+    if (!config_set_binding(&app.config, binding)) {
+        notify(L"Button not bound", L"The list of bound buttons is full.");
+        return;
+    }
+    save_config();
     apply_hotkeys();
     wchar_t text[160];
     describe_binding(binding, text, 160);
@@ -799,13 +978,16 @@ static void on_ui_event(void *user, const UiEvent *event)
         break;
     case UI_EVENT_SET_OPACITY:
         style.opacity = event->value;
-        change_style(style);
+        preview_style(style);
+        break;
+    case UI_EVENT_SLIDER_END:
+        finish_style_drag();
         break;
     case UI_EVENT_PANEL_MOVED:
         app.config.ui.placement[event->panel].set = true;
         app.config.ui.placement[event->panel].x = event->x;
         app.config.ui.placement[event->panel].y = event->y;
-        config_save(&app.config, app.configPath);
+        save_config();
         break;
     }
 }
@@ -838,6 +1020,42 @@ static void after_pointer_event(void)
     }
     app_flush();
     app_sync_ui();
+}
+
+/**
+ * @brief Handles a press, move or release from either pointer messages or the mouse.
+ * @param phase 0 down, 1 move, 2 up.
+ * @param screen Screen coordinates.
+ * @param pressure Pressure or negative when unknown.
+ * @param contact true while the pointer touches or a button is held.
+ */
+static void handle_pointer(int phase, POINT screen, float pressure, bool contact);
+
+/**
+ * @brief Decides what to do with input from a pointer other than the one that is drawing.
+ *
+ * A pointer that is no longer in contact has lost its release; it is ended so that a new press can
+ * start. Otherwise the foreign input is to be ignored.
+ * @param isPress true when the foreign input is a new press.
+ * @return true when the active pointer was stale and has been ended, so the new input may proceed.
+ */
+static bool supersede_stale_pointer(bool isPress)
+{
+    if (!isPress) {
+        return false;
+    }
+    bool alive;
+    if (app.activePointer == 0) {
+        alive = (GetKeyState(VK_LBUTTON) & 0x8000) != 0;
+    } else {
+        POINTER_INFO info;
+        alive = GetPointerInfo(app.activePointer, &info) && (info.pointerFlags & POINTER_FLAG_INCONTACT) != 0;
+    }
+    if (alive) {
+        return false;
+    }
+    handle_pointer(2, (POINT){0, 0}, -1.0f, false);
+    return true;
 }
 
 /**
@@ -899,6 +1117,14 @@ static void handle_key(WPARAM key)
     }
 }
 
+/**
+ * @brief Overlay window procedure; routes pointer, keyboard and cursor messages.
+ * @param window Overlay window handle.
+ * @param message Window message.
+ * @param wparam First parameter.
+ * @param lparam Second parameter.
+ * @return Message result.
+ */
 static LRESULT CALLBACK overlay_procedure(HWND window, UINT message, WPARAM wparam, LPARAM lparam)
 {
     switch (message) {
@@ -906,6 +1132,9 @@ static LRESULT CALLBACK overlay_procedure(HWND window, UINT message, WPARAM wpar
     case WM_POINTERUPDATE:
     case WM_POINTERUP: {
         UINT32 id = GET_POINTERID_WPARAM(wparam);
+        if (app.pointerDown && id != app.activePointer && !supersede_stale_pointer(message == WM_POINTERDOWN)) {
+            return 0;
+        }
         POINTER_INPUT_TYPE type = PT_POINTER;
         POINTER_INFO info;
         if (!GetPointerType(id, &type) || !GetPointerInfo(id, &info)) {
@@ -923,6 +1152,9 @@ static LRESULT CALLBACK overlay_procedure(HWND window, UINT message, WPARAM wpar
         if (phase == 1 && !contact && app.pointerDown) {
             phase = 2;
         }
+        if (phase == 0) {
+            app.activePointer = id;
+        }
         handle_pointer(phase, info.ptPixelLocation, pressure, contact);
         return 0;
     }
@@ -932,6 +1164,10 @@ static LRESULT CALLBACK overlay_procedure(HWND window, UINT message, WPARAM wpar
         }
         return 0;
     case WM_LBUTTONDOWN: {
+        if (app.pointerDown && !supersede_stale_pointer(true)) {
+            return 0;
+        }
+        app.activePointer = 0;
         SetCapture(window);
         POINT screen = {(short)LOWORD(lparam), (short)HIWORD(lparam)};
         ClientToScreen(window, &screen);
@@ -983,7 +1219,9 @@ static LRESULT CALLBACK overlay_procedure(HWND window, UINT message, WPARAM wpar
 static void handle_display_change(void)
 {
     refresh_monitors();
-    ui_place_defaults(app.ui, app.monitors[app.config.uiMonitor].work, false);
+    if (app.ui) {
+        ui_place_defaults(app.ui, app.monitors[panel_monitor()].work, false);
+    }
     if (app.overlayReady) {
         controller_cancel(&app.controller);
         app_apply_state();
@@ -991,16 +1229,28 @@ static void handle_display_change(void)
 }
 
 /**
- * @brief Re-presents everything after sleep or an unlocked session so nothing stays stale or buried.
+ * @brief Recovers after sleep or a locked session: resets input hooks, re-presents windows, restores the tray icon.
+ *
+ * Input that happened while the machine slept or the session was locked is lost, and the system may
+ * have dropped the low-level hooks, so held buttons are released and the hooks are installed again.
  */
 static void handle_resume(void)
 {
+    hotkeys_reset_hooks(app.hotkeys);
+    if (app.pointerDown) {
+        handle_pointer(2, (POINT){0, 0}, -1.0f, false);
+    }
     if (app.overlayReady) {
         SetWindowPos(app.overlay.window, HWND_TOPMOST, 0, 0, 0, 0,
                      SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
         render_everything();
     }
-    ui_raise(app.ui);
+    if (app.ui) {
+        ui_raise(app.ui);
+    }
+    if (!tray_is_registered(app.tray)) {
+        restore_tray(false);
+    }
 }
 
 /**
@@ -1013,8 +1263,8 @@ static void build_tray_state(TrayState *state)
     state->drawing = app.drawing;
     state->whiteboard = app.whiteboard;
     state->monitorCount = app.monitorCount;
-    state->drawMonitor = app.config.drawMonitor;
-    state->uiMonitor = app.config.uiMonitor;
+    state->drawMonitor = draw_monitor();
+    state->uiMonitor = panel_monitor();
     state->hideUiFromCapture = app.config.ui.excludeFromCapture;
     state->autoHideUi = app.config.ui.autoHide;
     state->startWithWindows = autostart_get();
@@ -1027,9 +1277,13 @@ static void build_tray_state(TrayState *state)
 static void reload_config(void)
 {
     wchar_t errors[256] = L"";
-    bool existed = config_load(&app.config, app.configPath, errors, 256);
-    if (!existed) {
-        config_save(&app.config, app.configPath);
+    ConfigStatus status = config_load(&app.config, app.configPath, errors, 256);
+    app.configProtected = status == CONFIG_UNREADABLE;
+    if (status == CONFIG_MISSING) {
+        save_config();
+    } else if (status == CONFIG_UNREADABLE) {
+        notify(L"Configuration not read",
+               L"The settings file could not be read. It was left unchanged and the current settings stay in use.");
     }
     refresh_monitors();
     app.controller.style.stroke = STROKE_PALETTE[app.config.defaultStrokeIndex];
@@ -1040,6 +1294,13 @@ static void reload_config(void)
         notify(L"Configuration warnings", errors);
     }
     apply_hotkeys();
+    if (app.ui) {
+        ui_apply_settings(app.ui, &app.config.ui);
+    }
+    if (app.overlayReady) {
+        controller_cancel(&app.controller);
+        app_apply_state();
+    }
 }
 
 /**
@@ -1060,7 +1321,7 @@ static void handle_tray_event(const TrayEvent *event)
         break;
     case TRAY_SET_DRAW_MONITOR:
         app.config.drawMonitor = event->value;
-        config_save(&app.config, app.configPath);
+        save_config();
         controller_cancel(&app.controller);
         app_apply_state();
         break;
@@ -1069,18 +1330,24 @@ static void handle_tray_event(const TrayEvent *event)
         for (int i = 0; i < PANEL_COUNT; i++) {
             app.config.ui.placement[i].set = false;
         }
-        config_save(&app.config, app.configPath);
-        ui_place_defaults(app.ui, app.monitors[app.config.uiMonitor].work, true);
+        save_config();
+        if (app.ui) {
+            ui_place_defaults(app.ui, app.monitors[panel_monitor()].work, true);
+        }
         break;
     case TRAY_TOGGLE_HIDE_UI_FROM_CAPTURE:
         app.config.ui.excludeFromCapture = !app.config.ui.excludeFromCapture;
-        ui_set_capture_excluded(app.ui, app.config.ui.excludeFromCapture);
-        config_save(&app.config, app.configPath);
+        if (app.ui) {
+            ui_set_capture_excluded(app.ui, app.config.ui.excludeFromCapture);
+        }
+        save_config();
         break;
     case TRAY_TOGGLE_AUTO_HIDE_UI:
         app.config.ui.autoHide = !app.config.ui.autoHide;
-        config_save(&app.config, app.configPath);
-        ui_apply_settings(app.ui, &app.config.ui);
+        save_config();
+        if (app.ui) {
+            ui_apply_settings(app.ui, &app.config.ui);
+        }
         break;
     case TRAY_LEARN_ACTION:
         if (hotkeys_learn_begin(app.hotkeys, event->action)) {
@@ -1096,7 +1363,9 @@ static void handle_tray_event(const TrayEvent *event)
         app_sync_ui();
         break;
     case TRAY_OPEN_CONFIG:
-        ShellExecuteW(NULL, L"open", app.configPath, NULL, NULL, SW_SHOWNORMAL);
+        if (app.configPath[0]) {
+            ShellExecuteW(NULL, L"open", app.configPath, NULL, NULL, SW_SHOWNORMAL);
+        }
         break;
     case TRAY_COPY_PNG:
         copy_drawing_png();
@@ -1152,12 +1421,17 @@ static LRESULT CALLBACK message_procedure(HWND window, UINT message, WPARAM wpar
             fade_step();
             return 0;
         }
+        if (wparam == TIMER_TRAY_RETRY) {
+            KillTimer(window, TIMER_TRAY_RETRY);
+            restore_tray(false);
+            return 0;
+        }
         break;
     case WM_APP_TRAY: {
         TrayState state;
         TrayEvent event;
         build_tray_state(&state);
-        if (tray_handle_message(app.tray, lparam, &state, &event)) {
+        if (app.tray && tray_handle_message(app.tray, lparam, &state, &event)) {
             handle_tray_event(&event);
         }
         return 0;
@@ -1171,10 +1445,12 @@ static LRESULT CALLBACK message_procedure(HWND window, UINT message, WPARAM wpar
     case WM_WTSSESSION_CHANGE:
         if (wparam == WTS_SESSION_UNLOCK) {
             handle_resume();
+        } else if (wparam == WTS_SESSION_LOCK) {
+            hotkeys_reset_hooks(app.hotkeys);
         }
         return 0;
     case WM_POWERBROADCAST:
-        if (wparam == PBT_APMRESUMEAUTOMATIC) {
+        if (wparam == PBT_APMRESUMEAUTOMATIC || wparam == PBT_APMRESUMESUSPEND) {
             handle_display_change();
             handle_resume();
         }
@@ -1182,8 +1458,8 @@ static LRESULT CALLBACK message_procedure(HWND window, UINT message, WPARAM wpar
     case WM_DESTROY:
         return 0;
     default:
-        if (message == app.taskbarCreatedMessage && app.tray) {
-            tray_restore(app.tray);
+        if (app.taskbarCreatedMessage != 0 && message == app.taskbarCreatedMessage) {
+            restore_tray(true);
             return 0;
         }
         break;
@@ -1209,16 +1485,27 @@ static LONG WINAPI crash_filter(EXCEPTION_POINTERS *info)
 }
 
 /**
- * @brief Builds the configuration file path next to the executable.
- * @param path Output buffer of MAX_PATH characters.
+ * @brief Builds the configuration file path next to the executable, never writing past the buffer.
+ * @param path Output buffer.
+ * @param size Capacity of the buffer in characters.
+ * @return true on success; on false the path is empty because the executable path does not fit.
  */
-static void build_config_path(wchar_t *path)
+static bool build_config_path(wchar_t *path, size_t size)
 {
-    GetModuleFileNameW(NULL, path, MAX_PATH);
-    wchar_t *slash = wcsrchr(path, L'\\');
-    if (slash) {
-        wcscpy(slash + 1, L"ink.ini");
+    static const wchar_t FILE_NAME[] = L"ink.ini";
+    path[0] = L'\0';
+    DWORD length = GetModuleFileNameW(NULL, path, (DWORD)size);
+    if (length == 0 || length >= size) {
+        path[0] = L'\0';
+        return false;
     }
+    wchar_t *slash = wcsrchr(path, L'\\');
+    if (!slash || (size_t)(path + size - (slash + 1)) < ARRAYSIZE(FILE_NAME)) {
+        path[0] = L'\0';
+        return false;
+    }
+    memcpy(slash + 1, FILE_NAME, sizeof FILE_NAME);
+    return true;
 }
 
 /**
@@ -1240,7 +1527,10 @@ static bool signal_existing_instance(void)
 }
 
 /**
- * @brief Creates the hidden message window.
+ * @brief Creates the hidden window that owns timers, hotkeys, the tray icon and system notifications.
+ *
+ * It is a top-level popup that is never shown, not a message-only window, because message-only
+ * windows do not receive broadcasts such as "TaskbarCreated", WM_DISPLAYCHANGE and power events.
  * @return true on success.
  */
 static bool create_message_window(void)
@@ -1251,8 +1541,8 @@ static bool create_message_window(void)
     windowClass.hInstance = app.instance;
     windowClass.lpszClassName = MESSAGE_CLASS;
     RegisterClassExW(&windowClass);
-    app.messageWindow = CreateWindowExW(0, MESSAGE_CLASS, L"Ink", 0, 0, 0, 0, 0, HWND_MESSAGE, NULL,
-                                        app.instance, NULL);
+    app.messageWindow = CreateWindowExW(WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE, MESSAGE_CLASS, L"Ink", WS_POPUP,
+                                        0, 0, 0, 0, NULL, NULL, app.instance, NULL);
     return app.messageWindow != NULL;
 }
 
@@ -1274,22 +1564,27 @@ int app_run(HINSTANCE instance)
     controller_init(&app.controller);
     controller_attach(&app.controller, &app.scenes[0], NULL);
     config_defaults(&app.config);
-    build_config_path(app.configPath);
+    bool pathFits = build_config_path(app.configPath, ARRAYSIZE(app.configPath));
 
     app.hotkeys = hotkeys_create(app.messageWindow, on_hotkey_action, on_learn_result, NULL);
-    RegisterHotKey(app.messageWindow, EMERGENCY_HOTKEY_ID, MOD_CONTROL | MOD_ALT | MOD_SHIFT, VK_ESCAPE);
+    register_emergency_hotkey();
 
+    if (!pathFits) {
+        notify(L"Settings location unavailable",
+               L"The folder of Ink is too deeply nested to keep a settings file there. Defaults are used and nothing is saved.");
+    }
     reload_config();
     controller_set_tool(&app.controller, app.config.defaultTool);
     app.ui = ui_create(instance, on_ui_event, NULL, &app.config.ui);
     if (app.ui) {
         ui_set_capture_excluded(app.ui, app.config.ui.excludeFromCapture);
-        ui_place_defaults(app.ui, app.monitors[app.config.uiMonitor].work, false);
+        ui_place_defaults(app.ui, app.monitors[panel_monitor()].work, false);
         ui_set_visible(app.ui, true, false);
         app_sync_ui();
     }
     create_tray();
     WTSRegisterSessionNotification(app.messageWindow, NOTIFY_FOR_THIS_SESSION);
+    app.powerNotification = RegisterSuspendResumeNotification(app.messageWindow, DEVICE_NOTIFY_WINDOW_HANDLE);
 
     trim_working_set();
 
@@ -1299,8 +1594,13 @@ int app_run(HINSTANCE instance)
         DispatchMessageW(&message);
     }
 
+    if (app.powerNotification) {
+        UnregisterSuspendResumeNotification(app.powerNotification);
+    }
     WTSUnRegisterSessionNotification(app.messageWindow);
-    UnregisterHotKey(app.messageWindow, EMERGENCY_HOTKEY_ID);
+    if (app.emergencyRegistered) {
+        UnregisterHotKey(app.messageWindow, EMERGENCY_HOTKEY_ID);
+    }
     destroy_overlay();
     ui_destroy(app.ui);
     hotkeys_destroy(app.hotkeys);
@@ -1309,6 +1609,7 @@ int app_run(HINSTANCE instance)
     scene_destroy(&app.scenes[0]);
     scene_destroy(&app.scenes[1]);
     text_shutdown();
+    jobs_shutdown(JOBS_SHUTDOWN_WAIT_MS);
     DestroyWindow(app.messageWindow);
     return 0;
 }

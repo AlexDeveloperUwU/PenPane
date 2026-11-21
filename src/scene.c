@@ -147,7 +147,12 @@ bool scene_add(Scene *scene, Element *element)
     if (!element_copy(&operation.after, element)) {
         return false;
     }
-    if (!items_insert(scene, scene->count, element) || !step_push(&scene->pending, &operation)) {
+    if (!step_push(&scene->pending, &operation)) {
+        element_free(&operation.after);
+        return false;
+    }
+    if (!items_insert(scene, scene->count, element)) {
+        scene->pending.count--;
         element_free(&operation.after);
         return false;
     }

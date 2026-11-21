@@ -65,8 +65,8 @@ void scene_destroy(Scene *scene);
 /**
  * @brief Appends an element and records it in the pending step. Takes ownership of the element's memory.
  * @param scene Target scene.
- * @param element Element to add; zeroed on success.
- * @return true on success.
+ * @param element Element to add; zeroed on success and left untouched on failure, so the caller still owns it then.
+ * @return true on success; on false the scene and its pending step are unchanged.
  */
 bool scene_add(Scene *scene, Element *element);
 

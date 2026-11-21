@@ -18,6 +18,8 @@
 #define KEY_BITSET_WORDS 8
 #define MESSAGE_TEXT_SIZE 256
 #define REPORT_LINE_SIZE 320
+#define MOUSE_HOLD_LIMIT_MS 10000
+#define MOUSE_STALL_MS 250
 
 /** @brief A mouse press or release captured by the low-level hook and handled outside it. */
 typedef struct InputEvent {
@@ -42,7 +44,7 @@ typedef struct RegisteredKey {
 typedef struct LearnState {
     bool active;
     bool decided;
-    bool captured;
+    LearnOutcome outcome;
     bool haveTrigger;
     bool down;
     bool awaitingSecond;
@@ -70,6 +72,9 @@ struct Hotkeys {
     HHOOK mouseHook;
     HHOOK keyboardHook;
     bool mouseBindingsExist;
+    uint32_t hookStamp;
+    POINT lastCursor;
+    bool haveCursor;
     bool swallowedMouse[MOUSE_BUTTON_COUNT];
     Trigger swallowedTrigger[MOUSE_BUTTON_COUNT];
     int timerInterval;
@@ -84,6 +89,12 @@ struct Hotkeys {
 
 /** @brief The single instance that owns the process-wide low-level hooks. */
 static Hotkeys *g_owner;
+
+/**
+ * @brief Removes the mouse hook if present and installs it again when it is still wanted.
+ * @param hotkeys Instance.
+ */
+static void reinstall_mouse_hook(Hotkeys *hotkeys);
 
 /** @brief Modifier virtual keys as reported by the low-level keyboard hook. */
 static const ModifierKey MODIFIER_KEYS[MODIFIER_KEY_COUNT] = {
@@ -157,6 +168,21 @@ static void report_failure(wchar_t *report, int reportSize, Trigger trigger, DWO
     }
     wide_append(line, REPORT_LINE_SIZE, L"\n");
     wide_append(report, reportSize, line);
+}
+
+/**
+ * @brief Appends a plain line of text to the failure report.
+ * @param report Report buffer, or NULL.
+ * @param reportSize Capacity of the report buffer.
+ * @param text Zero-terminated line without line break.
+ */
+static void report_text(wchar_t *report, int reportSize, const wchar_t *text)
+{
+    if (report == NULL || reportSize <= 0) {
+        return;
+    }
+    wide_append(report, reportSize, text);
+    wide_append(report, reportSize, L"\n");
 }
 
 /**
@@ -248,7 +274,7 @@ static bool flush_actions(Hotkeys *hotkeys)
 }
 
 /**
- * @brief Tells whether any keyboard trigger is currently held according to the engine.
+ * @brief Tells whether any keyboard or mouse trigger is currently held according to the engine.
  * @param hotkeys Instance.
  * @return true when the release poll must keep running.
  */
@@ -256,11 +282,73 @@ static bool any_key_held(const Hotkeys *hotkeys)
 {
     for (int i = 0; i < GESTURE_MAX_TRACKED; i++) {
         const GestureTracked *slot = &hotkeys->engine.tracked[i];
-        if (slot->inUse && slot->down && slot->trigger.kind == TRIGGER_KEY) {
+        if (slot->inUse && slot->down) {
             return true;
         }
     }
     return false;
+}
+
+/**
+ * @brief Reports the release of every mouse trigger the engine still holds and forgets swallowed buttons.
+ * @param hotkeys Instance.
+ * @param nowMs Current clock value.
+ */
+static void release_mouse_triggers(Hotkeys *hotkeys, uint32_t nowMs)
+{
+    for (int i = 0; i < GESTURE_MAX_TRACKED; i++) {
+        const GestureTracked *slot = &hotkeys->engine.tracked[i];
+        if (slot->inUse && slot->down && slot->trigger.kind == TRIGGER_MOUSE_BUTTON) {
+            gesture_release(&hotkeys->engine, slot->trigger, nowMs);
+        }
+    }
+    memset(hotkeys->swallowedMouse, 0, sizeof hotkeys->swallowedMouse);
+    hotkeys->eventCount = 0;
+}
+
+/**
+ * @brief Guards against a mouse trigger that stays held because its release was never seen.
+ *
+ * The state of a swallowed button is invisible to GetAsyncKeyState, so the release cannot be polled
+ * directly. Instead the hook is checked for liveness while a mouse trigger is held: a cursor that
+ * moves without the hook seeing any event means the system dropped the hook, and a trigger held
+ * past the hold limit is treated as stale. Either way the held triggers are released and the hook is
+ * installed again.
+ * @param hotkeys Instance.
+ * @param nowMs Current clock value.
+ */
+static void poll_mouse(Hotkeys *hotkeys, uint32_t nowMs)
+{
+    bool held = false;
+    bool expired = false;
+    for (int i = 0; i < GESTURE_MAX_TRACKED; i++) {
+        const GestureTracked *slot = &hotkeys->engine.tracked[i];
+        if (slot->inUse && slot->down && slot->trigger.kind == TRIGGER_MOUSE_BUTTON) {
+            held = true;
+            expired = expired || (int32_t)(nowMs - slot->pressedAt) >= MOUSE_HOLD_LIMIT_MS;
+        }
+    }
+    if (!held) {
+        hotkeys->haveCursor = false;
+        return;
+    }
+    POINT cursor;
+    bool moved = false;
+    if (GetCursorPos(&cursor)) {
+        moved = hotkeys->haveCursor &&
+                (cursor.x != hotkeys->lastCursor.x || cursor.y != hotkeys->lastCursor.y);
+        hotkeys->lastCursor = cursor;
+        hotkeys->haveCursor = true;
+    }
+    bool stalled = hotkeys->mouseHook == NULL ||
+                   (moved && (int32_t)(nowMs - hotkeys->hookStamp) > MOUSE_STALL_MS);
+    if (stalled || expired) {
+        release_mouse_triggers(hotkeys, nowMs);
+        hotkeys->haveCursor = false;
+        if (stalled) {
+            reinstall_mouse_hook(hotkeys);
+        }
+    }
 }
 
 /**
@@ -277,6 +365,7 @@ static void poll_releases(Hotkeys *hotkeys, uint32_t nowMs)
             gesture_release(&hotkeys->engine, slot->trigger, nowMs);
         }
     }
+    poll_mouse(hotkeys, nowMs);
 }
 
 /**
@@ -352,14 +441,14 @@ static void queue_event(Hotkeys *hotkeys, Trigger trigger, bool down, uint32_t t
 /**
  * @brief Records the final outcome of learn mode from inside a hook and wakes the window.
  * @param hotkeys Instance.
- * @param captured true when a gesture was captured.
- * @param gesture Captured gesture, used only when captured is true.
+ * @param outcome How learn mode ended.
+ * @param gesture Captured gesture, used only for LEARN_CAPTURED.
  */
-static void learn_decide(Hotkeys *hotkeys, bool captured, Gesture gesture)
+static void learn_decide(Hotkeys *hotkeys, LearnOutcome outcome, Gesture gesture)
 {
     LearnState *learn = &hotkeys->learn;
     learn->decided = true;
-    learn->captured = captured;
+    learn->outcome = outcome;
     learn->result.trigger = learn->trigger;
     learn->result.gesture = gesture;
     learn->result.action = learn->action;
@@ -381,6 +470,10 @@ static void learn_input(Hotkeys *hotkeys, Trigger trigger, bool down, uint32_t t
     }
     if (!learn->haveTrigger) {
         if (down) {
+            if (!trigger_is_bindable(trigger)) {
+                learn_decide(hotkeys, LEARN_REJECTED, GESTURE_SINGLE);
+                return;
+            }
             learn->trigger = trigger;
             learn->haveTrigger = true;
             learn->down = true;
@@ -408,9 +501,9 @@ static void learn_input(Hotkeys *hotkeys, Trigger trigger, bool down, uint32_t t
     }
     learn->down = false;
     if (learn->second) {
-        learn_decide(hotkeys, true, GESTURE_DOUBLE);
+        learn_decide(hotkeys, LEARN_CAPTURED, GESTURE_DOUBLE);
     } else if ((int32_t)(time - learn->pressedAt) >= hotkeys->longPressMs) {
-        learn_decide(hotkeys, true, GESTURE_LONG);
+        learn_decide(hotkeys, LEARN_CAPTURED, GESTURE_LONG);
     } else {
         learn->awaitingSecond = true;
         SetTimer(hotkeys->window, TIMER_LEARN, (UINT)hotkeys->doubleWindowMs, NULL);
@@ -479,7 +572,7 @@ static bool learn_keyboard(Hotkeys *hotkeys, const KBDLLHOOKSTRUCT *info, bool d
     unsigned modifiers = learn_modifiers(learn);
     bool emergency = modifiers == (TRIGGER_MOD_CONTROL | TRIGGER_MOD_ALT | TRIGGER_MOD_SHIFT);
     if (vk == VK_ESCAPE && (modifiers == 0 || emergency) && !learn->decided) {
-        learn_decide(hotkeys, false, GESTURE_SINGLE);
+        learn_decide(hotkeys, LEARN_CANCELLED, GESTURE_SINGLE);
         return true;
     }
     Trigger trigger = {TRIGGER_KEY, vk, modifiers};
@@ -557,6 +650,7 @@ static LRESULT CALLBACK mouse_hook_proc(int code, WPARAM wparam, LPARAM lparam)
     Hotkeys *hotkeys = g_owner;
     if (code == HC_ACTION && hotkeys != NULL) {
         const MSLLHOOKSTRUCT *info = (const MSLLHOOKSTRUCT *)lparam;
+        hotkeys->hookStamp = (uint32_t)GetTickCount();
         unsigned button = 0;
         bool down = false;
         switch (wparam) {
@@ -621,6 +715,20 @@ static void update_mouse_hook(Hotkeys *hotkeys)
 }
 
 /**
+ * @brief Removes the mouse hook if present, forgets swallowed buttons and installs the hook again when it is still wanted.
+ * @param hotkeys Instance.
+ */
+static void reinstall_mouse_hook(Hotkeys *hotkeys)
+{
+    if (hotkeys->mouseHook != NULL) {
+        UnhookWindowsHookEx(hotkeys->mouseHook);
+        hotkeys->mouseHook = NULL;
+    }
+    memset(hotkeys->swallowedMouse, 0, sizeof hotkeys->swallowedMouse);
+    update_mouse_hook(hotkeys);
+}
+
+/**
  * @brief Unregisters every keyboard hotkey of the instance.
  * @param hotkeys Instance.
  */
@@ -653,15 +761,15 @@ static void learn_stop(Hotkeys *hotkeys)
 /**
  * @brief Ends learn mode and reports the outcome to the learn handler.
  * @param hotkeys Instance.
- * @param captured true when a gesture was captured.
- * @param binding Captured binding, meaningful when captured is true.
+ * @param outcome How learn mode ended.
+ * @param binding Captured binding, meaningful for LEARN_CAPTURED.
  */
-static void learn_finish(Hotkeys *hotkeys, bool captured, Binding binding)
+static void learn_finish(Hotkeys *hotkeys, LearnOutcome outcome, Binding binding)
 {
     Action action = hotkeys->learn.action;
     learn_stop(hotkeys);
     if (hotkeys->onLearn != NULL) {
-        hotkeys->onLearn(hotkeys->user, action, binding, captured);
+        hotkeys->onLearn(hotkeys->user, action, binding, outcome);
     }
 }
 
@@ -684,7 +792,7 @@ static void handle_events(Hotkeys *hotkeys)
     pump(hotkeys);
     if (hotkeys->learn.active && hotkeys->learn.decided) {
         Binding result = hotkeys->learn.result;
-        learn_finish(hotkeys, hotkeys->learn.captured, result);
+        learn_finish(hotkeys, hotkeys->learn.outcome, result);
     }
 }
 
@@ -704,12 +812,12 @@ static void handle_learn_timer(Hotkeys *hotkeys)
     }
     if (learn->awaitingSecond && !learn->down) {
         Binding result = {learn->trigger, GESTURE_SINGLE, learn->action};
-        learn_finish(hotkeys, true, result);
+        learn_finish(hotkeys, LEARN_CAPTURED, result);
         return;
     }
     Binding none;
     memset(&none, 0, sizeof none);
-    learn_finish(hotkeys, false, none);
+    learn_finish(hotkeys, LEARN_CANCELLED, none);
 }
 
 Hotkeys *hotkeys_create(HWND window, HotkeyActionHandler onAction, HotkeyLearnHandler onLearn, void *user)
@@ -780,6 +888,11 @@ bool hotkeys_apply(Hotkeys *hotkeys, const Config *config, wchar_t *report, int 
             hotkeys->mouseBindingsExist = true;
             continue;
         }
+        if (!trigger_is_bindable(slot->trigger)) {
+            allRegistered = false;
+            report_text(report, reportSize, L"A key that types text needs Ctrl, Alt or Win and was skipped.");
+            continue;
+        }
         int id = HOTKEY_ID_BASE + hotkeys->registeredCount;
         if (RegisterHotKey(hotkeys->window, id, slot->trigger.modifiers, slot->trigger.virtualKey)) {
             hotkeys->registered[hotkeys->registeredCount].id = id;
@@ -790,10 +903,14 @@ bool hotkeys_apply(Hotkeys *hotkeys, const Config *config, wchar_t *report, int 
             report_failure(report, reportSize, slot->trigger, GetLastError());
         }
     }
-    update_mouse_hook(hotkeys);
+    reinstall_mouse_hook(hotkeys);
     if (hotkeys->mouseBindingsExist && hotkeys->mouseHook == NULL) {
         allRegistered = false;
         report_failure(report, reportSize, (Trigger){TRIGGER_MOUSE_BUTTON, VK_MBUTTON, 0}, GetLastError());
+    }
+    if (config_trigger_count(config) > GESTURE_MAX_TRACKED) {
+        allRegistered = false;
+        report_text(report, reportSize, L"More than 16 different buttons are bound; the extra ones are ignored.");
     }
     return allRegistered;
 }
@@ -855,5 +972,18 @@ void hotkeys_learn_cancel(Hotkeys *hotkeys)
     }
     Binding none;
     memset(&none, 0, sizeof none);
-    learn_finish(hotkeys, false, none);
+    learn_finish(hotkeys, LEARN_CANCELLED, none);
+}
+
+void hotkeys_reset_hooks(Hotkeys *hotkeys)
+{
+    if (hotkeys == NULL) {
+        return;
+    }
+    if (hotkeys->learn.active) {
+        hotkeys_learn_cancel(hotkeys);
+    }
+    release_mouse_triggers(hotkeys, (uint32_t)GetTickCount());
+    reinstall_mouse_hook(hotkeys);
+    pump(hotkeys);
 }

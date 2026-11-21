@@ -107,6 +107,26 @@ static void unmark_erasing(Controller *controller)
 }
 
 /**
+ * @brief Replaces an element in place with a copy of another, keeping the original when copying fails.
+ * @param scene Scene owning the element, used to schedule the repaint.
+ * @param item Element to overwrite.
+ * @param source Element to copy from.
+ * @return true when the copy succeeded and item now holds it.
+ */
+static bool replace_with_copy(Scene *scene, Element *item, const Element *source)
+{
+    Element copy;
+    if (!element_copy(&copy, source)) {
+        return false;
+    }
+    scene_mark_dirty(scene, element_bounds(item));
+    element_free(item);
+    *item = copy;
+    scene_mark_dirty(scene, element_bounds(item));
+    return true;
+}
+
+/**
  * @brief Drops the current selection and repaints its decoration.
  * @param controller Controller to update.
  */
@@ -120,6 +140,7 @@ static void clear_selection(Controller *controller)
 
 void controller_cancel(Controller *controller)
 {
+    controller_style_commit(controller);
     if (controller->editingText) {
         controller_text_commit(controller);
     }
@@ -129,10 +150,7 @@ void controller_cancel(Controller *controller)
             if (controller->hasBefore && controller->selected >= 0 &&
                 controller->selected < controller->scene->count) {
                 Element *item = &controller->scene->items[controller->selected];
-                scene_mark_dirty(controller->scene, element_bounds(item));
-                element_free(item);
-                element_copy(item, &controller->before);
-                scene_mark_dirty(controller->scene, element_bounds(item));
+                replace_with_copy(controller->scene, item, &controller->before);
             }
         }
     }
@@ -147,6 +165,7 @@ void controller_cancel(Controller *controller)
         trail_clear(&controller->eraser);
     }
     controller->interaction = INTERACTION_NONE;
+    controller->toolFinished = false;
 }
 
 void controller_attach(Controller *controller, Scene *scene, Canvas *canvas)
@@ -406,9 +425,9 @@ static void select_move(Controller *controller, const PointerSample *sample)
         float dx = sample->position.x - controller->dragStart.x;
         float dy = sample->position.y - controller->dragStart.y;
         FloatRect target = dragged_box(controller->startBox, controller->handle, dx, dy);
-        element_free(item);
-        element_copy(item, &controller->before);
-        element_remap(item, controller->startBox, target);
+        if (replace_with_copy(scene, item, &controller->before)) {
+            element_remap(item, controller->startBox, target);
+        }
     }
     repaint_add(controller, element_bounds(item));
     repaint_add(controller, render_selection_bounds(item));
@@ -467,7 +486,10 @@ void controller_pointer_down(Controller *controller, const PointerSample *sample
         controller->draft = element_make(ELEMENT_TEXT, &controller->style);
         controller->draft.from = sample->position;
         controller->draft.fontSize = font_size_for_width(controller->style.width);
-        element_set_text(&controller->draft, L"");
+        if (!element_set_text(&controller->draft, L"")) {
+            element_free(&controller->draft);
+            break;
+        }
         controller->hasDraft = true;
         controller->editingText = true;
         controller->draftBounds = element_bounds(&controller->draft);
@@ -560,6 +582,41 @@ void controller_pointer_up(Controller *controller, const PointerSample *sample)
     controller->interaction = INTERACTION_NONE;
 }
 
+void controller_style_preview(Controller *controller, const Style *style)
+{
+    if (!controller->scene || controller->selected < 0 || controller->selected >= controller->scene->count) {
+        return;
+    }
+    Element *item = &controller->scene->items[controller->selected];
+    if (!controller->hasStyleBefore) {
+        if (!element_copy(&controller->styleBefore, item)) {
+            return;
+        }
+        controller->hasStyleBefore = true;
+    }
+    repaint_add(controller, element_bounds(item));
+    item->style = *style;
+    if (item->type == ELEMENT_TEXT) {
+        item->fontSize = font_size_for_width(style->width);
+    }
+    repaint_add(controller, element_bounds(item));
+    repaint_add(controller, render_selection_bounds(item));
+}
+
+void controller_style_commit(Controller *controller)
+{
+    if (!controller->hasStyleBefore) {
+        return;
+    }
+    controller->hasStyleBefore = false;
+    if (controller->scene && controller->selected >= 0 && controller->selected < controller->scene->count) {
+        scene_record_change(controller->scene, controller->selected, &controller->styleBefore);
+        scene_commit(controller->scene);
+    } else {
+        element_free(&controller->styleBefore);
+    }
+}
+
 void controller_delete_selection(Controller *controller)
 {
     if (!controller->scene || controller->selected < 0 ||
@@ -611,7 +668,12 @@ bool controller_text_input(Controller *controller, wchar_t character)
             free(buffer);
             return true;
         }
-        buffer[length - 1] = 0;
+        size_t removed = 1;
+        if (length >= 2 && buffer[length - 1] >= 0xDC00 && buffer[length - 1] <= 0xDFFF &&
+            buffer[length - 2] >= 0xD800 && buffer[length - 2] <= 0xDBFF) {
+            removed = 2;
+        }
+        buffer[length - removed] = 0;
     } else if (character == L'\r' || character == L'\n') {
         buffer[length] = L'\n';
         buffer[length + 1] = 0;
@@ -623,8 +685,11 @@ bool controller_text_input(Controller *controller, wchar_t character)
         return false;
     }
     repaint_add(controller, rect_inflate(controller->draftBounds, 8));
-    element_set_text(draft, buffer);
+    bool stored = element_set_text(draft, buffer);
     free(buffer);
+    if (!stored) {
+        return true;
+    }
     controller->draftBounds = element_bounds(draft);
     repaint_add(controller, rect_inflate(controller->draftBounds, 8));
     return true;

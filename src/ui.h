@@ -70,7 +70,8 @@ typedef enum UiEventKind {
     UI_EVENT_SET_STROKE_STYLE,
     UI_EVENT_SET_PRESSURE,
     UI_EVENT_SET_OPACITY,
-    UI_EVENT_PANEL_MOVED
+    UI_EVENT_PANEL_MOVED,
+    UI_EVENT_SLIDER_END
 } UiEventKind;
 
 /**
@@ -86,6 +87,8 @@ typedef enum UiEventKind {
  *  - UI_EVENT_SET_PRESSURE: index is 0 or 1.
  *  - UI_EVENT_SET_OPACITY: value is 0.0 to 1.0 in steps of 0.1.
  *  - UI_EVENT_PANEL_MOVED: panel, x and y hold the new top-left position.
+ *  - UI_EVENT_SLIDER_END: the slider drag that produced the preceding UI_EVENT_SET_OPACITY events is over
+ *    (button released or capture lost); no other field is used.
  */
 typedef struct UiEvent {
     UiEventKind kind;

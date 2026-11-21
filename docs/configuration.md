@@ -9,6 +9,7 @@ The application reads one plain-text file. Every key is optional: a missing key 
 - UTF-8 with or without a byte-order mark, and LF or CRLF line endings, are accepted. Only ASCII is meaningful.
 - Booleans accept `true`/`false`, `yes`/`no`, `on`/`off`, `1`/`0`.
 - A value outside the documented range invalidates the line; the previous (default) value is kept.
+- A file that does not exist is created with the defaults. A file that exists but cannot be read, for example because another program has it locked, is left exactly as it is: the application keeps the settings it already has, shows a notice, and does not save anything until a reload reads the file successfully.
 
 ## Settings
 
@@ -73,7 +74,11 @@ A trigger is optional modifier prefixes joined by `+`, then one key or mouse but
 
 Examples: `F13`, `Ctrl+Alt+F14`, `Shift+Numpad5`, `VK_0xC0`, `XButton1`. The left and right mouse buttons and the wheel cannot be bound.
 
+A key that types text, which means a letter, a digit, `Space`, `Esc`, `Enter`, `Tab`, Backspace or a punctuation key, is accepted only together with `Ctrl`, `Alt` or `Win`. `Shift` alone does not count. A line such as `bind = A single undo` is reported as invalid and skipped, because a global hotkey takes the key away from every other program.
+
 Keyboard triggers are registered with the system as global hotkeys. If another application already owns the same combination, that trigger cannot be registered; the application reports it with the system's reason and the other triggers keep working. Pick a different key or change the other application.
+
+Only 16 different triggers can be tracked. When the file uses more, the application warns and ignores the extra ones.
 
 A bound mouse button is consumed by this application and no longer reaches other programs, so avoid binding `MButton` or the side buttons if you rely on their normal behavior.
 
@@ -106,7 +111,7 @@ Learn mode lets you assign a button without typing its name. From the settings, 
 
 While learning, the captured keys and the middle and side mouse buttons are swallowed so they do not act on other applications, and the modifier keys are swallowed too. The left and right mouse buttons keep working so you can click the interface. Press `Esc` on its own to cancel (the `Ctrl+Alt+Shift+Esc` emergency combination also cancels). Learning ends by itself after 15 seconds without a captured gesture. A single is confirmed only after the double window has passed, so expect a short pause before it is reported.
 
-Because `Esc` alone cancels, it cannot be learned as a trigger without a modifier. Type `bind = Esc single ...` in the file if you really want it.
+Keys that type text cannot be learned or bound on their own (see Triggers); learning such a key ends with a notice instead of a binding.
 
 ## Pen buttons with an XP-Pen tablet
 

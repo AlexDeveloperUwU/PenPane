@@ -35,6 +35,7 @@ struct Tray {
     HWND window;
     UINT callbackMessage;
     HICON icon;
+    bool registered;
     NOTIFYICONDATAW data;
 };
 
@@ -116,10 +117,14 @@ static HICON icon_create(void)
 static bool icon_register(Tray *tray)
 {
     bool added = Shell_NotifyIconW(NIM_ADD, &tray->data) != FALSE;
+    if (!added) {
+        added = Shell_NotifyIconW(NIM_MODIFY, &tray->data) != FALSE;
+    }
     if (added) {
         tray->data.uVersion = NOTIFYICON_VERSION_4;
         Shell_NotifyIconW(NIM_SETVERSION, &tray->data);
     }
+    tray->registered = added;
     return added;
 }
 
@@ -139,10 +144,7 @@ Tray *tray_create(HWND window, UINT callbackMessage)
     tray->data.uCallbackMessage = callbackMessage;
     tray->data.hIcon = tray->icon ? tray->icon : LoadIconW(NULL, IDI_APPLICATION);
     wcsncpy(tray->data.szTip, TRAY_TOOLTIP, ARRAYSIZE(tray->data.szTip) - 1);
-    if (!icon_register(tray)) {
-        tray_destroy(tray);
-        return NULL;
-    }
+    icon_register(tray);
     return tray;
 }
 
@@ -151,31 +153,48 @@ void tray_destroy(Tray *tray)
     if (!tray) {
         return;
     }
-    Shell_NotifyIconW(NIM_DELETE, &tray->data);
+    if (tray->registered) {
+        Shell_NotifyIconW(NIM_DELETE, &tray->data);
+    }
     if (tray->icon) {
         DestroyIcon(tray->icon);
     }
     free(tray);
 }
 
-void tray_restore(Tray *tray)
-{
-    if (tray) {
-        icon_register(tray);
-    }
-}
-
-void tray_notify(Tray *tray, const wchar_t *title, const wchar_t *text)
+bool tray_restore(Tray *tray)
 {
     if (!tray) {
-        return;
+        return false;
+    }
+    tray->registered = false;
+    return icon_register(tray);
+}
+
+bool tray_retry(Tray *tray)
+{
+    if (!tray) {
+        return false;
+    }
+    return tray->registered || icon_register(tray);
+}
+
+bool tray_is_registered(const Tray *tray)
+{
+    return tray != NULL && tray->registered;
+}
+
+bool tray_notify(Tray *tray, const wchar_t *title, const wchar_t *text)
+{
+    if (!tray || !tray->registered) {
+        return false;
     }
     NOTIFYICONDATAW data = tray->data;
     data.uFlags = NIF_INFO;
     data.dwInfoFlags = NIIF_INFO;
     wcsncpy(data.szInfoTitle, title, ARRAYSIZE(data.szInfoTitle) - 1);
     wcsncpy(data.szInfo, text, ARRAYSIZE(data.szInfo) - 1);
-    Shell_NotifyIconW(NIM_MODIFY, &data);
+    return Shell_NotifyIconW(NIM_MODIFY, &data) != FALSE;
 }
 
 /**

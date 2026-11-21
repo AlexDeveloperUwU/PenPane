@@ -55,10 +55,14 @@ typedef struct TrayEvent {
 typedef struct Tray Tray;
 
 /**
- * @brief Adds the notification-area icon.
+ * @brief Creates the notification-area icon object and tries to add it to the shell.
+ *
+ * The object exists even when the shell refuses the icon (for example because the taskbar has not
+ * been created yet at logon); use tray_is_registered to see whether the icon is visible and
+ * tray_retry or tray_restore to try again.
  * @param window Window that receives the callback message.
  * @param callbackMessage Message id (WM_APP based) the shell sends for icon events.
- * @return New instance, or NULL on failure.
+ * @return New instance, or NULL only when memory is exhausted.
  */
 Tray *tray_create(HWND window, UINT callbackMessage);
 
@@ -83,18 +87,34 @@ void tray_destroy(Tray *tray);
 bool tray_handle_message(Tray *tray, LPARAM lparam, const TrayState *state, TrayEvent *event);
 
 /**
- * @brief Re-adds the icon, for use after the "TaskbarCreated" broadcast message.
- * @param tray Instance.
+ * @brief Adds the icon again, for use after the "TaskbarCreated" broadcast message.
+ * @param tray Instance, may be NULL.
+ * @return true when the icon is registered afterwards.
  */
-void tray_restore(Tray *tray);
+bool tray_restore(Tray *tray);
+
+/**
+ * @brief Tries to register the icon when it is not registered yet; does nothing when it is.
+ * @param tray Instance, may be NULL.
+ * @return true when the icon is registered afterwards.
+ */
+bool tray_retry(Tray *tray);
+
+/**
+ * @brief Tells whether the shell currently holds the icon.
+ * @param tray Instance, may be NULL.
+ * @return true when the icon is registered.
+ */
+bool tray_is_registered(const Tray *tray);
 
 /**
  * @brief Shows a balloon notification.
  * @param tray Instance.
  * @param title Title, at most 63 characters.
  * @param text Body, at most 255 characters.
+ * @return false when the icon is not registered or the shell rejected the notification, so the caller can keep the message.
  */
-void tray_notify(Tray *tray, const wchar_t *title, const wchar_t *text);
+bool tray_notify(Tray *tray, const wchar_t *title, const wchar_t *text);
 
 /**
  * @brief Reads whether the program is registered to start with Windows (HKCU Run key).

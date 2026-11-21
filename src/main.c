@@ -47,6 +47,14 @@ static bool needs_text_services(void)
     return false;
 }
 
+/**
+ * @brief Program entry point: configures text services and process DPI awareness, then runs the application.
+ * @param instance Module instance of the executable.
+ * @param previous Always NULL on current Windows versions, unused.
+ * @param command Command line without the program name, unused.
+ * @param show Initial show state, unused because the application starts hidden.
+ * @return Process exit code.
+ */
 int WINAPI wWinMain(HINSTANCE instance, HINSTANCE previous, PWSTR command, int show)
 {
     (void)previous;

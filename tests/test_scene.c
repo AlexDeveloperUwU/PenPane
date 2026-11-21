@@ -183,8 +183,90 @@ static void test_remap(void)
     assert(rectangle.to.x == 200 && rectangle.to.y == 50);
 }
 
+/** @brief Number of reallocations still allowed to succeed, or -1 for no limit. */
+static int g_reallocBudget = -1;
+
+/**
+ * @brief Linker-wrapped realloc that fails once the test's budget is spent.
+ * @param block Block to resize.
+ * @param size New size in bytes.
+ * @return The resized block, or NULL when the budget is exhausted.
+ */
+void *__wrap_realloc(void *block, size_t size);
+
+/** @brief The real realloc, supplied by the linker through --wrap. */
+void *__real_realloc(void *block, size_t size);
+
+void *__wrap_realloc(void *block, size_t size)
+{
+    if (g_reallocBudget == 0) {
+        return NULL;
+    }
+    if (g_reallocBudget > 0) {
+        g_reallocBudget--;
+    }
+    return __real_realloc(block, size);
+}
+
+/**
+ * @brief Builds a pen stroke with a few points so that copying it allocates.
+ * @return Stroke element owning its point buffer.
+ */
+static Element make_stroke(void)
+{
+    Style style = style_default();
+    Element stroke = element_make(ELEMENT_PEN, &style);
+    for (int i = 0; i < 5; i++) {
+        assert(element_add_point(&stroke, (PenPoint){(float)i * 10.0f, 5.0f, 0.5f}));
+    }
+    return stroke;
+}
+
+/** @brief scene_add that cannot grow the step list leaves the scene, the pending step and the element untouched. */
+static void test_add_fails_when_step_cannot_grow(void)
+{
+    Scene scene;
+    scene_init(&scene);
+    Element stroke = make_stroke();
+    g_reallocBudget = 0;
+    assert(!scene_add(&scene, &stroke));
+    g_reallocBudget = -1;
+    assert(scene.count == 0);
+    assert(scene.pending.count == 0);
+    assert(stroke.points != NULL && stroke.pointCount == 5);
+    element_free(&stroke);
+    scene_destroy(&scene);
+}
+
+/** @brief scene_add that cannot grow the item list rolls back the recorded operation and leaves no dangling element. */
+static void test_add_fails_when_items_cannot_grow(void)
+{
+    Scene scene;
+    scene_init(&scene);
+    Element stroke = make_stroke();
+    g_reallocBudget = 1;
+    assert(!scene_add(&scene, &stroke));
+    g_reallocBudget = -1;
+    assert(scene.count == 0);
+    assert(scene.pending.count == 0);
+    assert(stroke.points != NULL && stroke.pointCount == 5);
+    scene_commit(&scene);
+    assert(!scene_can_undo(&scene));
+    assert(scene_add(&scene, &stroke));
+    assert(stroke.points == NULL);
+    scene_commit(&scene);
+    assert(scene.count == 1 && scene_can_undo(&scene));
+    assert(scene_undo(&scene));
+    assert(scene.count == 0);
+    assert(scene_redo(&scene));
+    assert(scene.count == 1 && scene.items[0].pointCount == 5);
+    scene_destroy(&scene);
+}
+
 int main(void)
 {
+    test_add_fails_when_step_cannot_grow();
+    test_add_fails_when_items_cannot_grow();
     test_add_undo_redo();
     test_commit_clears_redo();
     test_clear_is_undoable();

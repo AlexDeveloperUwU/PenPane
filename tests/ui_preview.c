@@ -179,6 +179,14 @@ static void parse_arguments(Preview *preview, int argc, wchar_t **argv, bool *id
     }
 }
 
+/**
+ * @brief Entry point of the preview program: parses the options, shows the islands and runs the message loop.
+ * @param instance Module instance of the executable.
+ * @param previous Unused.
+ * @param command Unused; the command line is read with CommandLineToArgvW.
+ * @param show Unused.
+ * @return Process exit code.
+ */
 int WINAPI wWinMain(HINSTANCE instance, HINSTANCE previous, PWSTR command, int show)
 {
     (void)previous;

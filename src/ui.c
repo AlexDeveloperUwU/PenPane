@@ -128,6 +128,18 @@ static void emit(Ui *ui, const UiEvent *event)
 }
 
 /**
+ * @brief Tells the handler that a slider drag has ended.
+ * @param ui UI instance.
+ */
+static void emit_slider_end(Ui *ui)
+{
+    UiEvent event;
+    memset(&event, 0, sizeof event);
+    event.kind = UI_EVENT_SLIDER_END;
+    emit(ui, &event);
+}
+
+/**
  * @brief Emits a panel moved event and records the position as the saved placement.
  * @param island Island that moved.
  */
@@ -703,6 +715,7 @@ static void island_release(Island *island, int x, int y)
     bool moved = island->dragging && island->dragMoved;
     bool handleClick = island->dragCandidate && island->forceCollapsed;
     int pressed = island->pressed;
+    bool sliderEnded = island->sliderActive;
     UiEvent event;
     memset(&event, 0, sizeof event);
     bool fire = false;
@@ -730,6 +743,9 @@ static void island_release(Island *island, int x, int y)
         }
     }
     island_timer_sync(island);
+    if (sliderEnded) {
+        emit_slider_end(island->ui);
+    }
     if (moved) {
         emit_moved(island);
     } else if (handleClick) {
@@ -844,11 +860,15 @@ static LRESULT CALLBACK island_procedure(HWND window, UINT message, WPARAM wpara
         return 0;
     case WM_CAPTURECHANGED:
         if (island->pointerDown) {
+            bool sliderEnded = island->sliderActive;
             island->pointerDown = false;
             island->dragging = false;
             island->dragCandidate = false;
             island->sliderActive = false;
             island->pressed = -1;
+            if (sliderEnded) {
+                emit_slider_end(island->ui);
+            }
         }
         return 0;
     case WM_TIMER:

@@ -561,6 +561,10 @@ static bool apply_setting(Config *config, const char *key, char *value, const ch
             *reason = "invalid binding";
             return false;
         }
+        if (!trigger_is_bindable(binding.trigger)) {
+            *reason = "plain typing key needs Ctrl, Alt or Win";
+            return false;
+        }
         if (!config_set_binding(config, binding)) {
             *reason = "too many bindings";
             return false;
@@ -606,26 +610,33 @@ static void parse_line(Config *config, char *line, int lineNumber, ErrorOut *err
  * @brief Reads a whole file into a heap buffer and appends a terminating zero.
  * @param path File path.
  * @param length Receives the number of bytes read.
+ * @param error Receives the Win32 error code when the file cannot be read.
  * @return Heap buffer to release with HeapFree, or NULL when the file cannot be read.
  */
-static char *read_file(const wchar_t *path, DWORD *length)
+static char *read_file(const wchar_t *path, DWORD *length, DWORD *error)
 {
+    *error = ERROR_SUCCESS;
     HANDLE file = CreateFileW(path, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL,
                               OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
     if (file == INVALID_HANDLE_VALUE) {
+        *error = GetLastError();
         return NULL;
     }
     LARGE_INTEGER size;
     char *buffer = NULL;
-    if (GetFileSizeEx(file, &size)) {
+    if (!GetFileSizeEx(file, &size)) {
+        *error = GetLastError();
+    } else {
         DWORD wanted = size.QuadPart > CONFIG_MAX_FILE_BYTES ? CONFIG_MAX_FILE_BYTES : (DWORD)size.QuadPart;
         buffer = HeapAlloc(GetProcessHeap(), 0, (SIZE_T)wanted + 1);
         DWORD got = 0;
-        if (buffer != NULL && !ReadFile(file, buffer, wanted, &got, NULL)) {
+        if (buffer == NULL) {
+            *error = ERROR_NOT_ENOUGH_MEMORY;
+        } else if (!ReadFile(file, buffer, wanted, &got, NULL)) {
+            *error = GetLastError();
             HeapFree(GetProcessHeap(), 0, buffer);
             buffer = NULL;
-        }
-        if (buffer != NULL) {
+        } else {
             buffer[got] = '\0';
             *length = got;
         }
@@ -657,18 +668,23 @@ void config_defaults(Config *config)
     }
 }
 
-bool config_load(Config *config, const wchar_t *path, wchar_t *errors, int errorsSize)
+ConfigStatus config_load(Config *config, const wchar_t *path, wchar_t *errors, int errorsSize)
 {
-    config_defaults(config);
     ErrorOut report = {errors, errorsSize, 0};
     if (errors != NULL && errorsSize > 0) {
         errors[0] = L'\0';
     }
     DWORD length = 0;
-    char *data = read_file(path, &length);
+    DWORD error = ERROR_SUCCESS;
+    char *data = read_file(path, &length, &error);
     if (data == NULL) {
-        return false;
+        if (error == ERROR_FILE_NOT_FOUND) {
+            config_defaults(config);
+            return CONFIG_MISSING;
+        }
+        return CONFIG_UNREADABLE;
     }
+    config_defaults(config);
     char *cursor = data;
     if (length >= 3 && (unsigned char)cursor[0] == 0xEF && (unsigned char)cursor[1] == 0xBB &&
         (unsigned char)cursor[2] == 0xBF) {
@@ -686,7 +702,7 @@ bool config_load(Config *config, const wchar_t *path, wchar_t *errors, int error
         cursor = last ? end : end + 1;
     }
     HeapFree(GetProcessHeap(), 0, data);
-    return true;
+    return CONFIG_LOADED;
 }
 
 /**
@@ -772,8 +788,47 @@ bool config_save(const Config *config, const wchar_t *path)
     return ok;
 }
 
+bool trigger_is_bindable(Trigger trigger)
+{
+    if (trigger.kind != TRIGGER_KEY) {
+        return true;
+    }
+    if ((trigger.modifiers & (TRIGGER_MOD_CONTROL | TRIGGER_MOD_ALT | TRIGGER_MOD_WIN)) != 0) {
+        return true;
+    }
+    unsigned vk = trigger.virtualKey;
+    if ((vk >= '0' && vk <= '9') || (vk >= 'A' && vk <= 'Z')) {
+        return false;
+    }
+    if (vk == VK_ESCAPE || vk == VK_RETURN || vk == VK_TAB || vk == VK_SPACE || vk == VK_BACK) {
+        return false;
+    }
+    if ((vk >= VK_OEM_1 && vk <= VK_OEM_3) || (vk >= VK_OEM_4 && vk <= VK_OEM_8) || vk == VK_OEM_102) {
+        return false;
+    }
+    return true;
+}
+
+int config_trigger_count(const Config *config)
+{
+    int distinct = 0;
+    for (int i = 0; i < config->bindingCount; i++) {
+        bool seen = false;
+        for (int j = 0; j < i && !seen; j++) {
+            seen = trigger_equals(config->bindings[j].trigger, config->bindings[i].trigger);
+        }
+        if (!seen) {
+            distinct++;
+        }
+    }
+    return distinct;
+}
+
 bool config_set_binding(Config *config, Binding binding)
 {
+    if (!trigger_is_bindable(binding.trigger)) {
+        return false;
+    }
     for (int i = 0; i < config->bindingCount; i++) {
         Binding *existing = &config->bindings[i];
         if (existing->gesture == binding.gesture && trigger_equals(existing->trigger, binding.trigger)) {

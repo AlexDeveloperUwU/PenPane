@@ -11,7 +11,7 @@ Ink is a single native executable written in C11 against Win32. There is no UI t
 | Behavior | `controller`, `pen`, `hittest`, `trail`, `tool` | Pointer and keyboard interaction for every tool, freehand model, hit testing, fading laser and eraser trails |
 | Drawing | `render` | Draws elements, selection decoration, text caret, clipped to a rectangle |
 | Input | `gesture`, `hotkeys`, `config`, `actions` | Single, double and long gestures, global hotkeys, mouse buttons, learn mode, plain-text configuration |
-| Shell | `app`, `overlay`, `ui`, `tray`, `clipboard`, `main` | State machine, overlay window, floating islands, tray icon, PNG export |
+| Shell | `app`, `overlay`, `ui`, `tray`, `clipboard`, `jobs`, `main` | State machine, overlay window, floating islands, tray icon, PNG export, background work |
 
 `model`, `gesture`, `config`, `pen` and `hittest` do not depend on Windows state and are covered by tests in `tests/`.
 
@@ -34,12 +34,13 @@ The whiteboard is always drawing; turning drawing off hides it. Desktop and whit
 
 ## Threads and timers
 
-One thread, one message loop, blocking `GetMessage`. Timers exist only while needed:
+One thread owns the windows, the hooks and one message loop, blocking `GetMessage`. The window that owns timers, hotkeys and the tray icon is a hidden top-level popup, because message-only windows get no broadcasts (note 0070). Slow work, which means configuration writes and PNG encoding, runs on a short-lived worker thread so the low-level mouse hook is never kept waiting (note 0075). Timers exist only while needed:
 
 - animation timer (16 ms) only while a laser or eraser trail is visible,
 - hotkey polling timer (12 ms) only while a bound key is held or a gesture is pending,
 - auto-hide timers, one-shot, only while a panel is expanded and idle,
-- optional annotation fade timers, one-shot.
+- optional annotation fade timers, one-shot,
+- the tray icon retry timer, one-shot with backoff, only while the shell has not accepted the icon (note 0071).
 
 ## Memory
 

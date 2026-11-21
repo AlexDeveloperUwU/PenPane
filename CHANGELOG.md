@@ -21,9 +21,20 @@ All notable changes to this project are documented here. The format follows
 
 ### Changed
 
+- Passthrough keeps a surface only as large as the annotations; memory is trimmed whenever the app is idle (hidden working set 10 MB to 0.3 MB).
+- Rasterizer fast paths and a size-optimized build (99 KB release executable, faster startup).
+- Text services are disabled when only plain Latin keyboard layouts are installed.
+
 - Tool lock is on by default so the pen stays selected between strokes.
 
 ### Fixed
+
+- Display changes, Explorer restarts and resume are now received (hidden top-level window); the tray icon is retried when registration fails.
+- Emergency exit has a fallback chain and reports when it is degraded.
+- Plain typing keys can no longer be bound as global hotkeys.
+- An unreadable configuration file is never overwritten with defaults.
+- Stuck mouse bindings are recovered on resume, unlock and lock; saves and PNG encoding no longer block the mouse hook.
+- Slider drags are one undo step; clipboard export no longer clears the clipboard on failure; out-of-memory in the scene no longer leaves dangling elements.
 
 - Pen strokes now end at the release position.
 - Undo, redo and clear no longer leave ghost selection boxes.

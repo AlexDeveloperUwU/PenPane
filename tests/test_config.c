@@ -147,7 +147,7 @@ static void test_round_trip(void)
     assert(config_set_binding(&original, extra));
     assert(config_set_binding(&original, modified));
     assert(config_save(&original, path));
-    assert(config_load(&loaded, path, NULL, 0));
+    assert(config_load(&loaded, path, NULL, 0) == CONFIG_LOADED);
     assert(config_equal(&original, &loaded));
     DeleteFileW(path);
 }
@@ -166,7 +166,7 @@ static void test_save_replaces_file(void)
     second.autoFadeSeconds = 7;
     assert(config_save(&first, path));
     assert(config_save(&second, path));
-    assert(config_load(&loaded, path, NULL, 0));
+    assert(config_load(&loaded, path, NULL, 0) == CONFIG_LOADED);
     assert(loaded.autoFadeSeconds == 7);
     wcscpy(temporary, path);
     wcscat(temporary, L".tmp");
@@ -185,7 +185,7 @@ static void test_missing_file(void)
     DeleteFileW(path);
     config_defaults(&defaults);
     config.doubleWindowMs = 1;
-    assert(!config_load(&config, path, errors, 128));
+    assert(config_load(&config, path, errors, 128) == CONFIG_MISSING);
     assert(config_equal(&config, &defaults));
     assert(errors[0] == L'\0');
 }
@@ -218,7 +218,7 @@ static void test_bad_lines_skipped(void)
                "default_tool = ellipse\r\n"
                "bind = F16 double redo\r\n"
                "properties_pos = 5, 6\r\n");
-    assert(config_load(&config, path, errors, 512));
+    assert(config_load(&config, path, errors, 512) == CONFIG_LOADED);
     assert(config.doubleWindowMs == 250);
     assert(config.longPressMs == 600);
     assert(config.defaultTool == TOOL_ELLIPSE);
@@ -247,9 +247,9 @@ static void test_error_buffer_bounds(void)
     Config config;
     scratch_path(L"ink_test_small_errors.cfg", path, MAX_PATH);
     write_text(path, "a = 1\nb = 2\nc = 3\nd = 4\n");
-    assert(config_load(&config, path, errors, 16));
+    assert(config_load(&config, path, errors, 16) == CONFIG_LOADED);
     assert(wcslen(errors) < 16);
-    assert(config_load(&config, path, NULL, 0));
+    assert(config_load(&config, path, NULL, 0) == CONFIG_LOADED);
     DeleteFileW(path);
 }
 
@@ -261,12 +261,12 @@ static void test_reset_bindings(void)
     Action action;
     scratch_path(L"ink_test_reset.cfg", path, MAX_PATH);
     write_text(path, "bind = F13 single redo\n");
-    assert(config_load(&config, path, NULL, 0));
+    assert(config_load(&config, path, NULL, 0) == CONFIG_LOADED);
     assert(config.bindingCount == 5);
     assert(find_binding(&config, key(VK_F13, 0), GESTURE_SINGLE, &action) && action == ACTION_REDO);
 
     write_text(path, "reset_bindings = true\nbind = F20 long clear\n");
-    assert(config_load(&config, path, NULL, 0));
+    assert(config_load(&config, path, NULL, 0) == CONFIG_LOADED);
     assert(config.bindingCount == 1);
     assert(find_binding(&config, key(VK_F20, 0), GESTURE_LONG, &action) && action == ACTION_CLEAR);
     DeleteFileW(path);
@@ -279,7 +279,7 @@ static void test_bom_and_spacing(void)
     Config config;
     scratch_path(L"ink_test_bom.cfg", path, MAX_PATH);
     write_text(path, "\xEF\xBB\xBF  double_press_ms=  400  \n\t# note\nLONG_PRESS_MS = 700");
-    assert(config_load(&config, path, NULL, 0));
+    assert(config_load(&config, path, NULL, 0) == CONFIG_LOADED);
     assert(config.doubleWindowMs == 400);
     assert(config.longPressMs == 700);
     DeleteFileW(path);
@@ -301,10 +301,12 @@ static void test_set_binding(void)
     assert(config.bindingCount == 6);
 
     while (config.bindingCount < CONFIG_MAX_BINDINGS) {
-        Binding filler = {key(0x41, (unsigned)config.bindingCount), GESTURE_SINGLE, ACTION_UNDO};
+        unsigned number = (unsigned)config.bindingCount;
+        Binding filler = {key(0x41 + number % 26u, TRIGGER_MOD_CONTROL | (number / 26u) * TRIGGER_MOD_SHIFT),
+                          GESTURE_SINGLE, ACTION_UNDO};
         assert(config_set_binding(&config, filler));
     }
-    Binding overflow = {key(0x42, 0), GESTURE_SINGLE, ACTION_UNDO};
+    Binding overflow = {key(0x42, TRIGGER_MOD_CONTROL | TRIGGER_MOD_ALT), GESTURE_SINGLE, ACTION_UNDO};
     assert(!config_set_binding(&config, overflow));
     assert(config_set_binding(&config, override));
 }
@@ -327,7 +329,7 @@ static void test_clear_action(void)
 
     scratch_path(L"ink_test_clear.cfg", path, MAX_PATH);
     assert(config_save(&config, path));
-    assert(config_load(&loaded, path, NULL, 0));
+    assert(config_load(&loaded, path, NULL, 0) == CONFIG_LOADED);
     assert(config_equal(&config, &loaded));
     config_clear_action(&config, ACTION_CLEAR);
     config_clear_action(&config, ACTION_NEXT_TOOL);
@@ -335,7 +337,7 @@ static void test_clear_action(void)
     config_clear_action(&config, ACTION_TOGGLE_OVERLAY);
     assert(config.bindingCount == 0);
     assert(config_save(&config, path));
-    assert(config_load(&loaded, path, NULL, 0));
+    assert(config_load(&loaded, path, NULL, 0) == CONFIG_LOADED);
     assert(loaded.bindingCount == 0);
     DeleteFileW(path);
 }
@@ -423,12 +425,135 @@ static void test_trigger_to_text_truncation(void)
     assert(text[0] == L'\0');
 }
 
+/** @brief A file that cannot be opened for a reason other than absence is unreadable and leaves the configuration untouched. */
+static void test_unreadable_file_is_not_missing(void)
+{
+    wchar_t path[MAX_PATH];
+    wchar_t folder[MAX_PATH];
+    Config config;
+    scratch_path(L"ink_test_locked.cfg", path, MAX_PATH);
+    write_text(path, "double_press_ms = 111\n");
+    HANDLE lock = CreateFileW(path, GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    assert(lock != INVALID_HANDLE_VALUE);
+    config_defaults(&config);
+    config.doubleWindowMs = 77;
+    config.bindingCount = 2;
+    assert(config_load(&config, path, NULL, 0) == CONFIG_UNREADABLE);
+    assert(config.doubleWindowMs == 77 && config.bindingCount == 2);
+    CloseHandle(lock);
+    assert(config_load(&config, path, NULL, 0) == CONFIG_LOADED);
+    assert(config.doubleWindowMs == 111);
+    DeleteFileW(path);
+
+    scratch_path(L"ink_test_folder.cfg", folder, MAX_PATH);
+    RemoveDirectoryW(folder);
+    assert(CreateDirectoryW(folder, NULL));
+    config.doubleWindowMs = 78;
+    assert(config_load(&config, folder, NULL, 0) == CONFIG_UNREADABLE);
+    assert(config.doubleWindowMs == 78);
+    RemoveDirectoryW(folder);
+
+    scratch_path(L"ink_test_no_such_folder\\ink.ini", path, MAX_PATH);
+    config.doubleWindowMs = 79;
+    assert(config_load(&config, path, NULL, 0) == CONFIG_UNREADABLE);
+    assert(config.doubleWindowMs == 79);
+}
+
+/** @brief Plain typing keys need Ctrl, Alt or Win; Shift alone does not count; other keys and mouse buttons are free. */
+static void test_bindable_triggers(void)
+{
+    for (unsigned vk = 'A'; vk <= 'Z'; vk++) {
+        assert(!trigger_is_bindable(key(vk, 0)));
+        assert(!trigger_is_bindable(key(vk, TRIGGER_MOD_SHIFT)));
+        assert(trigger_is_bindable(key(vk, TRIGGER_MOD_CONTROL)));
+        assert(trigger_is_bindable(key(vk, TRIGGER_MOD_ALT | TRIGGER_MOD_SHIFT)));
+        assert(trigger_is_bindable(key(vk, TRIGGER_MOD_WIN)));
+    }
+    for (unsigned vk = '0'; vk <= '9'; vk++) {
+        assert(!trigger_is_bindable(key(vk, 0)));
+    }
+    assert(!trigger_is_bindable(key(VK_ESCAPE, 0)));
+    assert(!trigger_is_bindable(key(VK_RETURN, 0)));
+    assert(!trigger_is_bindable(key(VK_TAB, 0)));
+    assert(!trigger_is_bindable(key(VK_SPACE, TRIGGER_MOD_SHIFT)));
+    assert(!trigger_is_bindable(key(VK_BACK, 0)));
+    assert(!trigger_is_bindable(key(VK_OEM_COMMA, 0)));
+    assert(!trigger_is_bindable(key(VK_OEM_3, 0)));
+    assert(trigger_is_bindable(key(VK_ESCAPE, TRIGGER_MOD_CONTROL | TRIGGER_MOD_ALT | TRIGGER_MOD_SHIFT)));
+    assert(trigger_is_bindable(key(VK_F13, 0)));
+    assert(trigger_is_bindable(key(VK_F1, TRIGGER_MOD_SHIFT)));
+    assert(trigger_is_bindable(key(VK_NUMPAD0, 0)));
+    assert(trigger_is_bindable(key(VK_LEFT, 0)));
+    Trigger middle = {TRIGGER_MOUSE_BUTTON, VK_MBUTTON, 0};
+    assert(trigger_is_bindable(middle));
+}
+
+/** @brief Plain typing keys are rejected from the file and from set_binding, with a reported line, and never stored. */
+static void test_plain_keys_rejected(void)
+{
+    wchar_t path[MAX_PATH];
+    wchar_t errors[512];
+    Config config;
+    Action action;
+    scratch_path(L"ink_test_plain.cfg", path, MAX_PATH);
+    write_text(path,
+               "reset_bindings = true\n"
+               "bind = A single undo\n"
+               "bind = Shift+B single redo\n"
+               "bind = Esc double clear\n"
+               "bind = Space long clear\n"
+               "bind = 5 single clear\n"
+               "bind = Ctrl+A single undo\n"
+               "bind = Win+Esc single redo\n"
+               "bind = F15 single next_tool\n");
+    assert(config_load(&config, path, errors, 512) == CONFIG_LOADED);
+    assert(config.bindingCount == 3);
+    assert(!find_binding(&config, key('A', 0), GESTURE_SINGLE, &action));
+    assert(!find_binding(&config, key(VK_ESCAPE, 0), GESTURE_DOUBLE, &action));
+    assert(find_binding(&config, key('A', TRIGGER_MOD_CONTROL), GESTURE_SINGLE, &action));
+    assert(find_binding(&config, key(VK_F15, 0), GESTURE_SINGLE, &action));
+    assert(wcsstr(errors, L"line 2:") != NULL && wcsstr(errors, L"line 3:") != NULL);
+    assert(wcsstr(errors, L"line 4:") != NULL && wcsstr(errors, L"line 5:") != NULL);
+    assert(wcsstr(errors, L"line 6:") != NULL);
+    assert(wcsstr(errors, L"line 7:") == NULL && wcsstr(errors, L"line 9:") == NULL);
+    DeleteFileW(path);
+
+    config_defaults(&config);
+    int before = config.bindingCount;
+    Binding plain = {key('Q', 0), GESTURE_SINGLE, ACTION_UNDO};
+    assert(!config_set_binding(&config, plain));
+    assert(config.bindingCount == before);
+    plain.trigger = key('Q', TRIGGER_MOD_ALT);
+    assert(config_set_binding(&config, plain));
+    assert(config.bindingCount == before + 1);
+}
+
+/** @brief The distinct trigger count ignores repeated triggers and distinguishes modifiers. */
+static void test_trigger_count(void)
+{
+    Config config;
+    config_defaults(&config);
+    assert(config_trigger_count(&config) == 2);
+    Binding extra = {key(VK_F13, TRIGGER_MOD_CONTROL), GESTURE_SINGLE, ACTION_UNDO};
+    assert(config_set_binding(&config, extra));
+    assert(config_trigger_count(&config) == 3);
+    extra.gesture = GESTURE_LONG;
+    assert(config_set_binding(&config, extra));
+    assert(config_trigger_count(&config) == 3);
+    config.bindingCount = 0;
+    assert(config_trigger_count(&config) == 0);
+}
+
 /**
  * @brief Runs every configuration test.
  * @return 0 when all assertions hold.
  */
 int main(void)
 {
+    test_unreadable_file_is_not_missing();
+    test_bindable_triggers();
+    test_plain_keys_rejected();
+    test_trigger_count();
     test_defaults();
     test_round_trip();
     test_save_replaces_file();
@@ -442,6 +567,6 @@ int main(void)
     test_trigger_text_round_trip();
     test_trigger_parsing();
     test_trigger_to_text_truncation();
-    printf("test_config: 13 tests passed\n");
+    printf("test_config: 17 tests passed\n");
     return 0;
 }

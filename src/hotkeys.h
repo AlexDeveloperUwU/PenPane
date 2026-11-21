@@ -27,14 +27,21 @@
  */
 typedef void (*HotkeyActionHandler)(void *user, Action action);
 
+/** @brief How learn mode ended. */
+typedef enum LearnOutcome {
+    LEARN_CAPTURED,
+    LEARN_CANCELLED,
+    LEARN_REJECTED
+} LearnOutcome;
+
 /**
  * @brief Receives the result of learn mode.
  * @param user Opaque pointer given to hotkeys_create.
  * @param action Action that was being learned.
- * @param binding Captured trigger and gesture; meaningful only when captured is true.
- * @param captured false when learn mode ended without a capture (cancelled or timed out).
+ * @param binding Captured trigger and gesture; meaningful only when outcome is LEARN_CAPTURED.
+ * @param outcome LEARN_CAPTURED, LEARN_CANCELLED (escape, timeout, resume) or LEARN_REJECTED (a plain typing key that needs Ctrl, Alt or Win).
  */
-typedef void (*HotkeyLearnHandler)(void *user, Action action, Binding binding, bool captured);
+typedef void (*HotkeyLearnHandler)(void *user, Action action, Binding binding, LearnOutcome outcome);
 
 /** @brief Opaque instance. */
 typedef struct Hotkeys Hotkeys;
@@ -98,9 +105,19 @@ bool hotkeys_handle_message(Hotkeys *hotkeys, UINT message, WPARAM wparam, LPARA
 bool hotkeys_learn_begin(Hotkeys *hotkeys, Action action);
 
 /**
- * @brief Cancels learn mode if it is running; the learn handler is called with captured false.
+ * @brief Cancels learn mode if it is running; the learn handler is called with LEARN_CANCELLED.
  * @param hotkeys Instance.
  */
 void hotkeys_learn_cancel(Hotkeys *hotkeys);
+
+/**
+ * @brief Recovers from a period in which input may have been missed, such as sleep or a locked session.
+ *
+ * Releases every mouse trigger the engine still considers held, drops queued events, cancels learn
+ * mode and installs the low-level hooks again, because the system removes a hook silently when it
+ * does not answer in time.
+ * @param hotkeys Instance, may be NULL.
+ */
+void hotkeys_reset_hooks(Hotkeys *hotkeys);
 
 #endif
