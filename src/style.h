@@ -1,9 +1,10 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /**
  * @file style.h
  * @brief Element appearance properties and the Excalidraw dark palettes.
  */
-#ifndef INK_STYLE_H
-#define INK_STYLE_H
+#ifndef PENPANE_STYLE_H
+#define PENPANE_STYLE_H
 
 #include <stdbool.h>
 

@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /**
  * @file gesture.h
  * @brief Platform-independent resolver that turns key/button presses into single, double and long gestures.
@@ -12,8 +13,8 @@
  *  - A trigger with a double binding delays its single action by doubleWindowMs after release,
  *    so that a second press inside the window fires the double action instead.
  */
-#ifndef INK_GESTURE_H
-#define INK_GESTURE_H
+#ifndef PENPANE_GESTURE_H
+#define PENPANE_GESTURE_H
 
 #include <stdbool.h>
 #include <stdint.h>

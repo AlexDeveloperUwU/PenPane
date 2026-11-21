@@ -1,13 +1,14 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /**
  * @file actions.h
  * @brief The complete list of actions that can be bound to a button or key.
  */
-#ifndef INK_ACTIONS_H
-#define INK_ACTIONS_H
+#ifndef PENPANE_ACTIONS_H
+#define PENPANE_ACTIONS_H
 
 #include <stdbool.h>
 
-#define INK_ACTION_LIST(X)                                  \
+#define PENPANE_ACTION_LIST(X)                              \
     X(ACTION_TOGGLE_OVERLAY, "toggle_overlay")              \
     X(ACTION_TOGGLE_MODE, "toggle_mode")                    \
     X(ACTION_TOOL_SELECT, "tool_select")                    \
@@ -33,9 +34,9 @@
 
 /** @brief Every bindable action. */
 typedef enum Action {
-#define INK_ACTION_ENUM(id, name) id,
-    INK_ACTION_LIST(INK_ACTION_ENUM)
-#undef INK_ACTION_ENUM
+#define PENPANE_ACTION_ENUM(id, name) id,
+    PENPANE_ACTION_LIST(PENPANE_ACTION_ENUM)
+#undef PENPANE_ACTION_ENUM
     ACTION_COUNT
 } Action;
 

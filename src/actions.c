@@ -1,12 +1,13 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 #include "actions.h"
 
 #include <strings.h>
 
 /** @brief Configuration-file names indexed by Action. */
 static const char *const ACTION_NAMES[ACTION_COUNT] = {
-#define INK_ACTION_NAME(id, name) name,
-    INK_ACTION_LIST(INK_ACTION_NAME)
-#undef INK_ACTION_NAME
+#define PENPANE_ACTION_NAME(id, name) name,
+    PENPANE_ACTION_LIST(PENPANE_ACTION_NAME)
+#undef PENPANE_ACTION_NAME
 };
 
 const char *action_name(Action action)

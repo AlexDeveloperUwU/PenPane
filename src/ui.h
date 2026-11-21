@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /**
  * @file ui.h
  * @brief Floating toolbar, properties panel and history panel in Excalidraw dark style.
@@ -7,8 +8,8 @@
  * user choice is reported through the event handler and the application pushes state back with
  * ui_update.
  */
-#ifndef INK_UI_H
-#define INK_UI_H
+#ifndef PENPANE_UI_H
+#define PENPANE_UI_H
 
 #include <stdbool.h>
 #include <windows.h>

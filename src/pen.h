@@ -1,14 +1,15 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /**
  * @file pen.h
  * @brief Freehand stroke model: streamlining, simulated pressure and variable-width outline emission.
  *
  * Follows Excalidraw's perfect-freehand settings: thinning 0.6, streamline 0.5, sine easing, and
- * speed based pressure simulation when no real pressure exists. Ink's width presets are twice
+ * speed based pressure simulation when no real pressure exists. PenPane's width presets are twice
  * Excalidraw's pen widths, so the outline diameter is the preset width times 4.25 times the eased
  * pressure. A constant width mode reproduces Excalidraw's default "constant" pressure setting.
  */
-#ifndef INK_PEN_H
-#define INK_PEN_H
+#ifndef PENPANE_PEN_H
+#define PENPANE_PEN_H
 
 #include <stdbool.h>
 

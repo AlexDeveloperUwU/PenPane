@@ -13,7 +13,7 @@ Keep signed distance coverage (`0.5 - d`) blended in sRGB without gamma. Restric
 
 ## Why
 
-Excalidraw's canvas produces edge pixels equal to exact area coverage with no gamma: a 2.75 px line centred on a pixel boundary has edge values 0.37, which Ink reproduces within 0.03. Adding gamma would make Ink's strokes look lighter than the reference. A 1200 px diagonal arrow touched about one million pixels per capsule; the row spans cut a diagonal arrow to well under a millisecond.
+Excalidraw's canvas produces edge pixels equal to exact area coverage with no gamma: a 2.75 px line centred on a pixel boundary has edge values 0.37, which PenPane reproduces within 0.03. Adding gamma would make PenPane's strokes look lighter than the reference. A 1200 px diagonal arrow touched about one million pixels per capsule; the row spans cut a diagonal arrow to well under a millisecond.
 
 ## Alternatives rejected
 

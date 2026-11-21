@@ -1,9 +1,10 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /**
  * @file overlay.h
  * @brief Full-screen transparent layered window that can capture or ignore input.
  */
-#ifndef INK_OVERLAY_H
-#define INK_OVERLAY_H
+#ifndef PENPANE_OVERLAY_H
+#define PENPANE_OVERLAY_H
 
 #include <stdbool.h>
 #include <windows.h>

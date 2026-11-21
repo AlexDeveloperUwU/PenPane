@@ -1,10 +1,11 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /**
  * @file render_preview.c
  * @brief Headless rendering harness: draws reference scenes to PNG files and prints measurements.
  *
  * Usage: render_preview OUTPUT_DIRECTORY
  *
- * Writes shapes.png, pens.png, trails.png and selection.png, and prints stroke thickness tables and
+ * Writes shapes.png, pens.png, sample.png, trails.png and selection.png, and prints stroke thickness tables and
  * pixel dumps in the same format that was used to measure Excalidraw, so the two can be compared.
  */
 #include <math.h>
@@ -283,7 +284,7 @@ static void draw_shape(Canvas *canvas, ElementType type, const Style *style, flo
 /**
  * @brief Draws a horizontal pen stroke emulating pointer events at a fixed spacing.
  * @param canvas Target canvas.
- * @param width Ink width preset.
+ * @param width PenPane width preset.
  * @param spacing Distance between pointer events in pixels.
  * @param mode Pressure argument for the pen builder.
  * @param x Start x.
@@ -312,7 +313,7 @@ static void run_pen_table(Canvas *canvas)
 {
     static const float spacings[] = {1, 2, 3, 4, 6, 8, 12};
     static const float widths[] = {2, 4, 8};
-    printf("Pen thickness, variable mode (Ink width, spacing: start, 15%%, 35%%, 55%%, 95%%)\n");
+    printf("Pen thickness, variable mode (PenPane width, spacing: start, 15%%, 35%%, 55%%, 95%%)\n");
     for (int w = 0; w < 3; w++) {
         for (int s = 0; s < 7; s++) {
             clear_scene(canvas);
@@ -428,6 +429,64 @@ static void draw_pens_scene(Canvas *canvas)
             }
         }
     }
+}
+
+/**
+ * @brief Draws a pen stroke along a parametric path.
+ * @param canvas Target canvas.
+ * @param stroke Stroke color.
+ * @param width PenPane width preset.
+ * @param centerX Center x of the path.
+ * @param centerY Center y of the path.
+ * @param radiusX Horizontal radius.
+ * @param radiusY Vertical radius.
+ * @param turns Number of turns around the center.
+ * @param drift Horizontal drift per turn, in pixels.
+ */
+static void draw_loop_stroke(Canvas *canvas, Color stroke, float width, float centerX, float centerY,
+                             float radiusX, float radiusY, float turns, float drift)
+{
+    Style style = style_default();
+    style.stroke = stroke;
+    style.width = width;
+    Element element = element_make(ELEMENT_PEN, &style);
+    PenBuilder builder;
+    const float step = 0.06f;
+    float end = turns * 6.2831853f;
+    pen_begin(&builder, &element, (Point){centerX + radiusX, centerY}, PEN_PRESSURE_SIMULATED);
+    for (float angle = step; angle <= end; angle += step) {
+        Point p = {centerX + radiusX * cosf(angle) + drift * angle / 6.2831853f, centerY + radiusY * sinf(angle)};
+        pen_add(&builder, &element, p, PEN_PRESSURE_SIMULATED);
+    }
+    pen_finish(&builder, &element);
+    draw_and_free(canvas, &element);
+}
+
+/**
+ * @brief Draws a typical annotation: a highlighted region, an arrow, a circled item and a hand-drawn underline.
+ * @param canvas Target canvas.
+ */
+static void draw_sample_scene(Canvas *canvas)
+{
+    clear_scene(canvas);
+    Style style = style_default();
+    style.stroke = COLOR_STROKE_RED;
+    style.width = 2;
+    draw_shape(canvas, ELEMENT_RECTANGLE, &style, 90, 120, 480, 300);
+    style.width = 4;
+    draw_shape(canvas, ELEMENT_ARROW, &style, 760, 120, 500, 220);
+    style = style_default();
+    style.stroke = COLOR_STROKE_BLUE;
+    style.fill = COLOR_FILL_BLUE;
+    style.width = 2;
+    draw_shape(canvas, ELEMENT_ELLIPSE, &style, 600, 340, 900, 520);
+    style = style_default();
+    style.stroke = COLOR_STROKE_GREEN;
+    style.strokeStyle = STROKE_DASHED;
+    style.width = 2;
+    draw_shape(canvas, ELEMENT_LINE, &style, 90, 380, 480, 380);
+    draw_loop_stroke(canvas, COLOR_STROKE_ORANGE, 2, 200, 470, 90, 22, 1.0f, 190);
+    draw_loop_stroke(canvas, COLOR_STROKE_DEFAULT, 1, 300, 600, 120, 36, 3.0f, 0);
 }
 
 /**
@@ -558,6 +617,10 @@ int main(int argc, char **argv)
 
     draw_pens_scene(&canvas);
     snprintf(path, sizeof path, "%s\\pens.png", directory);
+    save_png(&canvas, path, 0, 0, SCENE_WIDTH, 740, 1);
+
+    draw_sample_scene(&canvas);
+    snprintf(path, sizeof path, "%s\\sample.png", directory);
     save_png(&canvas, path, 0, 0, SCENE_WIDTH, 740, 1);
 
     draw_trails_scene(&canvas);

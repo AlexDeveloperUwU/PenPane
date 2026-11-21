@@ -1,9 +1,10 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /**
  * @file tray.h
  * @brief Notification-area icon and its context menu.
  */
-#ifndef INK_TRAY_H
-#define INK_TRAY_H
+#ifndef PENPANE_TRAY_H
+#define PENPANE_TRAY_H
 
 #include <stdbool.h>
 #include <windows.h>

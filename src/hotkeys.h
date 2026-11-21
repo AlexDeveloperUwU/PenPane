@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /**
  * @file hotkeys.h
  * @brief Global hotkeys, mouse-button triggers and learn mode on top of the gesture engine.
@@ -12,8 +13,8 @@
  * The emergency exit (Ctrl+Alt+Shift+Esc) is registered separately by the owner of the message
  * window and is not part of the binding table.
  */
-#ifndef INK_HOTKEYS_H
-#define INK_HOTKEYS_H
+#ifndef PENPANE_HOTKEYS_H
+#define PENPANE_HOTKEYS_H
 
 #include <stdbool.h>
 #include <windows.h>

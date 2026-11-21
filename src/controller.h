@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /**
  * @file controller.h
  * @brief Turns pointer and keyboard input into tool behavior: drawing, selecting, erasing, laser, text.
@@ -6,8 +7,8 @@
  * the attached scene. It never touches the screen; it reports which regions need repaint and
  * which were already drawn directly, and draws its own overlays on request.
  */
-#ifndef INK_CONTROLLER_H
-#define INK_CONTROLLER_H
+#ifndef PENPANE_CONTROLLER_H
+#define PENPANE_CONTROLLER_H
 
 #include <stdbool.h>
 #include <stdint.h>

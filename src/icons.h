@@ -1,9 +1,10 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /**
  * @file icons.h
  * @brief Stroke-based vector icons drawn with the rasterizer on a 16 unit grid.
  */
-#ifndef INK_ICONS_H
-#define INK_ICONS_H
+#ifndef PENPANE_ICONS_H
+#define PENPANE_ICONS_H
 
 #include "canvas.h"
 

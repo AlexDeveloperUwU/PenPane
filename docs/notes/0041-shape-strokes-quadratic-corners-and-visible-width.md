@@ -5,7 +5,7 @@
 
 ## Problem
 
-Measured Excalidraw shapes differ from Ink's in three ways: rounded rectangle corners are not circular arcs, the thin preset is drawn 1.5 px wide instead of 1 px, and dashes follow `[8, 8 + width]` with round caps rather than Ink's pattern shifted by half a pixel.
+Measured Excalidraw shapes differ from PenPane's in three ways: rounded rectangle corners are not circular arcs, the thin preset is drawn 1.5 px wide instead of 1 px, and dashes follow `[8, 8 + width]` with round caps rather than PenPane's pattern shifted by half a pixel.
 
 ## Decision
 

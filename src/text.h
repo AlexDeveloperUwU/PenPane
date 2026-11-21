@@ -1,9 +1,10 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /**
  * @file text.h
  * @brief Text measurement and rasterization into coverage masks using GDI with grayscale anti-aliasing.
  */
-#ifndef INK_TEXT_H
-#define INK_TEXT_H
+#ifndef PENPANE_TEXT_H
+#define PENPANE_TEXT_H
 
 #include <stdbool.h>
 #include <wchar.h>

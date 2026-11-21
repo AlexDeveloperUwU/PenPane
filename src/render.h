@@ -1,9 +1,10 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /**
  * @file render.h
  * @brief Draws elements and scenes onto a canvas, restricted to a clip rectangle.
  */
-#ifndef INK_RENDER_H
-#define INK_RENDER_H
+#ifndef PENPANE_RENDER_H
+#define PENPANE_RENDER_H
 
 #include "canvas.h"
 #include "element.h"

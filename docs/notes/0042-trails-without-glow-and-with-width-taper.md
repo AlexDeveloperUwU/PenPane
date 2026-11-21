@@ -5,7 +5,7 @@
 
 ## Problem
 
-Ink's laser had a translucent halo and a quadratic width fade, and its radii (4 and 3) were guesses. Excalidraw's trails keep one fixed colour and shrink instead of fading.
+PenPane's laser had a translucent halo and a quadratic width fade, and its radii (4 and 3) were guesses. Excalidraw's trails keep one fixed colour and shrink instead of fading.
 
 ## Decision
 

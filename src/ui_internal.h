@@ -1,10 +1,11 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /**
  * @file ui_internal.h
  * @brief Private interfaces shared by the UI implementation files: layout items, layout building
  *        and painting. Not part of the public UI API.
  */
-#ifndef INK_UI_INTERNAL_H
-#define INK_UI_INTERNAL_H
+#ifndef PENPANE_UI_INTERNAL_H
+#define PENPANE_UI_INTERNAL_H
 
 #include <stdbool.h>
 #include <windows.h>

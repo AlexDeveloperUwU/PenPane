@@ -1,0 +1,51 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Check that the tag matches the version
+        shell: powershell
+        run: |
+          $line = Select-String -Path src\version.h -Pattern 'define PENPANE_VERSION_STRING "([^"]+)"'
+          $version = $line.Matches[0].Groups[1].Value
+          if ("${{ github.ref_name }}" -ne "v$version") {
+            throw "Tag ${{ github.ref_name }} does not match version $version in src\version.h."
+          }
+
+      - name: Install toolchain
+        id: toolchain
+        shell: powershell
+        run: |
+          $path = powershell -NoProfile -ExecutionPolicy Bypass -File scripts\setup-toolchain.ps1 -Root "$env:RUNNER_TEMP\tools"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          "path=$($path | Select-Object -Last 1)" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+
+      - name: Build
+        shell: powershell
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File scripts\build.ps1 -Toolchain "${{ steps.toolchain.outputs.path }}"
+
+      - name: Test
+        shell: powershell
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File scripts\test.ps1 -Toolchain "${{ steps.toolchain.outputs.path }}"
+
+      - name: Compute checksum
+        shell: powershell
+        run: |
+          $hash = (Get-FileHash build\penpane.exe -Algorithm SHA256).Hash.ToLower()
+          [System.IO.File]::WriteAllText("$PWD\build\penpane.exe.sha256", "$hash  penpane.exe`n")
+
+      - name: Create release
+        shell: powershell
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "${{ github.ref_name }}" build\penpane.exe build\penpane.exe.sha256 --title "PenPane ${{ github.ref_name }}" --generate-notes --verify-tag

@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /**
  * @file raster.h
  * @brief Anti-aliased shape rasterization into 8-bit coverage masks.
@@ -6,8 +7,8 @@
  * canvas in one pass. Accumulating a whole stroke into one mask with a maximum operator avoids
  * the double darkening that overlapping segments would otherwise cause.
  */
-#ifndef INK_RASTER_H
-#define INK_RASTER_H
+#ifndef PENPANE_RASTER_H
+#define PENPANE_RASTER_H
 
 #include <stdbool.h>
 #include <stdint.h>

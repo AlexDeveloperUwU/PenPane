@@ -1,9 +1,10 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /**
  * @file clipboard.h
  * @brief Copies a rendered drawing to the clipboard as PNG (and as a bitmap for older applications).
  */
-#ifndef INK_CLIPBOARD_H
-#define INK_CLIPBOARD_H
+#ifndef PENPANE_CLIPBOARD_H
+#define PENPANE_CLIPBOARD_H
 
 #include <stdbool.h>
 #include <windows.h>

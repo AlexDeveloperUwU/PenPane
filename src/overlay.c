@@ -1,8 +1,9 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 #include "overlay.h"
 
 #include <string.h>
 
-#define OVERLAY_CLASS_NAME L"InkOverlayWindow"
+#define OVERLAY_CLASS_NAME L"PenPaneOverlayWindow"
 #define OVERLAY_BASE_STYLE (WS_EX_LAYERED | WS_EX_TOPMOST | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE)
 
 bool overlay_create(Overlay *overlay, HINSTANCE instance, RECT bounds, WNDPROC procedure,
@@ -23,7 +24,7 @@ bool overlay_create(Overlay *overlay, HINSTANCE instance, RECT bounds, WNDPROC p
     int width = bounds.right - bounds.left;
     int height = bounds.bottom - bounds.top;
     overlay->window =
-        CreateWindowExW(OVERLAY_BASE_STYLE | WS_EX_TRANSPARENT, OVERLAY_CLASS_NAME, L"Ink",
+        CreateWindowExW(OVERLAY_BASE_STYLE | WS_EX_TRANSPARENT, OVERLAY_CLASS_NAME, L"PenPane",
                         WS_POPUP, bounds.left, bounds.top, width, height, NULL, NULL, instance,
                         owner);
     if (!overlay->window) {

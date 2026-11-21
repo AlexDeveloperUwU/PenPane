@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 #include "ui.h"
 
 #include <stdlib.h>
@@ -7,7 +8,7 @@
 #include "shapes_ui.h"
 #include "ui_internal.h"
 
-#define ISLAND_CLASS L"InkIsland"
+#define ISLAND_CLASS L"PenPaneIsland"
 #define AUTO_HIDE_TIMER_ID 1
 #define AUTO_HIDE_DEFAULT_MS 1200
 #define AUTO_HIDE_MIN_MS 200
@@ -953,7 +954,7 @@ Ui *ui_create(HINSTANCE instance, UiEventHandler handler, void *user, const UiSe
         island->hover = -1;
         island->pressed = -1;
         island->window = CreateWindowExW(WS_EX_LAYERED | WS_EX_TOPMOST | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE,
-                                         ISLAND_CLASS, L"Ink island", WS_POPUP, 0, 0, 1, 1, NULL, NULL,
+                                         ISLAND_CLASS, L"PenPane island", WS_POPUP, 0, 0, 1, 1, NULL, NULL,
                                          instance, island);
         if (!island->window) {
             ui_destroy(ui);

@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
@@ -129,7 +130,7 @@ static void test_round_trip(void)
     wchar_t path[MAX_PATH];
     Config original;
     Config loaded;
-    scratch_path(L"ink_test_roundtrip.cfg", path, MAX_PATH);
+    scratch_path(L"penpane_test_roundtrip.cfg", path, MAX_PATH);
     config_defaults(&original);
     original.doubleWindowMs = 250;
     original.longPressMs = 900;
@@ -164,7 +165,7 @@ static void test_pinned_keys(void)
     wchar_t path[MAX_PATH];
     wchar_t errors[256];
     Config config;
-    scratch_path(L"ink_test_pinned.cfg", path, MAX_PATH);
+    scratch_path(L"penpane_test_pinned.cfg", path, MAX_PATH);
     write_text(path, "toolbar_pinned = true\nproperties_pinned = 1\nhistory_pinned = maybe\n");
     assert(config_load(&config, path, errors, 256) == CONFIG_LOADED);
     assert(config.ui.pinned[PANEL_TOOLBAR] && config.ui.pinned[PANEL_PROPERTIES]);
@@ -185,7 +186,7 @@ static void test_save_replaces_file(void)
     Config first;
     Config second;
     Config loaded;
-    scratch_path(L"ink_test_replace.cfg", path, MAX_PATH);
+    scratch_path(L"penpane_test_replace.cfg", path, MAX_PATH);
     config_defaults(&first);
     config_defaults(&second);
     second.autoFadeSeconds = 7;
@@ -206,7 +207,7 @@ static void test_missing_file(void)
     wchar_t errors[128];
     Config config;
     Config defaults;
-    scratch_path(L"ink_test_does_not_exist.cfg", path, MAX_PATH);
+    scratch_path(L"penpane_test_does_not_exist.cfg", path, MAX_PATH);
     DeleteFileW(path);
     config_defaults(&defaults);
     config.doubleWindowMs = 1;
@@ -222,7 +223,7 @@ static void test_bad_lines_skipped(void)
     wchar_t errors[512];
     Config config;
     Action action;
-    scratch_path(L"ink_test_bad.cfg", path, MAX_PATH);
+    scratch_path(L"penpane_test_bad.cfg", path, MAX_PATH);
     write_text(path,
                "# comment\r\n"
                "\r\n"
@@ -270,7 +271,7 @@ static void test_error_buffer_bounds(void)
     wchar_t path[MAX_PATH];
     wchar_t errors[16];
     Config config;
-    scratch_path(L"ink_test_small_errors.cfg", path, MAX_PATH);
+    scratch_path(L"penpane_test_small_errors.cfg", path, MAX_PATH);
     write_text(path, "a = 1\nb = 2\nc = 3\nd = 4\n");
     assert(config_load(&config, path, errors, 16) == CONFIG_LOADED);
     assert(wcslen(errors) < 16);
@@ -284,7 +285,7 @@ static void test_reset_bindings(void)
     wchar_t path[MAX_PATH];
     Config config;
     Action action;
-    scratch_path(L"ink_test_reset.cfg", path, MAX_PATH);
+    scratch_path(L"penpane_test_reset.cfg", path, MAX_PATH);
     write_text(path, "bind = F13 single redo\n");
     assert(config_load(&config, path, NULL, 0) == CONFIG_LOADED);
     assert(config.bindingCount == 5);
@@ -302,7 +303,7 @@ static void test_bom_and_spacing(void)
 {
     wchar_t path[MAX_PATH];
     Config config;
-    scratch_path(L"ink_test_bom.cfg", path, MAX_PATH);
+    scratch_path(L"penpane_test_bom.cfg", path, MAX_PATH);
     write_text(path, "\xEF\xBB\xBF  double_press_ms=  400  \n\t# note\nLONG_PRESS_MS = 700");
     assert(config_load(&config, path, NULL, 0) == CONFIG_LOADED);
     assert(config.doubleWindowMs == 400);
@@ -352,7 +353,7 @@ static void test_clear_action(void)
     assert(!find_binding(&config, key(VK_F20, 0), GESTURE_SINGLE, &action));
     assert(config.bindings[0].action == ACTION_TOGGLE_OVERLAY && config.bindings[3].action == ACTION_CLEAR);
 
-    scratch_path(L"ink_test_clear.cfg", path, MAX_PATH);
+    scratch_path(L"penpane_test_clear.cfg", path, MAX_PATH);
     assert(config_save(&config, path));
     assert(config_load(&loaded, path, NULL, 0) == CONFIG_LOADED);
     assert(config_equal(&config, &loaded));
@@ -456,7 +457,7 @@ static void test_unreadable_file_is_not_missing(void)
     wchar_t path[MAX_PATH];
     wchar_t folder[MAX_PATH];
     Config config;
-    scratch_path(L"ink_test_locked.cfg", path, MAX_PATH);
+    scratch_path(L"penpane_test_locked.cfg", path, MAX_PATH);
     write_text(path, "double_press_ms = 111\n");
     HANDLE lock = CreateFileW(path, GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
     assert(lock != INVALID_HANDLE_VALUE);
@@ -470,7 +471,7 @@ static void test_unreadable_file_is_not_missing(void)
     assert(config.doubleWindowMs == 111);
     DeleteFileW(path);
 
-    scratch_path(L"ink_test_folder.cfg", folder, MAX_PATH);
+    scratch_path(L"penpane_test_folder.cfg", folder, MAX_PATH);
     RemoveDirectoryW(folder);
     assert(CreateDirectoryW(folder, NULL));
     config.doubleWindowMs = 78;
@@ -478,7 +479,7 @@ static void test_unreadable_file_is_not_missing(void)
     assert(config.doubleWindowMs == 78);
     RemoveDirectoryW(folder);
 
-    scratch_path(L"ink_test_no_such_folder\\ink.ini", path, MAX_PATH);
+    scratch_path(L"penpane_test_no_such_folder\\penpane.ini", path, MAX_PATH);
     config.doubleWindowMs = 79;
     assert(config_load(&config, path, NULL, 0) == CONFIG_UNREADABLE);
     assert(config.doubleWindowMs == 79);
@@ -520,7 +521,7 @@ static void test_plain_keys_rejected(void)
     wchar_t errors[512];
     Config config;
     Action action;
-    scratch_path(L"ink_test_plain.cfg", path, MAX_PATH);
+    scratch_path(L"penpane_test_plain.cfg", path, MAX_PATH);
     write_text(path,
                "reset_bindings = true\n"
                "bind = A single undo\n"
@@ -569,6 +570,33 @@ static void test_trigger_count(void)
     assert(config_trigger_count(&config) == 0);
 }
 
+/** @brief A legacy file is copied once to the current name; an existing current file or a missing legacy file changes nothing. */
+static void test_legacy_migration(void)
+{
+    wchar_t legacy[MAX_PATH];
+    wchar_t current[MAX_PATH];
+    Config config;
+    scratch_path(L"penpane_test_legacy.cfg", legacy, MAX_PATH);
+    scratch_path(L"penpane_test_current.cfg", current, MAX_PATH);
+    DeleteFileW(legacy);
+    DeleteFileW(current);
+    assert(!config_migrate_legacy(legacy, current));
+    assert(GetFileAttributesW(current) == INVALID_FILE_ATTRIBUTES);
+
+    write_text(legacy, "double_press_ms = 321\n");
+    assert(config_migrate_legacy(legacy, current));
+    assert(GetFileAttributesW(legacy) != INVALID_FILE_ATTRIBUTES);
+    assert(config_load(&config, current, NULL, 0) == CONFIG_LOADED);
+    assert(config.doubleWindowMs == 321);
+
+    write_text(legacy, "double_press_ms = 123\n");
+    assert(!config_migrate_legacy(legacy, current));
+    assert(config_load(&config, current, NULL, 0) == CONFIG_LOADED);
+    assert(config.doubleWindowMs == 321);
+    DeleteFileW(legacy);
+    DeleteFileW(current);
+}
+
 /**
  * @brief Runs every configuration test.
  * @return 0 when all assertions hold.
@@ -593,6 +621,7 @@ int main(void)
     test_trigger_text_round_trip();
     test_trigger_parsing();
     test_trigger_to_text_truncation();
-    printf("test_config: 17 tests passed\n");
+    test_legacy_migration();
+    printf("test_config: 18 tests passed\n");
     return 0;
 }

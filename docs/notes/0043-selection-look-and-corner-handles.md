@@ -5,7 +5,7 @@
 
 ## Problem
 
-Ink drew a 1.5 px outline with rounded corners and eight handles. Excalidraw's selection looks lighter.
+PenPane drew a 1.5 px outline with rounded corners and eight handles. Excalidraw's selection looks lighter.
 
 ## Decision
 
@@ -21,4 +21,4 @@ Keeping eight handles: more visual weight than the reference. Removing the side 
 
 ## Consequences
 
-Side handles stay active but invisible. If that confuses users, the loop in `render_selection` can draw them again. The rotation circle is not drawn because Ink has no rotation.
+Side handles stay active but invisible. If that confuses users, the loop in `render_selection` can draw them again. The rotation circle is not drawn because PenPane has no rotation.

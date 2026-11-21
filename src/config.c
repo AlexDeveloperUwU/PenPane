@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 #include "config.h"
 
 #include <strings.h>
@@ -800,6 +801,19 @@ bool config_save(const Config *config, const wchar_t *path)
         DeleteFileW(temporary);
     }
     return ok;
+}
+
+bool config_migrate_legacy(const wchar_t *legacyPath, const wchar_t *path)
+{
+    DWORD current = GetFileAttributesW(path);
+    if (current != INVALID_FILE_ATTRIBUTES || GetLastError() != ERROR_FILE_NOT_FOUND) {
+        return false;
+    }
+    DWORD legacy = GetFileAttributesW(legacyPath);
+    if (legacy == INVALID_FILE_ATTRIBUTES || (legacy & FILE_ATTRIBUTE_DIRECTORY) != 0) {
+        return false;
+    }
+    return CopyFileW(legacyPath, path, TRUE) != 0;
 }
 
 bool trigger_is_bindable(Trigger trigger)

@@ -1,6 +1,6 @@
 # QA report
 
-Date: 2026-11-21. Build: `scripts\build.ps1` (clang, `-Os -flto`), 105 KB. Screen 2560x1376 at 100 percent, one display. The real `build\ink.exe` was driven with synthetic mouse and keyboard input (user32 `SetCursorPos`, `mouse_event`, `SendInput`), a WinForms window as the application underneath, and `CopyFromScreen` screenshots analysed by pixel counts and by eye.
+Date: 2026-11-21. Build: `scripts\build.ps1` (clang, `-Os -flto`), 105 KB. Screen 2560x1376 at 100 percent, one display. The real `build\penpane.exe` was driven with synthetic mouse and keyboard input (user32 `SetCursorPos`, `mouse_event`, `SendInput`), a WinForms window as the application underneath, and `CopyFromScreen` screenshots analysed by pixel counts and by eye.
 
 ## Bugs found and fixed
 

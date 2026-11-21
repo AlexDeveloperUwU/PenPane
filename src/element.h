@@ -1,9 +1,10 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /**
  * @file element.h
  * @brief Editable drawing objects. Everything on screen is stored as elements, never as baked pixels.
  */
-#ifndef INK_ELEMENT_H
-#define INK_ELEMENT_H
+#ifndef PENPANE_ELEMENT_H
+#define PENPANE_ELEMENT_H
 
 #include <stdbool.h>
 #include <wchar.h>

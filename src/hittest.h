@@ -1,9 +1,10 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /**
  * @file hittest.h
  * @brief Pointer hit testing against elements and selection handles.
  */
-#ifndef INK_HITTEST_H
-#define INK_HITTEST_H
+#ifndef PENPANE_HITTEST_H
+#define PENPANE_HITTEST_H
 
 #include <stdbool.h>
 

@@ -1,9 +1,10 @@
-﻿<#
+﻿# SPDX-License-Identifier: GPL-3.0-or-later
+<#
 .SYNOPSIS
-Measures idle CPU, memory, wakeups, leaks and startup time of ink.exe through the real executable.
+Measures idle CPU, memory, wakeups, leaks and startup time of penpane.exe through the real executable.
 
 .DESCRIPTION
-Copies the executable into a scratch directory with a known ink.ini, drives it with synthetic input
+Copies the executable into a scratch directory with a known penpane.ini, drives it with synthetic input
 (second launch toggles drawing, mouse strokes, hotkeys) and prints one table row per state.
 Idle CPU is reported as TotalProcessorTime and QueryProcessCycleTime deltas over IdleSeconds,
 together with context switch and thread counts. Memory comes from GetProcessMemoryInfo
@@ -16,7 +17,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts\measure.ps1 -IdleSec
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts\measure.ps1 -Only startup,leak -Cycles 500
 #>
 param(
-    [string]$Exe = "build\ink.exe",
+    [string]$Exe = "build\penpane.exe",
     [int]$IdleSeconds = 60,
     [int]$SettleSeconds = 8,
     [int]$Strokes = 200,
@@ -33,7 +34,7 @@ Add-Type -TypeDefinition @"
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
-public static class InkNative
+public static class PenPaneNative
 {
     [StructLayout(LayoutKind.Sequential)]
     public struct MemoryCounters
@@ -81,41 +82,41 @@ public static class InkNative
 }
 "@
 
-$scratch = Join-Path $env:TEMP "ink-measure"
-$screenWidth = [InkNative]::GetSystemMetrics(0)
-$screenHeight = [InkNative]::GetSystemMetrics(1)
+$scratch = Join-Path $env:TEMP "penpane-measure"
+$screenWidth = [PenPaneNative]::GetSystemMetrics(0)
+$screenHeight = [PenPaneNative]::GetSystemMetrics(1)
 $random = New-Object System.Random 7
 
-function Stop-Ink {
-    Get-Process ink -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+function Stop-PenPane {
+    Get-Process penpane -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
     Start-Sleep -Milliseconds 300
 }
 
 function Initialize-Scratch {
-    Stop-Ink
+    Stop-PenPane
     if (Test-Path $scratch) { Remove-Item $scratch -Recurse -Force }
     New-Item -ItemType Directory $scratch | Out-Null
     $source = if ([IO.Path]::IsPathRooted($Exe)) { $Exe } else { Join-Path $root $Exe }
-    Copy-Item $source (Join-Path $scratch "ink.exe")
-    Set-Content -Path (Join-Path $scratch "ink.ini") -Value "tool_lock = true`r`nbind = F22 single clear`r`n"
+    Copy-Item $source (Join-Path $scratch "penpane.exe")
+    Set-Content -Path (Join-Path $scratch "penpane.ini") -Value "tool_lock = true`r`nbind = F22 single clear`r`n"
 }
 
-function Start-Ink {
-    $process = [Diagnostics.Process]::Start((Join-Path $scratch "ink.exe"))
+function Start-PenPane {
+    $process = [Diagnostics.Process]::Start((Join-Path $scratch "penpane.exe"))
     Start-Sleep -Milliseconds 1500
     return $process
 }
 
 function Invoke-SecondLaunch {
-    Start-Process (Join-Path $scratch "ink.exe") | Out-Null
+    Start-Process (Join-Path $scratch "penpane.exe") | Out-Null
     Start-Sleep -Milliseconds 900
 }
 
 function Send-Key([byte[]]$keys, [int]$holdMs = 20) {
-    foreach ($key in $keys) { [InkNative]::keybd_event($key, 0, 0, [UIntPtr]::Zero) }
+    foreach ($key in $keys) { [PenPaneNative]::keybd_event($key, 0, 0, [UIntPtr]::Zero) }
     Start-Sleep -Milliseconds $holdMs
     [array]::Reverse($keys)
-    foreach ($key in $keys) { [InkNative]::keybd_event($key, 0, 2, [UIntPtr]::Zero) }
+    foreach ($key in $keys) { [PenPaneNative]::keybd_event($key, 0, 2, [UIntPtr]::Zero) }
 }
 
 function Send-Undo { Send-Key ([byte[]](0x11, 0x5A)) 5 }
@@ -123,16 +124,16 @@ function Send-Clear { Send-Key ([byte[]](0x85)) 20; Start-Sleep -Milliseconds 12
 function Send-ToggleMode { Send-Key ([byte[]](0x7D)) 20; Start-Sleep -Milliseconds 60; Send-Key ([byte[]](0x7D)) 20; Start-Sleep -Milliseconds 900 }
 
 function Move-Stroke([int]$x0, [int]$y0, [int]$points = 24, [int]$stepDelayMs = 2, [int]$amplitude = 40, [int]$stepX = 12) {
-    [InkNative]::SetCursorPos($x0, $y0) | Out-Null
+    [PenPaneNative]::SetCursorPos($x0, $y0) | Out-Null
     Start-Sleep -Milliseconds 4
-    [InkNative]::mouse_event(2, 0, 0, 0, [UIntPtr]::Zero)
+    [PenPaneNative]::mouse_event(2, 0, 0, 0, [UIntPtr]::Zero)
     for ($i = 1; $i -le $points; $i++) {
         $x = $x0 + $i * $stepX
         $y = $y0 + [int]([math]::Sin($i / 3.0) * $amplitude)
-        [InkNative]::SetCursorPos($x, $y) | Out-Null
+        [PenPaneNative]::SetCursorPos($x, $y) | Out-Null
         Start-Sleep -Milliseconds $stepDelayMs
     }
-    [InkNative]::mouse_event(4, 0, 0, 0, [UIntPtr]::Zero)
+    [PenPaneNative]::mouse_event(4, 0, 0, 0, [UIntPtr]::Zero)
     Start-Sleep -Milliseconds 6
 }
 
@@ -143,11 +144,11 @@ function Move-RandomStroke {
 }
 
 function Get-Memory($process) {
-    $handle = [InkNative]::OpenProcess(0x1010, $false, [uint32]$process.Id)
-    $counters = New-Object InkNative+MemoryCounters
+    $handle = [PenPaneNative]::OpenProcess(0x1010, $false, [uint32]$process.Id)
+    $counters = New-Object PenPaneNative+MemoryCounters
     $counters.cb = [Runtime.InteropServices.Marshal]::SizeOf($counters)
-    [void][InkNative]::K32GetProcessMemoryInfo($handle, [ref]$counters, $counters.cb)
-    [void][InkNative]::CloseHandle($handle)
+    [void][PenPaneNative]::K32GetProcessMemoryInfo($handle, [ref]$counters, $counters.cb)
+    [void][PenPaneNative]::CloseHandle($handle)
     return [pscustomobject]@{
         WorkingSetMB = [math]::Round($counters.WorkingSetSize.ToUInt64() / 1MB, 2)
         PrivateWorkingSetMB = [math]::Round($counters.PrivateWorkingSetSize.ToUInt64() / 1MB, 2)
@@ -157,10 +158,10 @@ function Get-Memory($process) {
 
 function Get-Activity($process) {
     $process.Refresh()
-    $handle = [InkNative]::OpenProcess(0x1000, $false, [uint32]$process.Id)
+    $handle = [PenPaneNative]::OpenProcess(0x1000, $false, [uint32]$process.Id)
     $cycles = [uint64]0
-    [void][InkNative]::QueryProcessCycleTime($handle, [ref]$cycles)
-    [void][InkNative]::CloseHandle($handle)
+    [void][PenPaneNative]::QueryProcessCycleTime($handle, [ref]$cycles)
+    [void][PenPaneNative]::CloseHandle($handle)
     $perThread = @{}
     foreach ($thread in Get-CimInstance Win32_PerfRawData_PerfProc_Thread -Filter "IDProcess=$($process.Id)") {
         $perThread[[string]$thread.IDThread] = [uint64]$thread.ContextSwitchesPersec
@@ -248,28 +249,28 @@ function Update-Forms {
 }
 
 function Send-Click([int]$x, [int]$y) {
-    [InkNative]::SetCursorPos($x, $y) | Out-Null
+    [PenPaneNative]::SetCursorPos($x, $y) | Out-Null
     Start-Sleep -Milliseconds 30
-    [InkNative]::mouse_event(2, 0, 0, 0, [UIntPtr]::Zero)
-    [InkNative]::mouse_event(4, 0, 0, 0, [UIntPtr]::Zero)
+    [PenPaneNative]::mouse_event(2, 0, 0, 0, [UIntPtr]::Zero)
+    [PenPaneNative]::mouse_event(4, 0, 0, 0, [UIntPtr]::Zero)
     Update-Forms
 }
 
 function Measure-Startup {
     $samples = @()
     for ($run = 0; $run -lt $StartupRuns; $run++) {
-        Stop-Ink
+        Stop-PenPane
         $watch = [Diagnostics.Stopwatch]::StartNew()
-        $process = [Diagnostics.Process]::Start((Join-Path $scratch "ink.exe"))
+        $process = [Diagnostics.Process]::Start((Join-Path $scratch "penpane.exe"))
         $visible = $null
         while ($watch.ElapsedMilliseconds -lt 5000) {
-            if ([InkNative]::VisibleWindowCount([uint32]$process.Id) -gt 0) { $visible = $watch.Elapsed.TotalMilliseconds; break }
+            if ([PenPaneNative]::VisibleWindowCount([uint32]$process.Id) -gt 0) { $visible = $watch.Elapsed.TotalMilliseconds; break }
             [Threading.Thread]::Sleep(1)
         }
         if ($visible -ne $null) { $samples += $visible }
         Start-Sleep -Milliseconds 500
     }
-    Stop-Ink
+    Stop-PenPane
     $sorted = $samples | Sort-Object
     $median = if ($sorted.Count) { $sorted[[int][math]::Floor($sorted.Count / 2)] } else { $null }
     Write-Host ("startup to first visible window: median {0:N1} ms  min {1:N1}  max {2:N1}  samples {3}" -f $median, $sorted[0], $sorted[-1], $sorted.Count)
@@ -279,18 +280,18 @@ function Measure-Startup {
 function Measure-LongStroke($process) {
     $before = Get-Activity $process
     $watch = [Diagnostics.Stopwatch]::StartNew()
-    [InkNative]::SetCursorPos(300, 400) | Out-Null
+    [PenPaneNative]::SetCursorPos(300, 400) | Out-Null
     Start-Sleep -Milliseconds 10
-    [InkNative]::mouse_event(2, 0, 0, 0, [UIntPtr]::Zero)
+    [PenPaneNative]::mouse_event(2, 0, 0, 0, [UIntPtr]::Zero)
     $points = 2000
     for ($i = 1; $i -le $points; $i++) {
         $angle = $i / 40.0
         $x = 1280 + [int]([math]::Cos($angle) * (200 + $i / 5.0))
         $y = 700 + [int]([math]::Sin($angle * 1.3) * (150 + $i / 12.0))
-        [InkNative]::SetCursorPos($x, $y) | Out-Null
+        [PenPaneNative]::SetCursorPos($x, $y) | Out-Null
         [Threading.Thread]::Sleep(1)
     }
-    [InkNative]::mouse_event(4, 0, 0, 0, [UIntPtr]::Zero)
+    [PenPaneNative]::mouse_event(4, 0, 0, 0, [UIntPtr]::Zero)
     Start-Sleep -Milliseconds 300
     $after = Get-Activity $process
     $watch.Stop()
@@ -303,8 +304,8 @@ function Measure-LongStroke($process) {
 $script:rows = @()
 $script:summary = [ordered]@{}
 Initialize-Scratch
-Write-Host ("exe: {0} bytes  screen {1}x{2}" -f (Get-Item (Join-Path $scratch "ink.exe")).Length, $screenWidth, $screenHeight)
-$script:summary["exe_bytes"] = (Get-Item (Join-Path $scratch "ink.exe")).Length
+Write-Host ("exe: {0} bytes  screen {1}x{2}" -f (Get-Item (Join-Path $scratch "penpane.exe")).Length, $screenWidth, $screenHeight)
+$script:summary["exe_bytes"] = (Get-Item (Join-Path $scratch "penpane.exe")).Length
 
 try {
     if (Wanted "startup") { Measure-Startup }
@@ -312,7 +313,7 @@ try {
     if (Wanted "states") {
         Initialize-Scratch
         $form = Test-ClickThrough
-        $process = Start-Ink
+        $process = Start-PenPane
         Measure-Snapshot "just started (hidden), +1.5 s" $process
         Start-Sleep -Seconds 14
         Measure-State "hidden, toolbar handle only" $process $IdleSeconds
@@ -336,12 +337,12 @@ try {
 
         Send-Key ([byte[]](0x4B)) 20
         Start-Sleep -Milliseconds 300
-        [InkNative]::SetCursorPos(600, 900) | Out-Null
-        [InkNative]::mouse_event(2, 0, 0, 0, [UIntPtr]::Zero)
-        for ($i = 0; $i -lt 40; $i++) { [InkNative]::SetCursorPos(600 + $i * 10, 900 + [int]([math]::Sin($i / 4.0) * 30)) | Out-Null; Start-Sleep -Milliseconds 8 }
+        [PenPaneNative]::SetCursorPos(600, 900) | Out-Null
+        [PenPaneNative]::mouse_event(2, 0, 0, 0, [UIntPtr]::Zero)
+        for ($i = 0; $i -lt 40; $i++) { [PenPaneNative]::SetCursorPos(600 + $i * 10, 900 + [int]([math]::Sin($i / 4.0) * 30)) | Out-Null; Start-Sleep -Milliseconds 8 }
         Start-Sleep -Milliseconds 100
         Measure-Snapshot "laser active (button held, trail alive)" $process
-        [InkNative]::mouse_event(4, 0, 0, 0, [UIntPtr]::Zero)
+        [PenPaneNative]::mouse_event(4, 0, 0, 0, [UIntPtr]::Zero)
         Start-Sleep -Milliseconds 2500
         Send-Key ([byte[]](0x50)) 20
 
@@ -371,12 +372,12 @@ try {
         Send-ToggleMode
         Invoke-SecondLaunch
         Measure-State "desktop, drawing off, empty scene" $process $IdleSeconds
-        Stop-Ink
+        Stop-PenPane
     }
 
     if (Wanted "strokes") {
         Initialize-Scratch
-        $process = Start-Ink
+        $process = Start-PenPane
         Invoke-SecondLaunch
         Measure-Snapshot "drawing, empty (baseline for strokes)" $process
         for ($i = 0; $i -lt $Strokes; $i++) { Move-RandomStroke }
@@ -389,20 +390,20 @@ try {
         for ($i = 0; $i -lt 20; $i++) { Move-RandomStroke }
         Send-Clear
         Measure-Snapshot "after clear" $process
-        Stop-Ink
+        Stop-PenPane
     }
 
     if (Wanted "longstroke") {
         Initialize-Scratch
-        $process = Start-Ink
+        $process = Start-PenPane
         Invoke-SecondLaunch
         Measure-LongStroke $process
-        Stop-Ink
+        Stop-PenPane
     }
 
     if (Wanted "leak") {
         Initialize-Scratch
-        $process = Start-Ink
+        $process = Start-PenPane
         Invoke-SecondLaunch
         for ($i = 0; $i -lt 5; $i++) { Move-RandomStroke; Send-Undo }
         Send-Clear
@@ -429,12 +430,12 @@ try {
         $final = Get-Memory $process
         $script:summary["leak_private_bytes_delta_mb"] = [math]::Round($final.PrivateBytesMB - $baseline.PrivateBytesMB, 2)
         $script:summary["leak_private_ws_delta_mb"] = [math]::Round($final.PrivateWorkingSetMB - $baseline.PrivateWorkingSetMB, 2)
-        Stop-Ink
+        Stop-PenPane
     }
 
     if (Wanted "exit") {
         Initialize-Scratch
-        $process = Start-Ink
+        $process = Start-PenPane
         Send-Key ([byte[]](0x11, 0x12, 0x10, 0x1B)) 50
         Start-Sleep -Milliseconds 800
         $script:summary["emergency_exit_ok"] = [bool]$process.HasExited
@@ -442,7 +443,7 @@ try {
     }
 }
 finally {
-    Stop-Ink
+    Stop-PenPane
 }
 
 $script:rows | Format-Table -AutoSize | Out-String -Width 220 | Write-Host

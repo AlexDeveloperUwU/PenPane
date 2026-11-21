@@ -1,4 +1,4 @@
-# Changelog
+# PenPane changelog
 
 All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
@@ -6,8 +6,12 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+- Renamed from Ink to PenPane (note 0091): `penpane.exe`, `penpane.ini`, window and synchronization object names, tray tooltip and registry value. An existing `ink.ini` next to the executable is copied to `penpane.ini` once (note 0092).
+
 ### Added
 
+- Application icon and version information (`res/penpane.rc`, `res/penpane.ico`, `scripts/make-icon.ps1`); the tray tooltip shows the version.
+- Public repository files: README, license (GPL-3.0-or-later, note 0093), contributing guide, code of conduct, security policy, issue and pull request templates, CI and release workflows, Doxyfile, `docs/README.md`.
 - Panels open on click instead of hover, close shortly after the pointer leaves, and each has a pin button that keeps it open (saved as toolbar_pinned, properties_pinned, history_pinned).
 
 - Transparent full-screen overlay with an anti-aliased software rasterizer and an alpha-1 backdrop that keeps drawing mode hit-testable while passthrough lets clicks reach the apps below.

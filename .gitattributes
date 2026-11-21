@@ -1,0 +1,13 @@
+* text=auto eol=lf
+
+*.c text eol=lf
+*.h text eol=lf
+*.rc text eol=lf
+*.ps1 text eol=lf
+*.md text eol=lf
+*.yml text eol=lf
+*.ini text eol=lf
+Doxyfile text eol=lf
+
+*.ico binary
+*.png binary

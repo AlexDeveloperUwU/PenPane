@@ -16,7 +16,33 @@ Installs llvm-mingw into `C:\tools`. The download is checked against a pinned SH
 powershell -ExecutionPolicy Bypass -File scripts\build.ps1
 ```
 
-Produces `build\ink.exe` (about 99 KB). Each source file is compiled on its own: `-Oz` by default, `-Os` for the rasterizer and `-O2` for the blend loop, with link-time optimization and unwind tables kept (note 0063). Add `-Debug` for an unoptimized build with symbols.
+Produces `build\penpane.exe` (about 121 KB, of which about 17 KB are the icon and version resources). Each source file is compiled on its own: `-Oz` by default, `-Os` for the rasterizer and `-O2` for the blend loop, with link-time optimization and unwind tables kept (note 0063). Add `-Debug` for an unoptimized build with symbols.
+
+The icon and the version information come from `res\penpane.rc`, compiled with `llvm-windres` and linked into the executable. The version lives in `src\version.h`; change it there only. `res\penpane.ico` is produced by `scripts\make-icon.ps1` (a pen nib on a pane, five sizes stored as PNG), so the icon is reproducible and needs no external tool.
+
+## Tests
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\test.ps1
+```
+
+Compiles and runs every `tests\test_*.c` program. `-Filter config` runs one of them.
+
+## Previews
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\preview.ps1
+```
+
+Renders sample drawings and the user interface into `build\preview` (and `scripts\screenshots.ps1` copies the images used by the README into `docs\images`).
+
+## API documentation
+
+```powershell
+doxygen Doxyfile
+```
+
+Reads the Doxygen comments in `src` and writes HTML to `docs\api` (ignored by git). Warnings are reported but never fail the run.
 
 ## Measuring
 

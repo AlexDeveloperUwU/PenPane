@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /**
  * @file theme.h
  * @brief Visual constants taken from Excalidraw's dark theme.
@@ -5,8 +6,8 @@
  * Colors are straight (non-premultiplied) 0xAARRGGBB values. Sizes are in pixels at 100% scaling.
  * See docs/excalidraw-reference.md for the source of every value.
  */
-#ifndef INK_THEME_H
-#define INK_THEME_H
+#ifndef PENPANE_THEME_H
+#define PENPANE_THEME_H
 
 #include <stdint.h>
 

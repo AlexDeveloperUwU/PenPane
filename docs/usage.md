@@ -2,7 +2,7 @@
 
 ## Start and stop
 
-Run `ink.exe`. It lives in the notification area. Starting it a second time toggles drawing on the running instance. `Ctrl+Alt+Shift+Esc` always quits.
+Run `penpane.exe`. It lives in the notification area. Starting it a second time toggles drawing on the running instance. `Ctrl+Alt+Shift+Esc` always quits.
 
 ## Two modes
 

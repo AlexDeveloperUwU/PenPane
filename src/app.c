@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 #include "app.h"
 
 #include <stdio.h>
@@ -29,8 +30,8 @@
 #define FADE_DURATION_MS 400
 #define DISPLAY_LIMIT TRAY_MAX_MONITORS
 #define HIT_TEST_BACKDROP 0x01000000u
-#define MESSAGE_CLASS L"InkMessageWindow"
-#define SINGLE_INSTANCE_MUTEX L"Local\\InkOverlaySingleInstance"
+#define MESSAGE_CLASS L"PenPaneMessageWindow"
+#define SINGLE_INSTANCE_MUTEX L"Local\\PenPaneOverlaySingleInstance"
 #define SCRATCH_KEEP_BYTES (256 * 1024)
 #define PENDING_NOTICE_LIMIT 4
 
@@ -889,13 +890,13 @@ static void register_emergency_hotkey(void)
             app.emergencyRegistered = true;
             if (CHOICES[i].key != VK_ESCAPE) {
                 notify(L"Emergency exit changed",
-                       L"Another program uses Ctrl+Alt+Shift+Esc. Press Ctrl+Alt+Shift+F12 to quit Ink.");
+                       L"Another program uses Ctrl+Alt+Shift+Esc. Press Ctrl+Alt+Shift+F12 to quit PenPane.");
             }
             return;
         }
     }
     notify(L"Emergency exit unavailable",
-           L"Ctrl+Alt+Shift+Esc and Ctrl+Alt+Shift+F12 are both taken by other programs. Use the tray menu to quit Ink.");
+           L"Ctrl+Alt+Shift+Esc and Ctrl+Alt+Shift+F12 are both taken by other programs. Use the tray menu to quit PenPane.");
 }
 
 /**
@@ -1489,14 +1490,15 @@ static LONG WINAPI crash_filter(EXCEPTION_POINTERS *info)
 }
 
 /**
- * @brief Builds the configuration file path next to the executable, never writing past the buffer.
+ * @brief Builds the path of a file next to the executable, never writing past the buffer.
+ * @param name File name to append, including its terminator.
+ * @param nameChars Length of the name including the terminator, in characters.
  * @param path Output buffer.
  * @param size Capacity of the buffer in characters.
  * @return true on success; on false the path is empty because the executable path does not fit.
  */
-static bool build_config_path(wchar_t *path, size_t size)
+static bool build_sibling_path(const wchar_t *name, size_t nameChars, wchar_t *path, size_t size)
 {
-    static const wchar_t FILE_NAME[] = L"ink.ini";
     path[0] = L'\0';
     DWORD length = GetModuleFileNameW(NULL, path, (DWORD)size);
     if (length == 0 || length >= size) {
@@ -1504,11 +1506,34 @@ static bool build_config_path(wchar_t *path, size_t size)
         return false;
     }
     wchar_t *slash = wcsrchr(path, L'\\');
-    if (!slash || (size_t)(path + size - (slash + 1)) < ARRAYSIZE(FILE_NAME)) {
+    if (!slash || (size_t)(path + size - (slash + 1)) < nameChars) {
         path[0] = L'\0';
         return false;
     }
-    memcpy(slash + 1, FILE_NAME, sizeof FILE_NAME);
+    memcpy(slash + 1, name, nameChars * sizeof(wchar_t));
+    return true;
+}
+
+/**
+ * @brief Builds the configuration file path next to the executable and adopts a legacy file once.
+ *
+ * When the current file does not exist and a file of the former product name sits next to it,
+ * that file is copied to the current name before the configuration is loaded (note 0092).
+ * @param path Output buffer.
+ * @param size Capacity of the buffer in characters.
+ * @return true on success; on false the path is empty because the executable path does not fit.
+ */
+static bool build_config_path(wchar_t *path, size_t size)
+{
+    static const wchar_t FILE_NAME[] = L"penpane.ini";
+    static const wchar_t LEGACY_FILE_NAME[] = L"ink.ini";
+    if (!build_sibling_path(FILE_NAME, ARRAYSIZE(FILE_NAME), path, size)) {
+        return false;
+    }
+    wchar_t legacy[MAX_PATH];
+    if (build_sibling_path(LEGACY_FILE_NAME, ARRAYSIZE(LEGACY_FILE_NAME), legacy, ARRAYSIZE(legacy))) {
+        config_migrate_legacy(legacy, path);
+    }
     return true;
 }
 
@@ -1545,7 +1570,7 @@ static bool create_message_window(void)
     windowClass.hInstance = app.instance;
     windowClass.lpszClassName = MESSAGE_CLASS;
     RegisterClassExW(&windowClass);
-    app.messageWindow = CreateWindowExW(WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE, MESSAGE_CLASS, L"Ink", WS_POPUP,
+    app.messageWindow = CreateWindowExW(WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE, MESSAGE_CLASS, L"PenPane", WS_POPUP,
                                         0, 0, 0, 0, NULL, NULL, app.instance, NULL);
     return app.messageWindow != NULL;
 }
@@ -1575,7 +1600,7 @@ int app_run(HINSTANCE instance)
 
     if (!pathFits) {
         notify(L"Settings location unavailable",
-               L"The folder of Ink is too deeply nested to keep a settings file there. Defaults are used and nothing is saved.");
+               L"The folder of PenPane is too deeply nested to keep a settings file there. Defaults are used and nothing is saved.");
     }
     reload_config();
     controller_set_tool(&app.controller, app.config.defaultTool);

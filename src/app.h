@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /**
  * @file app.h
  * @brief Application shell: owns every module, routes input and applies the overlay state machine.
@@ -6,8 +7,8 @@
  * apps below) and drawing (the overlay captures input). Desktop and whiteboard modes keep
  * separate scenes.
  */
-#ifndef INK_APP_H
-#define INK_APP_H
+#ifndef PENPANE_APP_H
+#define PENPANE_APP_H
 
 #include <windows.h>
 

@@ -1,6 +1,6 @@
 # Input model: capture versus passthrough
 
-The highest-risk part of an overlay is deciding who receives the pointer. Ink uses one layered window with per-pixel alpha.
+The highest-risk part of an overlay is deciding who receives the pointer. PenPane uses one layered window with per-pixel alpha.
 
 ## Passthrough
 

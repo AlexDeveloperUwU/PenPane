@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /**
  * @file ui_preview.c
  * @brief Visual harness: shows the three islands over a dark background and applies their events.
@@ -15,7 +16,7 @@
 #include "text.h"
 #include "ui.h"
 
-#define PREVIEW_CLASS L"InkUiPreviewBackground"
+#define PREVIEW_CLASS L"PenPaneUiPreviewBackground"
 #define DEMO_TIMER 1
 #define QUIT_TIMER 2
 

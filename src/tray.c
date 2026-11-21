@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 #include "tray.h"
 
 #include <shellapi.h>
@@ -7,11 +8,12 @@
 #include <wchar.h>
 
 #include "raster.h"
+#include "version.h"
 
 #define TRAY_ICON_ID 1
-#define TRAY_TOOLTIP L"Ink"
+#define TRAY_TOOLTIP L"PenPane " PENPANE_VERSION_TEXT
 #define AUTOSTART_KEY L"Software\\Microsoft\\Windows\\CurrentVersion\\Run"
-#define AUTOSTART_VALUE L"Ink"
+#define AUTOSTART_VALUE L"PenPane"
 #define ICON_DESIGN_SIZE 32.0f
 #define ACTION_NAME_CHARS 48
 

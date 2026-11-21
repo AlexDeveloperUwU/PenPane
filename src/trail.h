@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /**
  * @file trail.h
  * @brief Fading pointer trails used by the laser pointer and the eraser.
@@ -6,8 +7,8 @@
  * and along the last stretch before the tail, and never changes the colour, as Excalidraw does, so
  * the laser leaves no permanent ink and costs nothing once it has faded.
  */
-#ifndef INK_TRAIL_H
-#define INK_TRAIL_H
+#ifndef PENPANE_TRAIL_H
+#define PENPANE_TRAIL_H
 
 #include <stdbool.h>
 #include <stdint.h>

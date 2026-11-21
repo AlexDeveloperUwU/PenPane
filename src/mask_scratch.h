@@ -1,9 +1,10 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /**
  * @file mask_scratch.h
  * @brief A single reusable coverage buffer so rendering does not allocate per element.
  */
-#ifndef INK_MASK_SCRATCH_H
-#define INK_MASK_SCRATCH_H
+#ifndef PENPANE_MASK_SCRATCH_H
+#define PENPANE_MASK_SCRATCH_H
 
 #include <stdbool.h>
 #include <windows.h>

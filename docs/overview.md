@@ -1,6 +1,6 @@
 # Overview
 
-Ink is Excalidraw's drawing experience as a native, minimal screen overlay for Windows 10 and 11. It draws over live content for presentations and demos, or turns into a dark whiteboard. It is driven by global hotkeys so that the two buttons of a graphics tablet pen can control everything.
+PenPane is Excalidraw's drawing experience as a native, minimal screen overlay for Windows 10 and 11. It draws over live content for presentations and demos, or turns into a dark whiteboard. It is driven by global hotkeys so that the two buttons of a graphics tablet pen can control everything.
 
 Documents:
 
@@ -13,5 +13,6 @@ Documents:
 - [measurements.md](measurements.md) memory and CPU numbers and how they were measured
 - [building.md](building.md) toolchain and build
 - [notes/index.md](notes/index.md) decision records
+- [README.md](README.md) index of all documents
 
 Non-goals: light theme, themes, zoom, pan, images, frames, collaboration, any export other than PNG to the clipboard.

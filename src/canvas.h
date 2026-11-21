@@ -1,9 +1,10 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /**
  * @file canvas.h
  * @brief A premultiplied 32-bit pixel surface backed by a GDI DIB section.
  */
-#ifndef INK_CANVAS_H
-#define INK_CANVAS_H
+#ifndef PENPANE_CANVAS_H
+#define PENPANE_CANVAS_H
 
 #include <stdbool.h>
 #include <stdint.h>

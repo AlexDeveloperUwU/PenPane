@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /**
  * @file scene.h
  * @brief An ordered list of elements with unlimited undo and redo.
@@ -6,8 +7,8 @@
  * that the user perceives as one action (for example erasing three elements). Steps are
  * unbounded; memory is the only limit.
  */
-#ifndef INK_SCENE_H
-#define INK_SCENE_H
+#ifndef PENPANE_SCENE_H
+#define PENPANE_SCENE_H
 
 #include <stdbool.h>
 

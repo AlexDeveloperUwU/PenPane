@@ -1,0 +1,14 @@
+build/
+*.obj
+*.o
+*.res
+*.exe
+docs/api/
+penpane.ini
+ink.ini
+*.log
+*.tmp
+scratch/
+tmp/
+.vs/
+.vscode/

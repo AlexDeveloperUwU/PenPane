@@ -1,9 +1,10 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /**
  * @file geometry.h
  * @brief Small geometry helpers: dirty-region accumulation, rectangle math, segment distance.
  */
-#ifndef INK_GEOMETRY_H
-#define INK_GEOMETRY_H
+#ifndef PENPANE_GEOMETRY_H
+#define PENPANE_GEOMETRY_H
 
 #include <stdbool.h>
 #include <windows.h>

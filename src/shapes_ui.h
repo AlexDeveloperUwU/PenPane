@@ -1,10 +1,11 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /**
  * @file shapes_ui.h
  * @brief Small drawing helpers for the UI built on the rasterizer: a reusable scratch mask and
  *        one-call fills, strokes, arcs and polylines.
  */
-#ifndef INK_SHAPES_UI_H
-#define INK_SHAPES_UI_H
+#ifndef PENPANE_SHAPES_UI_H
+#define PENPANE_SHAPES_UI_H
 
 #include <stdbool.h>
 

@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /**
  * @file jobs.h
  * @brief Runs slow work (configuration writes, PNG encoding) off the message-loop thread.
@@ -7,8 +8,8 @@
  * machine, so disk writes and image encoding run on a short-lived worker thread instead. The worker
  * exists only while there is something to do.
  */
-#ifndef INK_JOBS_H
-#define INK_JOBS_H
+#ifndef PENPANE_JOBS_H
+#define PENPANE_JOBS_H
 
 #include <stdbool.h>
 #include <windows.h>

@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /**
  * @file config.h
  * @brief Plain-text configuration file: bindings, timings, defaults and panel placement.
@@ -16,8 +17,8 @@
  * Down, Numpad0-9, or `VK_0xNN` for any virtual-key code) or a mouse button name (MButton,
  * XButton1, XButton2).
  */
-#ifndef INK_CONFIG_H
-#define INK_CONFIG_H
+#ifndef PENPANE_CONFIG_H
+#define PENPANE_CONFIG_H
 
 #include <stdbool.h>
 #include <wchar.h>
@@ -83,6 +84,17 @@ ConfigStatus config_load(Config *config, const wchar_t *path, wchar_t *errors, i
  * @return true on success.
  */
 bool config_save(const Config *config, const wchar_t *path);
+
+/**
+ * @brief Copies a configuration file of the former product name to the current path, once.
+ *
+ * Nothing happens when the current file exists or cannot be told apart from missing, or when
+ * the legacy file is absent. The legacy file is left in place.
+ * @param legacyPath Path of the former configuration file.
+ * @param path Path of the current configuration file.
+ * @return true when the file was copied.
+ */
+bool config_migrate_legacy(const wchar_t *legacyPath, const wchar_t *path);
 
 /**
  * @brief Replaces any binding with the same trigger and gesture, or appends a new one.

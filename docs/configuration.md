@@ -9,7 +9,7 @@ The application reads one plain-text file. Every key is optional: a missing key 
 - UTF-8 with or without a byte-order mark, and LF or CRLF line endings, are accepted. Only ASCII is meaningful.
 - Booleans accept `true`/`false`, `yes`/`no`, `on`/`off`, `1`/`0`.
 - A value outside the documented range invalidates the line; the previous (default) value is kept.
-- A file that does not exist is created with the defaults. A file that exists but cannot be read, for example because another program has it locked, is left exactly as it is: the application keeps the settings it already has, shows a notice, and does not save anything until a reload reads the file successfully.
+- A file that does not exist is created with the defaults, except that an `ink.ini` next to the executable (the file name of the former product name) is copied to `penpane.ini` once and then read (note 0092). A file that exists but cannot be read, for example because another program has it locked, is left exactly as it is: the application keeps the settings it already has, shows a notice, and does not save anything until a reload reads the file successfully.
 
 ## Settings
 

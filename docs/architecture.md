@@ -1,6 +1,6 @@
 # Architecture
 
-Ink is a single native executable written in C11 against Win32. There is no UI toolkit, no web runtime and no managed code. Everything on screen is produced by a small software rasterizer and shown through layered windows.
+PenPane is a single native executable written in C11 against Win32. There is no UI toolkit, no web runtime and no managed code. Everything on screen is produced by a small software rasterizer and shown through layered windows.
 
 ## Module map
 

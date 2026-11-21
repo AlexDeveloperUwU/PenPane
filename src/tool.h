@@ -1,9 +1,10 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /**
  * @file tool.h
  * @brief Drawing tools in toolbar order, with their Excalidraw shortcut letters.
  */
-#ifndef INK_TOOL_H
-#define INK_TOOL_H
+#ifndef PENPANE_TOOL_H
+#define PENPANE_TOOL_H
 
 #include <stdbool.h>
 
