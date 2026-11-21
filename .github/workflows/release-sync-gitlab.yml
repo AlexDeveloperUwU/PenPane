@@ -1,0 +1,29 @@
+# WHEN:   A push to main (after a merge), or manually.
+# WHAT:   Mirrors main and tags to GitLab.
+# WRITES: The GitLab mirror only.
+#
+name: Release - Sync to GitLab
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - '.github/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sync-gitlab
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    uses: ZyFeronix/utils/.github/workflows/sync-gitlab.yml@main
+    with:
+      gitlab-path: git.alexdevuwu.com/personal/applications
+      gitlab-repo: penpane
+      branches: main
+    secrets:
+      GITLAB_ACCESS_TOKEN: ${{ secrets.GITLAB_ACCESS_TOKEN }}
