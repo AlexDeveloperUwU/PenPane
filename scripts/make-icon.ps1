@@ -62,9 +62,12 @@ function New-IconImage([int]$size) {
     $penBrush = New-Object System.Drawing.SolidBrush $pen
     Add-RoundedRect $graphics $borderBrush $unit 0.5 0.5 31 31 7
     Add-RoundedRect $graphics $paneBrush $unit 1.6 1.6 28.8 28.8 6
-    Add-Capsule $graphics $penBrush $unit 21.5 9.0 12.0 18.5 3.4 3.4
-    Add-Capsule $graphics $penBrush $unit 12.0 18.5 8.2 23.2 3.4 0.6
-    Add-Capsule $graphics $penBrush $unit 14.0 26.0 25.0 26.0 1.3 1.3
+    Add-Capsule $graphics $penBrush $unit 20.73 8.98 12.56 17.15 2.92 2.92
+    Add-Capsule $graphics $penBrush $unit 12.56 17.15 9.29 21.19 2.92 0.52
+    Add-Capsule $graphics $penBrush $unit 6.97 25.53 11.27 23.81 1.03 1.03
+    Add-Capsule $graphics $penBrush $unit 11.27 23.81 15.57 25.53 1.03 1.03
+    Add-Capsule $graphics $penBrush $unit 15.57 25.53 19.87 23.81 1.03 1.03
+    Add-Capsule $graphics $penBrush $unit 19.87 23.81 24.17 25.53 1.03 1.03
     $graphics.Dispose()
     $target = New-Object System.Drawing.Bitmap $size, $size, ([System.Drawing.Imaging.PixelFormat]::Format32bppArgb)
     $reducer = [System.Drawing.Graphics]::FromImage($target)
