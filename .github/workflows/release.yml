@@ -11,7 +11,7 @@ jobs:
   release:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/checkout@v7
 
       - name: Check that the tag matches the version
         shell: powershell
@@ -21,6 +21,12 @@ jobs:
           if ("${{ github.ref_name }}" -ne "v$version") {
             throw "Tag ${{ github.ref_name }} does not match version $version in src\version.h."
           }
+
+      - name: Cache toolchain
+        uses: actions/cache@v6
+        with:
+          path: ${{ runner.temp }}\tools
+          key: llvm-mingw-20261117-ucrt-x86_64
 
       - name: Install toolchain
         id: toolchain
