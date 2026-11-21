@@ -97,6 +97,12 @@ void controller_cancel(Controller *controller);
 void controller_set_tool(Controller *controller, Tool tool);
 
 /**
+ * @brief Drops the selection and schedules a repaint of its decoration.
+ * @param controller Controller to update.
+ */
+void controller_deselect(Controller *controller);
+
+/**
  * @brief Handles pointer press.
  * @param controller Controller to drive.
  * @param sample Pointer data.

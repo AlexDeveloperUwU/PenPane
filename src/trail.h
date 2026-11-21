@@ -2,8 +2,9 @@
  * @file trail.h
  * @brief Fading pointer trails used by the laser pointer and the eraser.
  *
- * A trail keeps recent timestamped points. Rendering tapers the width toward the tail and fades
- * with age, so the laser leaves no permanent ink and costs nothing once it has faded.
+ * A trail keeps recent timestamped points. Rendering shrinks the width with the age of each point
+ * and along the last stretch before the tail, and never changes the colour, as Excalidraw does, so
+ * the laser leaves no permanent ink and costs nothing once it has faded.
  */
 #ifndef INK_TRAIL_H
 #define INK_TRAIL_H
@@ -14,6 +15,11 @@
 #include "geometry.h"
 
 #define TRAIL_CAPACITY 192
+
+#define TRAIL_LASER_RADIUS 2.0f
+#define TRAIL_LASER_LIFETIME_MS 1000
+#define TRAIL_ERASER_RADIUS 5.0f
+#define TRAIL_ERASER_LIFETIME_MS 200
 
 /** @brief One timestamped trail point. */
 typedef struct TrailPoint {
@@ -29,23 +35,30 @@ typedef struct Trail {
     float maxRadius;
     uint32_t lifetimeMs;
     Color color;
-    bool glow;
+    bool laser;
+    float taperLength;
+    float smoothing;
+    Point smoothed;
 } Trail;
 
 /**
  * @brief Configures an empty trail.
+ *
+ * The laser look uses a 50 pixel taper and streamline 0.4, the eraser look a 10 pixel taper and
+ * streamline 0.2, both matching Excalidraw. Excalidraw's own values are TRAIL_LASER_RADIUS with
+ * TRAIL_LASER_LIFETIME_MS and TRAIL_ERASER_RADIUS with TRAIL_ERASER_LIFETIME_MS.
  * @param trail Trail to initialize.
  * @param maxRadius Radius at the head of a fresh trail in pixels.
  * @param lifetimeMs Time after which a point has fully faded.
  * @param color Straight-alpha base color.
- * @param glow true to draw a soft halo under the core.
+ * @param laser true for the laser look, false for the eraser look.
  */
-void trail_init(Trail *trail, float maxRadius, uint32_t lifetimeMs, Color color, bool glow);
+void trail_init(Trail *trail, float maxRadius, uint32_t lifetimeMs, Color color, bool laser);
 
 /**
- * @brief Appends a point, dropping the oldest when full.
+ * @brief Appends a point after streamlining it, dropping the oldest when full.
  * @param trail Trail to extend.
- * @param position Point position.
+ * @param position Raw point position.
  * @param nowMs Monotonic millisecond clock.
  */
 void trail_add(Trail *trail, Point position, uint32_t nowMs);

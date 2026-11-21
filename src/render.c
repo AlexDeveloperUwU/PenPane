@@ -14,12 +14,21 @@
 #define ERASING_OPACITY 0.2f
 #define CORNER_RATIO 0.25f
 #define CORNER_MAX 32.0f
+#define MIN_VISIBLE_WIDTH 1.5f
 #define DASH_ON 8.0f
+#define DASH_OFF 8.0f
 #define DOT_ON 1.5f
-#define MAX_PATH_POINTS 160
+#define DOT_OFF 6.0f
+#define CORNER_STEPS 12
+#define RECT_PATH_POINTS 64
+#define MAX_PATH_POINTS 257
+#define ELLIPSE_SEGMENT_LENGTH 6.0f
+#define ELLIPSE_MIN_STEPS 48
 #define HANDLE_SIZE 8.0f
-#define SELECTION_PADDING 6.0f
-#define SELECTION_COLOR COLOR_PRIMARY
+#define HANDLE_RADIUS 2.0f
+#define SELECTION_PADDING 3.5f
+#define SELECTION_OUTLINE_WIDTH 1.0f
+#define SELECTION_COLOR COLOR_SELECTION
 
 /** @brief Pen segments forwarded into a mask. */
 typedef struct MaskSink {
@@ -53,6 +62,16 @@ static Color with_opacity(Color color, const Element *element)
 }
 
 /**
+ * @brief Width at which a stroke is actually drawn; Excalidraw renders its thin preset 1.5 pixels wide.
+ * @param width Nominal stroke width preset.
+ * @return Drawn stroke width in pixels.
+ */
+static float visible_width(float width)
+{
+    return width < MIN_VISIBLE_WIDTH ? MIN_VISIBLE_WIDTH : width;
+}
+
+/**
  * @brief Corner radius used for rectangles, matching Excalidraw's proportional roundness.
  * @param width Rectangle width.
  * @param height Rectangle height.
@@ -75,14 +94,20 @@ static float corner_radius(float width, float height)
 static int rect_path(Point *points, FloatRect box, float radius)
 {
     int count = 0;
-    Point corners[4] = {{box.right - radius, box.top + radius}, {box.right - radius, box.bottom - radius},
-                        {box.left + radius, box.bottom - radius}, {box.left + radius, box.top + radius}};
+    Point corners[4] = {{box.right, box.top}, {box.right, box.bottom}, {box.left, box.bottom},
+                        {box.left, box.top}};
+    Point entry[4] = {{box.right - radius, box.top}, {box.right, box.bottom - radius},
+                      {box.left + radius, box.bottom}, {box.left, box.top + radius}};
+    Point exit[4] = {{box.right, box.top + radius}, {box.right - radius, box.bottom},
+                     {box.left, box.bottom - radius}, {box.left + radius, box.top}};
     for (int corner = 0; corner < 4; corner++) {
-        float start = (float)(corner - 1) * PI_FLOAT * 0.5f;
-        for (int step = 0; step <= 6; step++) {
-            float angle = start + (float)step / 6.0f * PI_FLOAT * 0.5f;
-            points[count].x = corners[corner].x + cosf(angle) * radius;
-            points[count].y = corners[corner].y + sinf(angle) * radius;
+        for (int step = 0; step <= CORNER_STEPS; step++) {
+            float t = (float)step / (float)CORNER_STEPS;
+            float u = 1.0f - t;
+            points[count].x = u * u * entry[corner].x + 2.0f * u * t * corners[corner].x +
+                              t * t * exit[corner].x;
+            points[count].y = u * u * entry[corner].y + 2.0f * u * t * corners[corner].y +
+                              t * t * exit[corner].y;
             count++;
         }
     }
@@ -102,7 +127,9 @@ static int ellipse_path(Point *points, FloatRect box)
     float cy = (box.top + box.bottom) * 0.5f;
     float rx = (box.right - box.left) * 0.5f;
     float ry = (box.bottom - box.top) * 0.5f;
-    int steps = 96;
+    float perimeter = PI_FLOAT * (3.0f * (rx + ry) - sqrtf((3.0f * rx + ry) * (rx + 3.0f * ry)));
+    int steps = (int)ceilf(perimeter / ELLIPSE_SEGMENT_LENGTH);
+    steps = steps < ELLIPSE_MIN_STEPS ? ELLIPSE_MIN_STEPS : (steps > MAX_PATH_POINTS - 1 ? MAX_PATH_POINTS - 1 : steps);
     for (int i = 0; i < steps; i++) {
         float angle = (float)i / (float)steps * 2.0f * PI_FLOAT;
         points[i].x = cx + cosf(angle) * rx;
@@ -123,8 +150,8 @@ static int ellipse_path(Point *points, FloatRect box)
 static void stroke_dashed(Mask *mask, const Point *points, int count, float width, StrokeStyle style)
 {
     float on = style == STROKE_DASHED ? DASH_ON : DOT_ON;
-    float off = style == STROKE_DASHED ? 8.0f + width : 6.0f + width;
-    float radius = width * 0.5f;
+    float off = (style == STROKE_DASHED ? DASH_OFF : DOT_OFF) + width;
+    float radius = visible_width(width) * 0.5f;
     float remaining = on;
     bool drawing = true;
     for (int i = 0; i + 1 < count; i++) {
@@ -160,7 +187,7 @@ static void stroke_dashed(Mask *mask, const Point *points, int count, float widt
  */
 static void stroke_solid(Mask *mask, const Point *points, int count, float width)
 {
-    float radius = width * 0.5f;
+    float radius = visible_width(width) * 0.5f;
     for (int i = 0; i + 1 < count; i++) {
         mask_add_capsule(mask, points[i], points[i + 1], radius, radius);
     }
@@ -178,7 +205,7 @@ static void stroke_path(Mask *mask, const Point *points, int count, const Style 
     if (style->strokeStyle == STROKE_SOLID) {
         stroke_solid(mask, points, count, style->width);
     } else {
-        stroke_dashed(mask, points, count, style->width + 0.5f, style->strokeStyle);
+        stroke_dashed(mask, points, count, style->width, style->strokeStyle);
     }
 }
 
@@ -226,21 +253,17 @@ static void render_rectangle(Canvas *canvas, const Element *element, RECT area)
     float width = box.right - box.left;
     float height = box.bottom - box.top;
     float radius = corner_radius(width, height);
+    Point points[RECT_PATH_POINTS];
+    int count = rect_path(points, box, radius);
     Mask mask;
     if (element_is_filled(element) && mask_scratch_acquire(&mask, area)) {
-        mask_add_rect_fill(&mask, box.left, box.top, width, height, radius);
+        mask_add_polygon_fill(&mask, points, count - 1);
         mask_blend(canvas, &mask, with_opacity(element->style.fill, element));
     }
     if (!mask_scratch_acquire(&mask, area)) {
         return;
     }
-    if (element->style.strokeStyle == STROKE_SOLID) {
-        mask_add_rect_stroke(&mask, box.left, box.top, width, height, radius, element->style.width);
-    } else {
-        Point points[40];
-        int count = rect_path(points, box, radius);
-        stroke_path(&mask, points, count, &element->style);
-    }
+    stroke_path(&mask, points, count, &element->style);
     mask_blend(canvas, &mask, with_opacity(element->style.stroke, element));
 }
 
@@ -268,7 +291,7 @@ static void render_ellipse(Canvas *canvas, const Element *element, RECT area)
         return;
     }
     if (element->style.strokeStyle == STROKE_SOLID) {
-        mask_add_ellipse_stroke(&mask, center, rx, ry, element->style.width);
+        mask_add_ellipse_stroke(&mask, center, rx, ry, visible_width(element->style.width));
     } else {
         Point points[MAX_PATH_POINTS];
         int count = ellipse_path(points, box);
@@ -292,7 +315,7 @@ static void render_line(Canvas *canvas, const Element *element, RECT area)
     Point points[2] = {element->from, element->to};
     stroke_path(&mask, points, 2, &element->style);
     if (element->type == ELEMENT_ARROW) {
-        add_arrowhead(&mask, element->from, element->to, element->style.width);
+        add_arrowhead(&mask, element->from, element->to, visible_width(element->style.width));
     }
     mask_blend(canvas, &mask, with_opacity(element->style.stroke, element));
 }
@@ -445,26 +468,29 @@ void render_selection(Canvas *canvas, const Element *element, const RECT *clip)
         return;
     }
     FloatRect box = render_selection_box(element);
-    mask_add_rect_stroke(&mask, box.left, box.top, box.right - box.left, box.bottom - box.top, 3.0f, 1.5f);
+    box.left = roundf(box.left);
+    box.top = roundf(box.top);
+    box.right = roundf(box.right);
+    box.bottom = roundf(box.bottom);
+    mask_add_rect_stroke(&mask, box.left, box.top, box.right - box.left, box.bottom - box.top, 0.0f,
+                         SELECTION_OUTLINE_WIDTH);
     mask_blend(canvas, &mask, SELECTION_COLOR);
-    float xs[3] = {box.left, (box.left + box.right) * 0.5f, box.right};
-    float ys[3] = {box.top, (box.top + box.bottom) * 0.5f, box.bottom};
-    for (int row = 0; row < 3; row++) {
-        for (int column = 0; column < 3; column++) {
-            if (row == 1 && column == 1) {
-                continue;
-            }
+    float xs[2] = {box.left, box.right};
+    float ys[2] = {box.top, box.bottom};
+    for (int row = 0; row < 2; row++) {
+        for (int column = 0; column < 2; column++) {
+            float left = xs[column] - HANDLE_SIZE * 0.5f;
+            float top = ys[row] - HANDLE_SIZE * 0.5f;
             if (!mask_scratch_acquire(&mask, area)) {
                 return;
             }
-            mask_add_rect_fill(&mask, xs[column] - HANDLE_SIZE * 0.5f, ys[row] - HANDLE_SIZE * 0.5f,
-                               HANDLE_SIZE, HANDLE_SIZE, 2.0f);
+            mask_add_rect_fill(&mask, left, top, HANDLE_SIZE, HANDLE_SIZE, HANDLE_RADIUS);
             mask_blend(canvas, &mask, COLOR_CANVAS_DARK);
             if (!mask_scratch_acquire(&mask, area)) {
                 return;
             }
-            mask_add_rect_stroke(&mask, xs[column] - HANDLE_SIZE * 0.5f, ys[row] - HANDLE_SIZE * 0.5f,
-                                 HANDLE_SIZE, HANDLE_SIZE, 2.0f, 1.5f);
+            mask_add_rect_stroke(&mask, left, top, HANDLE_SIZE, HANDLE_SIZE, HANDLE_RADIUS,
+                                 SELECTION_OUTLINE_WIDTH);
             mask_blend(canvas, &mask, SELECTION_COLOR);
         }
     }

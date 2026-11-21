@@ -73,3 +73,38 @@ Selection `V`/`1`, rectangle `R`/`2`, ellipse `O`/`4`, arrow `A`/`5`, line `L`/`
 ## Unverified
 
 Exact icon path data, undo/redo placement, rounding versus browser, and whether the toolbar has a border. These are checked visually in the browser during the UI milestone.
+
+## Measured
+
+Measured on excalidraw.com in dark mode (a build whose pen has a "Pressure" option, canvas 1024 by 768 at device pixel ratio 1) by injecting elements with roughness 0 and summing pixel coverage of the canvas, then compared with Ink's `tests/render_preview.c` output rendered from the same content. Ink widths 1, 2 and 4 correspond to Excalidraw's pen widths thin 0.5, medium 1 and bold 2, because the pen presets are half the shape presets. Thickness is the integral of coverage across the stroke in pixels.
+
+| Property | Excalidraw | Ink |
+|---|---|---|
+| Pen default mode | constant width (the other mode is "variable") | constant via `PEN_PRESSURE_CONSTANT`; speed simulated via `PEN_PRESSURE_SIMULATED` |
+| Pen constant thickness for sw 1 / 2 / 4 | 2.75 / 5.49 / 11.24 | 2.74 (width 2) / 5.48 (width 4) / 10.98 (width 8) |
+| Pen variable thickness, sw 1, event spacing 1 / 2 / 3 / 4 / 6 / 8 / 12 px | 7.24 / 6.25 / 4.75 / 3.01 / 2.50 / 2.50 / 2.50 | 7.31 / 6.17 / 4.74 / 3.06 / 2.62 / 2.62 / 2.62 (width 2) |
+| Pen variable thickness, sw 2, same spacings | 15.49 / 14.50 / 13.49 / 12.25 / 9.49 / 6.25 / 5.24 | 15.48 / 14.61 / 13.56 / 12.35 / 9.47 / 6.13 / 5.25 (width 4) |
+| Pen variable thickness, sw 4, same spacings | 31.74 / 31.01 / 30.00 / 29.24 / 27.01 / 24.25 / 19.01 | 31.67 / 30.93 / 30.11 / 29.20 / 27.11 / 24.67 / 18.95 (width 8) |
+| Pen outline diameter | 2 x size x sin(t x PI / 2), size = 4.25 x sw, t = 0.5 - 0.6 x (0.5 - pressure) | width x 4.25 x sin(...) with width = 2 x sw |
+| Pen streamline factor | 0.15 + (1 - 0.5) x 0.85 = 0.575 per sample | same |
+| Pen speed unit | distance between streamlined points divided by 4.25 x sw | same, 2.125 x width |
+| Shape stroke thickness for width 1 / 2 / 4 | 1.49 / 2.00 / 4.00 | 1.5 / 2.0 / 4.0 |
+| Dash runs for width 1 / 2 / 4 (lit, unlit) | +9 -8 / +10 -8 / +12 -8, period 8 + 8 + width | identical runs |
+| Dotted period for width 2 / 4 | 9.5 / 11.5 (dot 1.5 plus caps) | same |
+| Dotted arrowhead | dotted | solid |
+| Rounded rectangle corner | quadratic Bezier with the control point on the corner, radius min(side) x 0.25 capped at 32 | same curve (12 steps per corner), polygon fill of the same path |
+| Arrowhead, long arrow | wings 25 px long at 20 degrees, round caps, independent of stroke width | same |
+| Arrowhead, 30 px arrow | wing about 15 px at about 28 degrees | wing 15 px at 26.7 degrees |
+| Selection outline | 1 px, `#b3afff`, square corners | same, box snapped to whole pixels |
+| Selection handles | 8 px rounded square (radius about 2), 1 px outline `#b3afff`, fill `#121212`; only four corner handles plus a rotation circle seen on the ellipse measured | four corner handles, same look, no rotation circle |
+| Selection padding | handle centres 4.5 px outside the geometry for width 2 | 3.5 + width / 2 |
+| Laser trail | red fill, head radius 2, no glow, 1000 ms decay, taper over the last 50 points, streamline 0.4 | same |
+| Eraser trail | fill `rgba(255,255,255,0.2)`, head radius 5, 200 ms decay, taper over 10 points, streamline 0.2 | same |
+| Anti-aliasing | exact area coverage blended in sRGB without gamma (a 2.75 px line gives edge pixels 0.37) | distance based coverage blended without gamma, edge values within 0.03 |
+
+Notes:
+
+- Excalidraw's default roughness is 1 (hand drawn). All comparison shapes use roughness 0 so that edges are clean.
+- Excalidraw's default pen stroke width is 1, which yields the 2.75 px constant stroke; Ink's default width 2 is the same preset by name.
+- Controller values still to align (outside this task's files): `LASER_RADIUS` 2, `ERASER_RADIUS` 5, `ERASER_COLOR` `COLOR_ERASER_TRAIL`, pen mode argument `style.pressure ? sample->pressure : PEN_PRESSURE_CONSTANT`, and a call to `pen_finish` on pointer release. The trail constants are exported from `src/trail.h` as `TRAIL_LASER_RADIUS`, `TRAIL_ERASER_RADIUS`, `TRAIL_LASER_LIFETIME_MS` and `TRAIL_ERASER_LIFETIME_MS`.
+- Re-run the comparison with `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\preview.ps1`, which compiles `tests\render_preview.c` with the render sources, writes PNG files to `build\preview` and prints the same tables and pixel dumps.

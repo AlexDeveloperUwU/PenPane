@@ -2,6 +2,9 @@
 
 #include <math.h>
 #include <stdlib.h>
+#include <string.h>
+
+#define POLYGON_SUBSAMPLES 4
 
 /**
  * @brief Signed distance function evaluated per pixel center.
@@ -186,12 +189,117 @@ void mask_add_capsule(Mask *mask, Point from, Point to, float radiusFrom, float 
 {
     CapsuleShape shape = {from, to, radiusFrom, radiusTo};
     float reach = (radiusFrom > radiusTo ? radiusFrom : radiusTo) + 1.0f;
-    float minX = (from.x < to.x ? from.x : to.x) - reach;
-    float maxX = (from.x > to.x ? from.x : to.x) + reach;
     float minY = (from.y < to.y ? from.y : to.y) - reach;
     float maxY = (from.y > to.y ? from.y : to.y) + reach;
-    rasterize(mask, (int)floorf(minX), (int)floorf(minY), (int)ceilf(maxX), (int)ceilf(maxY),
-              capsule_distance, &shape, -1.0f, 0.0f);
+    int top = (int)floorf(minY);
+    int bottom = (int)ceilf(maxY);
+    if (top < mask->y) {
+        top = mask->y;
+    }
+    if (bottom > mask->y + mask->height) {
+        bottom = mask->y + mask->height;
+    }
+    float dy = to.y - from.y;
+    for (int y = top; y < bottom; y++) {
+        float centerY = (float)y + 0.5f;
+        float t0 = 0.0f;
+        float t1 = 1.0f;
+        if (fabsf(dy) > 1e-6f) {
+            float a = (centerY - reach - from.y) / dy;
+            float b = (centerY + reach - from.y) / dy;
+            t0 = clamp_unit(a < b ? a : b);
+            t1 = clamp_unit(a < b ? b : a);
+            if ((a < 0.0f && b < 0.0f) || (a > 1.0f && b > 1.0f)) {
+                continue;
+            }
+        } else if (fabsf(centerY - from.y) > reach) {
+            continue;
+        }
+        float xa = from.x + (to.x - from.x) * t0;
+        float xb = from.x + (to.x - from.x) * t1;
+        int left = (int)floorf((xa < xb ? xa : xb) - reach);
+        int right = (int)ceilf((xa < xb ? xb : xa) + reach);
+        rasterize(mask, left, y, right, y + 1, capsule_distance, &shape, -1.0f, 0.0f);
+    }
+}
+
+void mask_add_polygon_fill(Mask *mask, const Point *points, int count)
+{
+    if (count < 3 || mask->width <= 0) {
+        return;
+    }
+    float minY = points[0].y;
+    float maxY = points[0].y;
+    for (int i = 1; i < count; i++) {
+        minY = points[i].y < minY ? points[i].y : minY;
+        maxY = points[i].y > maxY ? points[i].y : maxY;
+    }
+    int top = (int)floorf(minY);
+    int bottom = (int)ceilf(maxY);
+    top = top < mask->y ? mask->y : top;
+    bottom = bottom > mask->y + mask->height ? mask->y + mask->height : bottom;
+    float *accumulator = calloc((size_t)mask->width, sizeof(float));
+    float *crossings = malloc((size_t)count * sizeof(float));
+    if (!accumulator || !crossings) {
+        free(accumulator);
+        free(crossings);
+        return;
+    }
+    for (int y = top; y < bottom; y++) {
+        memset(accumulator, 0, (size_t)mask->width * sizeof(float));
+        for (int sub = 0; sub < POLYGON_SUBSAMPLES; sub++) {
+            float sampleY = (float)y + ((float)sub + 0.5f) / (float)POLYGON_SUBSAMPLES;
+            int found = 0;
+            for (int i = 0; i < count; i++) {
+                Point a = points[i];
+                Point b = points[(i + 1) % count];
+                if ((a.y <= sampleY) != (b.y <= sampleY)) {
+                    crossings[found++] = a.x + (sampleY - a.y) / (b.y - a.y) * (b.x - a.x);
+                }
+            }
+            for (int i = 1; i < found; i++) {
+                float value = crossings[i];
+                int j = i - 1;
+                while (j >= 0 && crossings[j] > value) {
+                    crossings[j + 1] = crossings[j];
+                    j--;
+                }
+                crossings[j + 1] = value;
+            }
+            for (int i = 0; i + 1 < found; i += 2) {
+                float x0 = crossings[i] - (float)mask->x;
+                float x1 = crossings[i + 1] - (float)mask->x;
+                x0 = x0 < 0.0f ? 0.0f : x0;
+                x1 = x1 > (float)mask->width ? (float)mask->width : x1;
+                if (x1 <= x0) {
+                    continue;
+                }
+                int first = (int)floorf(x0);
+                int last = (int)floorf(x1);
+                if (first == last) {
+                    accumulator[first] += x1 - x0;
+                    continue;
+                }
+                accumulator[first] += (float)(first + 1) - x0;
+                for (int x = first + 1; x < last; x++) {
+                    accumulator[x] += 1.0f;
+                }
+                if (last < mask->width) {
+                    accumulator[last] += x1 - (float)last;
+                }
+            }
+        }
+        uint8_t *row = mask->coverage + (size_t)(y - mask->y) * mask->width;
+        for (int x = 0; x < mask->width; x++) {
+            float cover = accumulator[x] / (float)POLYGON_SUBSAMPLES;
+            uint8_t value = (uint8_t)(clamp_unit(cover) * 255.0f + 0.5f);
+            if (value > row[x]) {
+                row[x] = value;
+            }
+        }
+    }
+    free(accumulator);
+    free(crossings);
 }
 
 void mask_add_ellipse_fill(Mask *mask, Point center, float radiusX, float radiusY)

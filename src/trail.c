@@ -5,16 +5,22 @@
 
 #include "mask_scratch.h"
 
-#define TRAIL_GLOW_SCALE 2.6f
-#define TRAIL_GLOW_ALPHA 0.22f
+#define TRAIL_FRAME_MS 16.0f
+#define TRAIL_LASER_TAPER_LENGTH 50.0f
+#define TRAIL_ERASER_TAPER_LENGTH 10.0f
+#define TRAIL_LASER_STREAMLINE 0.4f
+#define TRAIL_ERASER_STREAMLINE 0.2f
 
-void trail_init(Trail *trail, float maxRadius, uint32_t lifetimeMs, Color color, bool glow)
+void trail_init(Trail *trail, float maxRadius, uint32_t lifetimeMs, Color color, bool laser)
 {
     memset(trail, 0, sizeof *trail);
     trail->maxRadius = maxRadius;
     trail->lifetimeMs = lifetimeMs;
     trail->color = color;
-    trail->glow = glow;
+    trail->laser = laser;
+    trail->taperLength = laser ? TRAIL_LASER_TAPER_LENGTH : TRAIL_ERASER_TAPER_LENGTH;
+    float streamline = laser ? TRAIL_LASER_STREAMLINE : TRAIL_ERASER_STREAMLINE;
+    trail->smoothing = 0.15f + (1.0f - streamline) * 0.85f;
 }
 
 /**
@@ -30,7 +36,13 @@ static int trail_index(const Trail *trail, int n)
 
 void trail_add(Trail *trail, Point position, uint32_t nowMs)
 {
-    trail->points[trail->head].position = position;
+    if (trail->count == 0) {
+        trail->smoothed = position;
+    } else {
+        trail->smoothed.x += (position.x - trail->smoothed.x) * trail->smoothing;
+        trail->smoothed.y += (position.y - trail->smoothed.y) * trail->smoothing;
+    }
+    trail->points[trail->head].position = trail->smoothed;
     trail->points[trail->head].timeMs = nowMs;
     trail->head = (trail->head + 1) % TRAIL_CAPACITY;
     if (trail->count < TRAIL_CAPACITY) {
@@ -61,7 +73,7 @@ RECT trail_bounds(const Trail *trail)
     if (trail->count == 0) {
         return bounds;
     }
-    float reach = trail->maxRadius * (trail->glow ? TRAIL_GLOW_SCALE : 1.0f) + 2.0f;
+    float reach = trail->maxRadius + 2.0f;
     FloatRect box = {1e9f, 1e9f, -1e9f, -1e9f};
     for (int i = 0; i < trail->count; i++) {
         Point p = trail->points[trail_index(trail, i)].position;
@@ -74,46 +86,30 @@ RECT trail_bounds(const Trail *trail)
 }
 
 /**
- * @brief Quadratic ease-out used for width and fade, as in Excalidraw's trails.
+ * @brief Quartic ease-out used for the width mapping of Excalidraw's trails.
  * @param t Value in 0..1.
  * @return Eased value in 0..1.
  */
 static float ease_out(float t)
 {
-    return 1.0f - (1.0f - t) * (1.0f - t);
+    float inverse = 1.0f - t;
+    inverse *= inverse;
+    return 1.0f - inverse * inverse;
 }
 
 /**
- * @brief Draws one pass of the trail with a radius scale and an alpha multiplier.
- * @param trail Trail to draw.
- * @param canvas Target canvas.
- * @param area Pixel rectangle of work.
- * @param nowMs Clock used for fading.
- * @param scale Radius multiplier.
- * @param alpha Alpha multiplier applied to the base color.
+ * @brief Width factor of one point from its age and its distance to the head.
+ * @param trail Trail being drawn.
+ * @param ageMs Age of the point in milliseconds.
+ * @param distanceToHead Time between the point and the newest point expressed in frames of 16 milliseconds.
+ * @return Factor in 0..1 applied to the maximum radius.
  */
-static void render_pass(const Trail *trail, Canvas *canvas, RECT area, uint32_t nowMs, float scale,
-                        float alpha)
+static float width_factor(const Trail *trail, uint32_t ageMs, float distanceToHead)
 {
-    Mask mask;
-    if (!mask_scratch_acquire(&mask, area)) {
-        return;
-    }
-    for (int i = 0; i + 1 < trail->count; i++) {
-        const TrailPoint *a = &trail->points[trail_index(trail, i)];
-        const TrailPoint *b = &trail->points[trail_index(trail, i + 1)];
-        float ageA = (float)(nowMs - a->timeMs) / (float)trail->lifetimeMs;
-        float ageB = (float)(nowMs - b->timeMs) / (float)trail->lifetimeMs;
-        ageA = ageA > 1.0f ? 1.0f : ageA;
-        ageB = ageB > 1.0f ? 1.0f : ageB;
-        float radiusA = trail->maxRadius * scale * ease_out(1.0f - ageA);
-        float radiusB = trail->maxRadius * scale * ease_out(1.0f - ageB);
-        mask_add_capsule(&mask, a->position, b->position, radiusA, radiusB);
-    }
-    Color color = trail->color;
-    uint32_t base = color >> 24;
-    uint32_t scaled = (uint32_t)((float)base * alpha);
-    mask_blend(canvas, &mask, (color & 0x00FFFFFFu) | (scaled << 24));
+    float life = 1.0f - (float)ageMs / (float)trail->lifetimeMs;
+    life = life < 0.0f ? 0.0f : life;
+    float taper = (trail->taperLength - fminf(trail->taperLength, distanceToHead)) / trail->taperLength;
+    return fminf(ease_out(life), ease_out(taper));
 }
 
 void trail_render(const Trail *trail, Canvas *canvas, const RECT *clip, uint32_t nowMs)
@@ -123,8 +119,20 @@ void trail_render(const Trail *trail, Canvas *canvas, const RECT *clip, uint32_t
     if (trail->count < 2 || !rect_intersect(bounds, *clip, &area)) {
         return;
     }
-    if (trail->glow) {
-        render_pass(trail, canvas, area, nowMs, TRAIL_GLOW_SCALE, TRAIL_GLOW_ALPHA);
+    Mask mask;
+    if (!mask_scratch_acquire(&mask, area)) {
+        return;
     }
-    render_pass(trail, canvas, area, nowMs, 1.0f, 1.0f);
+    const TrailPoint *newest = &trail->points[trail_index(trail, trail->count - 1)];
+    const TrailPoint *newer = newest;
+    float radiusNewer = trail->maxRadius * width_factor(trail, nowMs - newer->timeMs, 0.0f);
+    for (int i = trail->count - 2; i >= 0; i--) {
+        const TrailPoint *older = &trail->points[trail_index(trail, i)];
+        float distance = (float)(newest->timeMs - older->timeMs) / TRAIL_FRAME_MS;
+        float radiusOlder = trail->maxRadius * width_factor(trail, nowMs - older->timeMs, distance);
+        mask_add_capsule(&mask, older->position, newer->position, radiusOlder, radiusNewer);
+        newer = older;
+        radiusNewer = radiusOlder;
+    }
+    mask_blend(canvas, &mask, trail->color);
 }

@@ -106,7 +106,7 @@ static void test_defaults(void)
     assert(config.defaultTool == TOOL_PEN);
     assert(config.defaultStrokeIndex == 0 && config.defaultFillIndex == 0 && config.defaultWidthIndex == 1);
     assert(config.autoFadeSeconds == 0 && config.drawMonitor == 0 && config.uiMonitor == 0);
-    assert(!config.toolLock);
+    assert(config.toolLock);
     assert(config.ui.autoHide && config.ui.autoHideMs == 4000 && config.ui.excludeFromCapture);
     for (int i = 0; i < PANEL_COUNT; i++) {
         assert(!config.ui.placement[i].set);
@@ -224,7 +224,7 @@ static void test_bad_lines_skipped(void)
     assert(config.defaultTool == TOOL_ELLIPSE);
     assert(config.defaultStrokeIndex == 0);
     assert(config.autoFadeSeconds == 0);
-    assert(!config.toolLock);
+    assert(config.toolLock);
     assert(!config.ui.placement[PANEL_TOOLBAR].set);
     assert(config.ui.placement[PANEL_PROPERTIES].set && config.ui.placement[PANEL_PROPERTIES].x == 5 &&
            config.ui.placement[PANEL_PROPERTIES].y == 6);

@@ -379,6 +379,7 @@ static void app_apply_state(void)
             focus_overlay();
         } else {
             restore_focus();
+            SetWindowPos(app.overlay.window, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
             if (app.config.autoFadeSeconds > 0 && scene->count > 0) {
                 SetTimer(app.messageWindow, TIMER_FADE_WAIT, (UINT)app.config.autoFadeSeconds * 1000, NULL);
             }
@@ -571,21 +572,21 @@ static void perform_action(Action action)
     }
     case ACTION_UNDO:
         controller_cancel(&app.controller);
-        app.controller.selected = -1;
+        controller_deselect(&app.controller);
         scene_undo(scene);
         app_flush();
         app_sync_ui();
         break;
     case ACTION_REDO:
         controller_cancel(&app.controller);
-        app.controller.selected = -1;
+        controller_deselect(&app.controller);
         scene_redo(scene);
         app_flush();
         app_sync_ui();
         break;
     case ACTION_CLEAR:
         controller_cancel(&app.controller);
-        app.controller.selected = -1;
+        controller_deselect(&app.controller);
         scene_clear(scene);
         app_flush();
         app_sync_ui();

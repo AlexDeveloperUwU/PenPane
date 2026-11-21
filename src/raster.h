@@ -57,6 +57,14 @@ void mask_destroy(Mask *mask);
 void mask_add_capsule(Mask *mask, Point from, Point to, float radiusFrom, float radiusTo);
 
 /**
+ * @brief Adds a filled polygon using the even-odd rule with exact horizontal and four-fold vertical coverage.
+ * @param mask Target mask.
+ * @param points Polygon vertices; the last vertex connects back to the first.
+ * @param count Number of vertices, at least three.
+ */
+void mask_add_polygon_fill(Mask *mask, const Point *points, int count);
+
+/**
  * @brief Adds a filled ellipse.
  * @param mask Target mask.
  * @param center Ellipse center.

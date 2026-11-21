@@ -23,7 +23,7 @@ The application reads one plain-text file. Every key is optional: a missing key 
 | `auto_fade_seconds` | `0` | 0 to 3600 | Seconds after which finished strokes fade out. 0 keeps strokes until cleared. |
 | `draw_monitor` | `0` | 0 to 15 | Monitor that holds the drawing surface. 0 is the primary monitor. |
 | `ui_monitor` | `0` | 0 to 15 | Monitor that holds the toolbar and panels. 0 is the primary monitor. |
-| `tool_lock` | `false` | boolean | Keep the selected tool after drawing one element instead of returning to the select tool. |
+| `tool_lock` | `true` | boolean | Keep the selected tool after drawing one element instead of returning to the select tool. |
 | `ui_auto_hide` | `true` | boolean | Hide the toolbar and panels when the pen is drawing or has been idle. |
 | `ui_auto_hide_ms` | `4000` | 500 to 60000 | Idle time before the panels hide. |
 | `ui_exclude_from_capture` | `true` | boolean | Keep the toolbar and panels out of screen recordings and screenshots. |
@@ -130,7 +130,7 @@ default_width_index = 1
 auto_fade_seconds = 0
 draw_monitor = 0
 ui_monitor = 0
-tool_lock = false
+tool_lock = true
 ui_auto_hide = true
 ui_auto_hide_ms = 4000
 ui_exclude_from_capture = true

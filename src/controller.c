@@ -13,11 +13,11 @@
 #define MIN_BOX_SIZE 6.0f
 #define PI_FLOAT 3.14159265f
 #define SNAP_ANGLE (PI_FLOAT / 12.0f)
-#define LASER_RADIUS 4.0f
-#define LASER_LIFETIME_MS 1000
-#define ERASER_RADIUS 3.0f
-#define ERASER_LIFETIME_MS 200
-#define ERASER_COLOR 0x33FFFFFFu
+#define LASER_RADIUS TRAIL_LASER_RADIUS
+#define LASER_LIFETIME_MS TRAIL_LASER_LIFETIME_MS
+#define ERASER_RADIUS TRAIL_ERASER_RADIUS
+#define ERASER_LIFETIME_MS TRAIL_ERASER_LIFETIME_MS
+#define ERASER_COLOR COLOR_ERASER_TRAIL
 
 /**
  * @brief Adds a rectangle to the repaint region.
@@ -159,6 +159,14 @@ void controller_attach(Controller *controller, Scene *scene, Canvas *canvas)
     controller->canvas = canvas;
 }
 
+void controller_deselect(Controller *controller)
+{
+    if (controller->scene) {
+        clear_selection(controller);
+    }
+    controller->selected = -1;
+}
+
 void controller_set_tool(Controller *controller, Tool tool)
 {
     if (controller->tool == tool) {
@@ -216,7 +224,7 @@ static bool begin_draft(Controller *controller, const PointerSample *sample)
     controller->draft.to = sample->position;
     controller->penGroup = 0;
     if (controller->draft.type == ELEMENT_PEN) {
-        float pressure = controller->style.pressure ? sample->pressure : -1.0f;
+        float pressure = controller->style.pressure && sample->pressure >= 0.0f ? sample->pressure : PEN_PRESSURE_CONSTANT;
         if (!pen_begin(&controller->pen, &controller->draft, sample->position, pressure)) {
             element_free(&controller->draft);
             controller->hasDraft = false;
@@ -414,6 +422,9 @@ static void finish_draft(Controller *controller)
 {
     Element *draft = &controller->draft;
     bool keep = true;
+    if (draft->type == ELEMENT_PEN) {
+        pen_finish(&controller->pen, draft);
+    }
     if (draft->type == ELEMENT_RECTANGLE || draft->type == ELEMENT_ELLIPSE) {
         keep = fabsf(draft->to.x - draft->from.x) >= MIN_SHAPE_SIZE ||
                fabsf(draft->to.y - draft->from.y) >= MIN_SHAPE_SIZE;
@@ -481,7 +492,7 @@ void controller_pointer_move(Controller *controller, const PointerSample *sample
     switch (controller->interaction) {
     case INTERACTION_DRAW:
         if (controller->draft.type == ELEMENT_PEN) {
-            float pressure = controller->style.pressure ? sample->pressure : -1.0f;
+            float pressure = controller->style.pressure && sample->pressure >= 0.0f ? sample->pressure : PEN_PRESSURE_CONSTANT;
             if (pen_add(&controller->pen, &controller->draft, sample->position, pressure)) {
                 flush_pen_draft(controller);
             }
