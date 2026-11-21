@@ -113,6 +113,10 @@ bool gesture_is_bound(const GestureEngine *engine, Trigger trigger);
 
 /**
  * @brief Reports whether a trigger needs release events (it has a long or double binding).
+ *
+ * Single-only triggers fire on press and need no release for their own gesture, but the engine
+ * keeps them "held" until a release is reported, which is how auto-repeat is ignored. Callers that
+ * can detect releases should therefore report them for every bound trigger.
  * @param engine Engine to query.
  * @param trigger Trigger to look up.
  * @return true when the caller must report releases for this trigger.

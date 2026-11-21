@@ -10,6 +10,7 @@ bool overlay_create(Overlay *overlay, HINSTANCE instance, RECT bounds, WNDPROC p
 {
     memset(overlay, 0, sizeof *overlay);
     overlay->bounds = bounds;
+    overlay->opacity = 255;
 
     WNDCLASSEXW windowClass = {0};
     windowClass.cbSize = sizeof windowClass;
@@ -59,7 +60,7 @@ void overlay_present(Overlay *overlay, const RECT *dirty)
     POINT position = {overlay->bounds.left, overlay->bounds.top};
     SIZE size = {overlay->canvas.width, overlay->canvas.height};
     POINT source = {0, 0};
-    BLENDFUNCTION blend = {AC_SRC_OVER, 0, 255, AC_SRC_ALPHA};
+    BLENDFUNCTION blend = {AC_SRC_OVER, 0, overlay->opacity, AC_SRC_ALPHA};
     UPDATELAYEREDWINDOWINFO info = {0};
     info.cbSize = sizeof info;
     info.pptDst = &position;
@@ -70,4 +71,32 @@ void overlay_present(Overlay *overlay, const RECT *dirty)
     info.dwFlags = ULW_ALPHA;
     info.prcDirty = dirty;
     UpdateLayeredWindowIndirect(overlay->window, &info);
+}
+
+void overlay_set_focusable(Overlay *overlay, bool focusable)
+{
+    LONG_PTR style = GetWindowLongPtrW(overlay->window, GWL_EXSTYLE);
+    style = focusable ? (style & ~(LONG_PTR)WS_EX_NOACTIVATE) : (style | WS_EX_NOACTIVATE);
+    SetWindowLongPtrW(overlay->window, GWL_EXSTYLE, style);
+}
+
+void overlay_set_opacity(Overlay *overlay, unsigned char opacity)
+{
+    overlay->opacity = opacity;
+}
+
+bool overlay_resize(Overlay *overlay, RECT bounds)
+{
+    Canvas replacement;
+    int width = bounds.right - bounds.left;
+    int height = bounds.bottom - bounds.top;
+    if (!canvas_create(&replacement, width, height)) {
+        return false;
+    }
+    canvas_destroy(&overlay->canvas);
+    overlay->canvas = replacement;
+    overlay->bounds = bounds;
+    SetWindowPos(overlay->window, HWND_TOPMOST, bounds.left, bounds.top, width, height,
+                 SWP_NOACTIVATE);
+    return true;
 }

@@ -16,6 +16,7 @@ typedef struct Overlay {
     RECT bounds;
     Canvas canvas;
     bool capturesInput;
+    unsigned char opacity;
 } Overlay;
 
 /**
@@ -49,6 +50,28 @@ void overlay_set_visible(Overlay *overlay, bool visible);
  * @param capture true to receive mouse and pen input, false for click-through.
  */
 void overlay_set_capture(Overlay *overlay, bool capture);
+
+/**
+ * @brief Allows or forbids the window to take keyboard focus.
+ * @param overlay Target overlay.
+ * @param focusable true while the user is actively drawing and shortcuts must reach the overlay.
+ */
+void overlay_set_focusable(Overlay *overlay, bool focusable);
+
+/**
+ * @brief Sets the whole-surface opacity used on the next present, for fading annotations out.
+ * @param overlay Target overlay.
+ * @param opacity 0 (invisible) to 255 (normal).
+ */
+void overlay_set_opacity(Overlay *overlay, unsigned char opacity);
+
+/**
+ * @brief Moves the window to new bounds and reallocates the surface.
+ * @param overlay Target overlay.
+ * @param bounds New screen rectangle.
+ * @return false when the new surface could not be created; the overlay keeps its old surface.
+ */
+bool overlay_resize(Overlay *overlay, RECT bounds);
 
 /**
  * @brief Pushes the canvas to the screen.

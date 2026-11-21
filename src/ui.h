@@ -132,6 +132,15 @@ void ui_destroy(Ui *ui);
 void ui_update(Ui *ui, const UiModel *model);
 
 /**
+ * @brief Applies changed preferences at runtime: auto-hide, its delay and capture exclusion.
+ *
+ * Saved placements are replaced too but islands are not moved; use ui_place_defaults for that.
+ * @param ui Instance to change.
+ * @param settings New preferences; copied.
+ */
+void ui_apply_settings(Ui *ui, const UiSettings *settings);
+
+/**
  * @brief Shows or hides the UI for the current overlay state.
  *
  * With drawing true all islands are shown (subject to auto-hide). With drawing false only the
@@ -150,7 +159,8 @@ void ui_set_visible(Ui *ui, bool visible, bool drawing);
  * history panel at the bottom left.
  * @param ui Instance to change.
  * @param workArea Work area of the monitor that should host the UI.
- * @param forceAll true to ignore saved positions and reposition every island.
+ * @param forceAll true to ignore saved positions and reposition every island. In that case every
+ *        new position is also reported with UI_EVENT_PANEL_MOVED so that it can be persisted.
  */
 void ui_place_defaults(Ui *ui, RECT workArea, bool forceAll);
 

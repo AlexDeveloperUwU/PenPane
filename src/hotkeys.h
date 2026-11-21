@@ -39,7 +39,12 @@ typedef void (*HotkeyLearnHandler)(void *user, Action action, Binding binding, b
 /** @brief Opaque instance. */
 typedef struct Hotkeys Hotkeys;
 
-/** @brief Message id of the polling timer; the owner forwards WM_TIMER to hotkeys_handle_message. */
+/**
+ * @brief Base message id of the module timers; the owner forwards every WM_TIMER to hotkeys_handle_message.
+ *
+ * Ids HOTKEYS_TIMER_ID to HOTKEYS_TIMER_ID + 2 are reserved. Registered hotkey ids start at 0x4C00.
+ * Only one instance can exist at a time because the low-level hooks are process-wide.
+ */
 #define HOTKEYS_TIMER_ID 0x4B48
 
 /**
