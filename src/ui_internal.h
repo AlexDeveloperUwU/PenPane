@@ -74,10 +74,11 @@ int ui_px(float scale, int value);
  * @brief Builds the layout of one island for a model.
  * @param panel Island to lay out.
  * @param model Application state.
+ * @param pinned true when the island is pinned open; selects the look of its pin button.
  * @param scale Scale factor.
  * @param layout Receives the layout; fully overwritten.
  */
-void ui_layout_build(PanelId panel, const UiModel *model, float scale, UiLayout *layout);
+void ui_layout_build(PanelId panel, const UiModel *model, bool pinned, float scale, UiLayout *layout);
 
 /**
  * @brief Compares two items for visual and behavioral equality.

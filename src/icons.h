@@ -35,6 +35,8 @@ typedef enum Icon {
     ICON_WIDTH_THIN,
     ICON_WIDTH_MEDIUM,
     ICON_WIDTH_BOLD,
+    ICON_PIN,
+    ICON_PIN_OFF,
     ICON_COUNT
 } Icon;
 

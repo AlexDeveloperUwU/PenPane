@@ -64,6 +64,9 @@ static bool config_equal(const Config *a, const Config *b)
     for (int i = 0; i < PANEL_COUNT; i++) {
         const PanelPlacement *p = &a->ui.placement[i];
         const PanelPlacement *q = &b->ui.placement[i];
+        if (a->ui.pinned[i] != b->ui.pinned[i]) {
+            return false;
+        }
         if (p->set != q->set || (p->set && (p->x != q->x || p->y != q->y))) {
             return false;
         }
@@ -107,9 +110,10 @@ static void test_defaults(void)
     assert(config.defaultStrokeIndex == 0 && config.defaultFillIndex == 0 && config.defaultWidthIndex == 1);
     assert(config.autoFadeSeconds == 0 && config.drawMonitor == 0 && config.uiMonitor == 0);
     assert(config.toolLock);
-    assert(config.ui.autoHide && config.ui.autoHideMs == 4000 && config.ui.excludeFromCapture);
+    assert(config.ui.autoHide && config.ui.autoHideMs == 1200 && config.ui.excludeFromCapture);
     for (int i = 0; i < PANEL_COUNT; i++) {
         assert(!config.ui.placement[i].set);
+        assert(!config.ui.pinned[i]);
     }
     assert(config.bindingCount == 5);
     assert(find_binding(&config, key(VK_F13, 0), GESTURE_SINGLE, &action) && action == ACTION_UNDO);
@@ -142,6 +146,8 @@ static void test_round_trip(void)
     original.ui.excludeFromCapture = false;
     original.ui.placement[PANEL_TOOLBAR] = (PanelPlacement){true, -1920, 40};
     original.ui.placement[PANEL_HISTORY] = (PanelPlacement){true, 12, 900};
+    original.ui.pinned[PANEL_TOOLBAR] = true;
+    original.ui.pinned[PANEL_HISTORY] = true;
     Binding extra = {{TRIGGER_MOUSE_BUTTON, VK_XBUTTON1, 0}, GESTURE_SINGLE, ACTION_REDO};
     Binding modified = {key(VK_F15, TRIGGER_MOD_CONTROL | TRIGGER_MOD_ALT), GESTURE_LONG, ACTION_COPY_PNG};
     assert(config_set_binding(&original, extra));
@@ -149,6 +155,25 @@ static void test_round_trip(void)
     assert(config_save(&original, path));
     assert(config_load(&loaded, path, NULL, 0) == CONFIG_LOADED);
     assert(config_equal(&original, &loaded));
+    DeleteFileW(path);
+}
+
+/** @brief Pin keys load, a reload replaces earlier values, and malformed values are rejected. */
+static void test_pinned_keys(void)
+{
+    wchar_t path[MAX_PATH];
+    wchar_t errors[256];
+    Config config;
+    scratch_path(L"ink_test_pinned.cfg", path, MAX_PATH);
+    write_text(path, "toolbar_pinned = true\nproperties_pinned = 1\nhistory_pinned = maybe\n");
+    assert(config_load(&config, path, errors, 256) == CONFIG_LOADED);
+    assert(config.ui.pinned[PANEL_TOOLBAR] && config.ui.pinned[PANEL_PROPERTIES]);
+    assert(!config.ui.pinned[PANEL_HISTORY]);
+    assert(errors[0] != L'\0');
+    write_text(path, "history_pinned = yes\n");
+    assert(config_load(&config, path, errors, 256) == CONFIG_LOADED);
+    assert(!config.ui.pinned[PANEL_TOOLBAR] && !config.ui.pinned[PANEL_PROPERTIES]);
+    assert(config.ui.pinned[PANEL_HISTORY]);
     DeleteFileW(path);
 }
 
@@ -556,6 +581,7 @@ int main(void)
     test_trigger_count();
     test_defaults();
     test_round_trip();
+    test_pinned_keys();
     test_save_replaces_file();
     test_missing_file();
     test_bad_lines_skipped();

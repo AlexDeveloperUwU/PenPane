@@ -21,9 +21,10 @@ All metrics are at 100 percent and multiplied by one scale factor read in `islan
 
 - Island: background `#232329`, radius 8, padding 4, soft three-layer shadow in a 20 px margin around the content.
 - Buttons: 36 px, 16 px icons, radius 8, hover `#2e2d39`, pressed slightly lighter, selected `#403e6a` with icon `#e0dfff`, disabled icons at 30 percent. Keybinding hints are 10 px in `#7a7a7a` at the bottom right.
-- Toolbar, left to right: drag grip, tool lock (`Q`), divider, nine tools in `tool.h` order with hints `1 2 4 5 6 7 K 8 0`, divider, desktop or whiteboard mode, drawing on or off, emergency exit.
-- Properties panel (width 211, padding 12), sections chosen by `UiModel.sections`: Stroke (five presets, divider, current color), Background (five presets, the first drawn as a checkerboard), Stroke width and Stroke style (three buttons each), Pressure (switch), Opacity (slider 0 to 100 in steps of 10 with a value label). A selected preset gets a 2 px ring in `#d0ccff`.
-- History panel: grip, undo, redo; disabled buttons do not react to hover or clicks.
+- Pin button: the second element of every island, right after the grip. Unpinned it is a thin outlined push pin tilted by 45 degrees (`ICON_PIN_OFF`); pinned it is an upright solid pin on the selected button background (`ICON_PIN`).
+- Toolbar, left to right: drag grip, pin, divider, tool lock (`Q`), divider, nine tools in `tool.h` order with hints `1 2 4 5 6 7 K 8 0`, divider, desktop or whiteboard mode, drawing on or off, emergency exit.
+- Properties panel (width 211, padding 12) starts with a header row of grip and pin, then the sections chosen by `UiModel.sections`: Stroke (five presets, divider, current color), Background (five presets, the first drawn as a checkerboard), Stroke width and Stroke style (three buttons each), Pressure (switch), Opacity (slider 0 to 100 in steps of 10 with a value label). A selected preset gets a 2 px ring in `#d0ccff`.
+- History panel: grip, pin, divider, undo, redo; disabled buttons do not react to hover or clicks.
 
 ## Behavior
 
@@ -32,15 +33,18 @@ All metrics are at 100 percent and multiplied by one scale factor read in `islan
 - A button fires on release when the pointer is still over it. The opacity slider fires while dragging, once per change.
 - Hover repaints only the old and new item and presents only that rectangle.
 - `ui_place_defaults`: toolbar centered at the top with an 8 px margin, properties panel at the left 16 px below the toolbar row, history panel at the bottom left 16 px from the edges. Saved placements are honored unless `forceAll` is set; with `forceAll` each new position is reported through `UI_EVENT_PANEL_MOVED`.
-- `ui_apply_settings` (an addition to the header) applies changed auto-hide, delay and capture exclusion at runtime.
+- `ui_apply_settings` (an addition to the header) applies changed auto-hide, delay, pinned islands and capture exclusion at runtime.
+- The pin button reports `UI_EVENT_PANEL_PINNED` (panel, index 1 pinned or 0 unpinned) on release; the UI has already updated its own settings, and `app.c` stores the value in the configuration and saves it.
 
-### Auto-hide
+### Open on click, close when left
 
-When `UiSettings.autoHide` is set and the pointer has been away from an expanded island for `autoHideMs`, the island collapses to a 28 px handle anchored at its top-left corner. The handle shows the active tool (toolbar), the stroke color (properties) or the undo arrow (history). Moving the pointer onto the handle expands the island again, shifted if needed so it fits the monitor. A one-shot timer exists only while an island is expanded and the pointer is elsewhere, so an idle program receives no timer messages.
+An island that is not open shows as a 28 px handle anchored at its top-left corner. The handle shows the active tool (toolbar, the "drawing off" glyph while not drawing), the stroke color (properties) or the undo arrow (history). Hovering a handle only draws its hover highlight. Pressing and releasing it without dragging more than 4 px expands the island, shifted if needed so it fits the monitor; dragging moves it as before. Newly shown islands start as handles unless they are pinned.
+
+An expanded island that is not pinned collapses to its handle `autoHideMs` after the pointer leaves it (default 1200 ms, never below 200 ms). It does not collapse while the pointer is inside, a button is held, or a drag or slider is active. A pinned island never collapses by itself; with `UiSettings.autoHide` off every island behaves as pinned while the handles still work. The timer is one-shot and exists only while an island is expanded, unpinned and the pointer is elsewhere, so an idle program receives no timer messages.
 
 ### Not drawing
 
-`ui_set_visible(ui, true, false)` leaves only the toolbar handle (with the "drawing off" glyph). It does not expand on hover; clicking it reports `ACTION_TOGGLE_OVERLAY`. `ui_set_visible(ui, false, ...)` hides everything. Hidden islands are hidden windows without a canvas.
+`ui_set_visible(ui, true, false)` shows only the toolbar (handle or open, as above). Click the handle to open it and use its drawing button to start drawing; the handle itself no longer toggles drawing. A pinned toolbar stays open across drawing on and off. The properties and history islands are hidden while drawing is off and return, open if pinned, when drawing starts. `ui_set_visible(ui, false, ...)` hides everything. Hidden islands are hidden windows without a canvas.
 
 ## Capture exclusion
 
@@ -61,12 +65,13 @@ A runtime-generated pen glyph (32-bit ARGB icon created with `CreateIconIndirect
 - Scale is read per island window and re-read on `WM_DPICHANGED`; the default placement uses the scale of the monitor the islands were created on.
 - Capture exclusion needs Windows 10 version 2004 or later.
 - The collapsed toolbar handle sits at the toolbar's left end, not at its center.
+- A handle near the right or bottom edge expands shifted, so the pointer can end up outside the island; an unpinned island then collapses after the delay.
 - The current-color swatch is display only; there is no color picker.
 - The native tray menu cannot be styled.
 
 ## Preview harness
 
-`tests/ui_preview.c` shows the islands over a dark background and applies their events to a local model. Options: `--tool N`, `--sections HEX`, `--autohide MS`, `--idle`, `--lock`, `--whiteboard`, `--noundo`, `--demo`, `--exclude`, `--quit MS`. Build:
+`tests/ui_preview.c` shows the islands over a dark background and applies their events to a local model. Options: `--tool N`, `--sections HEX`, `--autohide MS` (islands start as handles and open on click), `--pin HEX` (bit 0 toolbar, 1 properties, 2 history), `--idle`, `--lock`, `--whiteboard`, `--noundo`, `--demo`, `--exclude`, `--quit MS`. Build:
 
     clang -std=c11 -municode -D_WIN32_WINNT=0x0A00 -mwindows -Isrc tests/ui_preview.c src/ui.c src/ui_layout.c src/ui_paint.c src/icons.c src/shapes_ui.c src/text.c src/raster.c src/canvas.c src/style.c src/tool.c -o build/ui_preview.exe -luser32 -lgdi32 -lshell32
 

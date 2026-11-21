@@ -8,6 +8,8 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
+- Panels open on click instead of hover, close shortly after the pointer leaves, and each has a pin button that keeps it open (saved as toolbar_pinned, properties_pinned, history_pinned).
+
 - Transparent full-screen overlay with an anti-aliased software rasterizer and an alpha-1 backdrop that keeps drawing mode hit-testable while passthrough lets clicks reach the apps below.
 - Desktop and whiteboard modes with separate scenes and unlimited undo and redo.
 - Tools: selection (move, resize, delete), rectangle, ellipse, arrow, line, pen, laser, text and eraser, with Excalidraw's shortcuts and tool lock.

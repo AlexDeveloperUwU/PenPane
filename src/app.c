@@ -989,6 +989,10 @@ static void on_ui_event(void *user, const UiEvent *event)
         app.config.ui.placement[event->panel].y = event->y;
         save_config();
         break;
+    case UI_EVENT_PANEL_PINNED:
+        app.config.ui.pinned[event->panel] = event->index != 0;
+        save_config();
+        break;
     }
 }
 

@@ -21,6 +21,7 @@
 #define BUTTON_GAP 2
 #define DIVIDER_SIDE 4
 #define DIVIDER_HEIGHT 24
+#define HEADER_GAP 8
 
 static const wchar_t TOOL_HINTS[TOOL_COUNT] = {L'1', L'2', L'4', L'5', L'6', L'7', L'K', L'8', L'0'};
 
@@ -91,21 +92,46 @@ static int divider_add(UiLayout *layout, float scale, int x, int y, int rowHeigh
 }
 
 /**
+ * @brief Adds the drag grip and the pin toggle that start the header of every island.
+ * @param layout Layout to extend.
+ * @param panel Island being built; reported by the pin event.
+ * @param pinned true when the island is pinned open.
+ * @param scale Scale factor.
+ * @param x Left edge of the grip.
+ * @param y Top of the row.
+ * @return x position after the pin button including the gap.
+ */
+static int header_add(UiLayout *layout, PanelId panel, bool pinned, float scale, int x, int y)
+{
+    int button = ui_px(scale, BUTTON_SIZE);
+    int gap = ui_px(scale, BUTTON_GAP);
+    item_add(layout, ITEM_GRIP, x, y, ui_px(scale, GRIP_WIDTH), button)->icon = ICON_GRIP;
+    x += ui_px(scale, GRIP_WIDTH) + gap;
+    UiItem *pin = item_add(layout, ITEM_BUTTON, x, y, button, button);
+    pin->icon = pinned ? ICON_PIN : ICON_PIN_OFF;
+    pin->selected = pinned;
+    pin->event.kind = UI_EVENT_PANEL_PINNED;
+    pin->event.panel = panel;
+    pin->event.index = pinned ? 0 : 1;
+    return x + button + gap;
+}
+
+/**
  * @brief Builds the toolbar island.
  * @param layout Layout to fill.
  * @param model Application state.
+ * @param pinned true when the toolbar is pinned open.
  * @param scale Scale factor.
  */
-static void build_toolbar(UiLayout *layout, const UiModel *model, float scale)
+static void build_toolbar(UiLayout *layout, const UiModel *model, bool pinned, float scale)
 {
     int pad = ui_px(scale, ISLAND_PADDING);
     int button = ui_px(scale, BUTTON_SIZE);
     int gap = ui_px(scale, BUTTON_GAP);
-    int x = pad;
     int y = pad;
+    int x = header_add(layout, PANEL_TOOLBAR, pinned, scale, pad, y);
 
-    item_add(layout, ITEM_GRIP, x, y, ui_px(scale, GRIP_WIDTH), button)->icon = ICON_GRIP;
-    x += ui_px(scale, GRIP_WIDTH) + gap;
+    x = divider_add(layout, scale, x, y, button);
 
     UiItem *lock = button_action(layout, x, y, button, model->toolLocked ? ICON_LOCK_CLOSED : ICON_LOCK_OPEN,
                                  ACTION_TOGGLE_TOOL_LOCK);
@@ -150,18 +176,18 @@ static void build_toolbar(UiLayout *layout, const UiModel *model, float scale)
  * @brief Builds the history island.
  * @param layout Layout to fill.
  * @param model Application state.
+ * @param pinned true when the history island is pinned open.
  * @param scale Scale factor.
  */
-static void build_history(UiLayout *layout, const UiModel *model, float scale)
+static void build_history(UiLayout *layout, const UiModel *model, bool pinned, float scale)
 {
     int pad = ui_px(scale, ISLAND_PADDING);
     int button = ui_px(scale, BUTTON_SIZE);
     int gap = ui_px(scale, BUTTON_GAP);
-    int x = pad;
     int y = pad;
+    int x = header_add(layout, PANEL_HISTORY, pinned, scale, pad, y);
 
-    item_add(layout, ITEM_GRIP, x, y, ui_px(scale, GRIP_WIDTH), button)->icon = ICON_GRIP;
-    x += ui_px(scale, GRIP_WIDTH) + gap;
+    x = divider_add(layout, scale, x, y, button);
     button_action(layout, x, y, button, ICON_UNDO, ACTION_UNDO)->enabled = model->canUndo;
     x += button + gap;
     button_action(layout, x, y, button, ICON_REDO, ACTION_REDO)->enabled = model->canRedo;
@@ -239,16 +265,20 @@ static void choices_add(UiLayout *layout, float scale, int y, const Icon icons[3
  * @brief Builds the properties island according to the visible sections.
  * @param layout Layout to fill.
  * @param model Application state.
+ * @param pinned true when the properties island is pinned open.
  * @param scale Scale factor.
  */
-static void build_properties(UiLayout *layout, const UiModel *model, float scale)
+static void build_properties(UiLayout *layout, const UiModel *model, bool pinned, float scale)
 {
     static const Icon widthIcons[3] = {ICON_WIDTH_THIN, ICON_WIDTH_MEDIUM, ICON_WIDTH_BOLD};
     static const Icon styleIcons[3] = {ICON_STYLE_SOLID, ICON_STYLE_DASHED, ICON_STYLE_DOTTED};
     int pad = ui_px(scale, SECTION_PAD);
     int gap = ui_px(scale, SECTION_GAP);
     int cell = ui_px(scale, SWATCH_CELL);
-    int y = pad;
+    int edge = ui_px(scale, ISLAND_PADDING);
+    header_add(layout, PANEL_PROPERTIES, pinned, scale, edge, edge);
+    int headerCount = layout->count;
+    int y = edge + ui_px(scale, BUTTON_SIZE) + ui_px(scale, HEADER_GAP);
     const Style *style = &model->style;
 
     if (model->sections & UI_SECTION_STROKE) {
@@ -308,18 +338,18 @@ static void build_properties(UiLayout *layout, const UiModel *model, float scale
         y += ui_px(scale, SLIDER_HEIGHT) + gap;
     }
     layout->width = 2 * pad + ui_px(scale, SECTION_INNER);
-    layout->height = layout->count > 0 ? y - gap + pad : ui_px(scale, 24);
+    layout->height = layout->count > headerCount ? y - gap + pad : y + edge;
 }
 
-void ui_layout_build(PanelId panel, const UiModel *model, float scale, UiLayout *layout)
+void ui_layout_build(PanelId panel, const UiModel *model, bool pinned, float scale, UiLayout *layout)
 {
     memset(layout, 0, sizeof *layout);
     if (panel == PANEL_TOOLBAR) {
-        build_toolbar(layout, model, scale);
+        build_toolbar(layout, model, pinned, scale);
     } else if (panel == PANEL_HISTORY) {
-        build_history(layout, model, scale);
+        build_history(layout, model, pinned, scale);
     } else {
-        build_properties(layout, model, scale);
+        build_properties(layout, model, pinned, scale);
     }
 }
 

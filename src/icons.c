@@ -18,10 +18,12 @@ typedef struct Pen {
     float unit;
     float half;
     bool mirror;
+    float angle;
 } Pen;
 
 /**
- * @brief Maps grid coordinates to mask coordinates, mirroring horizontally when requested.
+ * @brief Maps grid coordinates to mask coordinates, mirroring horizontally and rotating around the
+ *        center of the grid when requested.
  * @param pen Drawing context.
  * @param u Grid x.
  * @param v Grid y.
@@ -30,7 +32,17 @@ typedef struct Pen {
 static Point at(const Pen *pen, float u, float v)
 {
     float x = pen->mirror ? ICON_GRID - u : u;
-    return (Point){pen->originX + x * pen->unit, pen->originY + v * pen->unit};
+    float y = v;
+    if (pen->angle != 0.0f) {
+        float centre = ICON_GRID * 0.5f;
+        float dx = x - centre;
+        float dy = y - centre;
+        float c = cosf(pen->angle);
+        float s = sinf(pen->angle);
+        x = centre + dx * c - dy * s;
+        y = centre + dx * s + dy * c;
+    }
+    return (Point){pen->originX + x * pen->unit, pen->originY + y * pen->unit};
 }
 
 /**
@@ -63,6 +75,24 @@ static void poly(const Pen *pen, const float *coordinates, int count, bool close
         points[i] = at(pen, coordinates[i * 2], coordinates[i * 2 + 1]);
     }
     ui_mask_polyline(pen->mask, points, count, closed, pen->half);
+}
+
+/**
+ * @brief Fills a polygon given as interleaved coordinate pairs.
+ * @param pen Drawing context.
+ * @param coordinates Interleaved x and y values in grid units.
+ * @param count Number of vertices, at most ICON_MAX_VERTICES.
+ */
+static void poly_fill(const Pen *pen, const float *coordinates, int count)
+{
+    Point points[ICON_MAX_VERTICES];
+    if (count > ICON_MAX_VERTICES) {
+        count = ICON_MAX_VERTICES;
+    }
+    for (int i = 0; i < count; i++) {
+        points[i] = at(pen, coordinates[i * 2], coordinates[i * 2 + 1]);
+    }
+    mask_add_polygon_fill(pen->mask, points, count);
 }
 
 /**
@@ -296,6 +326,25 @@ static void draw_text(const Pen *pen)
 }
 
 /**
+ * @brief Draws the push pin; pinned is upright and solid, unpinned is an outline tilted by 45 degrees.
+ * @param pen Drawing context; its rotation is set here for the unpinned variant.
+ * @param pinned true for the pinned look.
+ */
+static void draw_pin(Pen *pen, bool pinned)
+{
+    static const float body[] = {5.8f, 2.2f, 10.2f, 2.2f, 10.2f, 6.2f, 12.2f, 8.6f,
+                                 12.2f, 10.0f, 3.8f, 10.0f, 3.8f, 8.6f, 5.8f, 6.2f};
+    if (!pinned) {
+        pen->angle = PI_FLOAT * 0.25f;
+    }
+    poly(pen, body, 8, true);
+    if (pinned) {
+        poly_fill(pen, body, 8);
+    }
+    line(pen, 8.0f, 10.0f, 8.0f, 14.2f);
+}
+
+/**
  * @brief Dispatches to the drawing routine of an icon.
  * @param pen Drawing context.
  * @param icon Icon to draw.
@@ -343,6 +392,8 @@ static bool draw_icon(Pen *pen, Icon icon)
     case ICON_WIDTH_THIN: bar(pen, 2.6f, 13.4f, 8.0f, 1.2f); break;
     case ICON_WIDTH_MEDIUM: bar(pen, 2.6f, 13.4f, 8.0f, 2.6f); break;
     case ICON_WIDTH_BOLD: bar(pen, 2.6f, 13.4f, 8.0f, 4.4f); break;
+    case ICON_PIN: draw_pin(pen, true); break;
+    case ICON_PIN_OFF: draw_pin(pen, false); break;
     default: return false;
     }
     return true;
@@ -359,7 +410,7 @@ void icon_draw(Canvas *canvas, Icon icon, float centerX, float centerY, float si
     if (!mask) {
         return;
     }
-    Pen pen = {mask, originX, originY, unit, ICON_HALF_STROKE * unit, false};
+    Pen pen = {mask, originX, originY, unit, ICON_HALF_STROKE * unit, false, 0.0f};
     if (draw_icon(&pen, icon)) {
         mask_blend(canvas, mask, color);
     }

@@ -9,7 +9,7 @@
 
 #define ISLAND_CLASS L"InkIsland"
 #define AUTO_HIDE_TIMER_ID 1
-#define AUTO_HIDE_DEFAULT_MS 3000
+#define AUTO_HIDE_DEFAULT_MS 1200
 #define AUTO_HIDE_MIN_MS 200
 #define DRAG_THRESHOLD 4
 #define EXCLUDE_FROM_CAPTURE 0x11
@@ -29,7 +29,6 @@ typedef struct Island {
     int margin;
     bool shown;
     bool collapsed;
-    bool forceCollapsed;
     int x;
     int y;
     int hover;
@@ -113,6 +112,28 @@ static bool island_cursor_inside(const Island *island)
     POINT cursor;
     RECT rect = island_screen_rect(island);
     return GetCursorPos(&cursor) && PtInRect(&rect, cursor);
+}
+
+/**
+ * @brief Tells whether an island never collapses by itself: pinned, or auto-hide switched off.
+ * @param island Island to query.
+ * @return true when the island stays expanded without the pointer.
+ */
+static bool island_keeps_open(const Island *island)
+{
+    const UiSettings *settings = &island->ui->settings;
+    return !settings->autoHide || settings->pinned[island->id];
+}
+
+/**
+ * @brief Builds the layout of an island from the model, its pin state and its scale.
+ * @param island Island to lay out.
+ * @param layout Receives the layout.
+ */
+static void island_build_layout(const Island *island, UiLayout *layout)
+{
+    ui_layout_build(island->id, &island->ui->model, island->ui->settings.pinned[island->id], island->scale,
+                    layout);
 }
 
 /**
@@ -210,8 +231,8 @@ static void island_timer_sync(Island *island)
         island->timerActive = false;
     }
     const UiSettings *settings = &island->ui->settings;
-    if (settings->autoHide && island->shown && !island->collapsed && !island->forceCollapsed &&
-        !island->pointerDown && !island_cursor_inside(island)) {
+    if (island->shown && !island->collapsed && !island_keeps_open(island) && !island->pointerDown &&
+        !island_cursor_inside(island)) {
         UINT delay = settings->autoHideMs > 0 ? (UINT)settings->autoHideMs : AUTO_HIDE_DEFAULT_MS;
         if (delay < AUTO_HIDE_MIN_MS) {
             delay = AUTO_HIDE_MIN_MS;
@@ -351,7 +372,7 @@ static void island_apply_geometry(Island *island)
  */
 static void island_rebuild_layout(Island *island)
 {
-    ui_layout_build(island->id, &island->ui->model, island->scale, &island->layout);
+    island_build_layout(island, &island->layout);
     island->hover = -1;
     island->pressed = -1;
     island->sliderActive = false;
@@ -365,8 +386,9 @@ static void island_show(Island *island)
 {
     island_read_scale(island);
     island_rebuild_layout(island);
-    island->collapsed = island->forceCollapsed;
+    island->collapsed = !island_keeps_open(island);
     island->handleHover = false;
+    island->tracking = false;
     island->shown = true;
     island_apply_geometry(island);
     if (island->hasCanvas) {
@@ -404,12 +426,50 @@ static void island_hide(Island *island)
 }
 
 /**
+ * @brief Finds the item that reacts to hover at a point, including passive grips.
+ * @param island Island to query.
+ * @param x Client x relative to the content.
+ * @param y Client y relative to the content.
+ * @return Item index or -1.
+ */
+static int island_hover_target(const Island *island, int x, int y)
+{
+    int hit = ui_layout_hit(&island->layout, x, y);
+    if (hit >= 0) {
+        return island->layout.items[hit].enabled ? hit : -1;
+    }
+    for (int i = 0; i < island->layout.count; i++) {
+        const UiItem *item = &island->layout.items[i];
+        if (item->kind == ITEM_GRIP && x >= item->rect.left && x < item->rect.right &&
+            y >= item->rect.top && y < item->rect.bottom) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+/**
+ * @brief Finds the item under the mouse cursor, using the expanded layout.
+ * @param island Island to query.
+ * @return Item index, or -1 when the cursor is outside the expanded island.
+ */
+static int island_cursor_target(const Island *island)
+{
+    POINT cursor;
+    RECT rect = {island->x, island->y, island->x + island->layout.width, island->y + island->layout.height};
+    if (!GetCursorPos(&cursor) || !PtInRect(&rect, cursor)) {
+        return -1;
+    }
+    return island_hover_target(island, cursor.x - rect.left, cursor.y - rect.top);
+}
+
+/**
  * @brief Expands a collapsed island, shifting it so that it fits on its monitor.
  * @param island Island to expand.
  */
 static void island_expand(Island *island)
 {
-    if (!island->collapsed || island->forceCollapsed) {
+    if (!island->collapsed) {
         return;
     }
     RECT rect = {island->x, island->y, island->x + island->layout.width, island->y + island->layout.height};
@@ -432,8 +492,9 @@ static void island_expand(Island *island)
     }
     island->collapsed = false;
     island->handleHover = false;
-    island->hover = -1;
+    island->tracking = false;
     island->pressed = -1;
+    island->hover = island_cursor_target(island);
     island_apply_geometry(island);
     island_timer_sync(island);
 }
@@ -448,6 +509,7 @@ static void island_collapse(Island *island)
         return;
     }
     island->collapsed = true;
+    island->tracking = false;
     island->handleHover = island_cursor_inside(island);
     island->hover = -1;
     island->pressed = -1;
@@ -482,29 +544,6 @@ static void island_set_hover(Island *island, int hover)
 }
 
 /**
- * @brief Finds the item that reacts to hover at a point, including passive grips.
- * @param island Island to query.
- * @param x Client x relative to the content.
- * @param y Client y relative to the content.
- * @return Item index or -1.
- */
-static int island_hover_target(const Island *island, int x, int y)
-{
-    int hit = ui_layout_hit(&island->layout, x, y);
-    if (hit >= 0) {
-        return island->layout.items[hit].enabled ? hit : -1;
-    }
-    for (int i = 0; i < island->layout.count; i++) {
-        const UiItem *item = &island->layout.items[i];
-        if (item->kind == ITEM_GRIP && x >= item->rect.left && x < item->rect.right &&
-            y >= item->rect.top && y < item->rect.bottom) {
-            return i;
-        }
-    }
-    return -1;
-}
-
-/**
  * @brief Applies the model to one island, repainting only the items that changed.
  * @param island Island to update.
  */
@@ -513,7 +552,7 @@ static void island_update(Island *island)
     float previousScale = island->scale;
     island_read_scale(island);
     UiLayout next;
-    ui_layout_build(island->id, &island->ui->model, island->scale, &next);
+    island_build_layout(island, &next);
     bool sameGeometry = previousScale == island->scale && next.count == island->layout.count &&
                         next.width == island->layout.width && next.height == island->layout.height;
     if (!sameGeometry) {
@@ -559,7 +598,6 @@ static void island_refresh_visibility(Island *island)
     const Ui *ui = island->ui;
     bool want = ui->visible && (ui->drawing || island->id == PANEL_TOOLBAR) &&
                 (island->id != PANEL_PROPERTIES || ui->model.sections != 0);
-    bool forceCollapsed = !ui->drawing;
     if (!want) {
         if (island->shown) {
             island_hide(island);
@@ -567,17 +605,20 @@ static void island_refresh_visibility(Island *island)
         return;
     }
     if (!island->shown) {
-        island->forceCollapsed = forceCollapsed;
         island_show(island);
-        return;
     }
-    if (island->forceCollapsed != forceCollapsed) {
-        island->forceCollapsed = forceCollapsed;
-        island->collapsed = forceCollapsed;
-        island->handleHover = false;
-        island_apply_geometry(island);
-        island_timer_sync(island);
-    }
+}
+
+/**
+ * @brief Changes the pin state of an island, repaints its pin button and re-evaluates the timer.
+ * @param island Island to change.
+ * @param pinned true to keep the island open.
+ */
+static void island_set_pinned(Island *island, bool pinned)
+{
+    island->ui->settings.pinned[island->id] = pinned;
+    island_update(island);
+    island_timer_sync(island);
 }
 
 /**
@@ -590,10 +631,6 @@ static void island_press(Island *island, int x, int y)
 {
     int cx = x - island->margin;
     int cy = y - island->margin;
-    if (island->collapsed && !island->forceCollapsed) {
-        island_expand(island);
-        return;
-    }
     SetCapture(island->window);
     island->pointerDown = true;
     island->dragMoved = false;
@@ -713,7 +750,7 @@ static void island_release(Island *island, int x, int y)
     int cx = x - island->margin;
     int cy = y - island->margin;
     bool moved = island->dragging && island->dragMoved;
-    bool handleClick = island->dragCandidate && island->forceCollapsed;
+    bool handleClick = island->dragCandidate && island->collapsed && island_cursor_inside(island);
     int pressed = island->pressed;
     bool sliderEnded = island->sliderActive;
     UiEvent event;
@@ -749,12 +786,11 @@ static void island_release(Island *island, int x, int y)
     if (moved) {
         emit_moved(island);
     } else if (handleClick) {
-        UiEvent toggle;
-        memset(&toggle, 0, sizeof toggle);
-        toggle.kind = UI_EVENT_ACTION;
-        toggle.action = ACTION_TOGGLE_OVERLAY;
-        emit(island->ui, &toggle);
+        island_expand(island);
     } else if (fire) {
+        if (event.kind == UI_EVENT_PANEL_PINNED) {
+            island_set_pinned(island, event.index != 0);
+        }
         emit(island->ui, &event);
     }
 }
@@ -778,9 +814,7 @@ static void island_hover_move(Island *island, int x, int y)
         island->timerActive = false;
     }
     if (island->collapsed) {
-        if (!island->forceCollapsed) {
-            island_expand(island);
-        } else if (!island->handleHover && island->hasCanvas) {
+        if (!island->handleHover && island->hasCanvas) {
             island->handleHover = true;
             island_redraw_handle(island);
         }
@@ -875,8 +909,8 @@ static LRESULT CALLBACK island_procedure(HWND window, UINT message, WPARAM wpara
         if (wparam == AUTO_HIDE_TIMER_ID) {
             KillTimer(window, AUTO_HIDE_TIMER_ID);
             island->timerActive = false;
-            if (island->shown && !island->forceCollapsed && !island->pointerDown &&
-                island->ui->settings.autoHide && !island_cursor_inside(island)) {
+            if (island->shown && !island->pointerDown && !island_keeps_open(island) &&
+                !island_cursor_inside(island)) {
                 island_collapse(island);
             }
         }
@@ -926,7 +960,7 @@ Ui *ui_create(HINSTANCE instance, UiEventHandler handler, void *user, const UiSe
             return NULL;
         }
         island_read_scale(island);
-        ui_layout_build(island->id, &ui->model, island->scale, &island->layout);
+        island_build_layout(island, &island->layout);
         if (settings->placement[i].set) {
             island->x = settings->placement[i].x;
             island->y = settings->placement[i].y;
@@ -974,7 +1008,8 @@ void ui_apply_settings(Ui *ui, const UiSettings *settings)
     ui_set_capture_excluded(ui, settings->excludeFromCapture);
     for (int i = 0; i < PANEL_COUNT; i++) {
         Island *island = &ui->islands[i];
-        if (island->shown && island->collapsed && !island->forceCollapsed && !settings->autoHide) {
+        island_update(island);
+        if (island->shown && island->collapsed && island_keeps_open(island)) {
             island_expand(island);
         }
         island_timer_sync(island);

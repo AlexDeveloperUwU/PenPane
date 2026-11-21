@@ -483,6 +483,8 @@ static bool apply_setting(Config *config, const char *key, char *value, const ch
 {
     static const char *const PLACEMENT_KEYS[PANEL_COUNT] = {"toolbar_pos", "properties_pos",
                                                             "history_pos"};
+    static const char *const PINNED_KEYS[PANEL_COUNT] = {"toolbar_pinned", "properties_pinned",
+                                                         "history_pinned"};
     int number;
     bool flag;
     *reason = "invalid value";
@@ -574,6 +576,13 @@ static bool apply_setting(Config *config, const char *key, char *value, const ch
             if (strcasecmp(key, PLACEMENT_KEYS[i]) == 0) {
                 return parse_placement(value, &config->ui.placement[i]);
             }
+            if (strcasecmp(key, PINNED_KEYS[i]) == 0) {
+                if (!parse_bool(value, &flag)) {
+                    return false;
+                }
+                config->ui.pinned[i] = flag;
+                return true;
+            }
         }
         *reason = "unknown key";
         return false;
@@ -654,7 +663,7 @@ void config_defaults(Config *config)
     config->defaultWidthIndex = 1;
     config->toolLock = true;
     config->ui.autoHide = true;
-    config->ui.autoHideMs = 4000;
+    config->ui.autoHideMs = 1200;
     config->ui.excludeFromCapture = true;
     const Binding defaults[] = {
         {{TRIGGER_KEY, VK_F13, 0}, GESTURE_SINGLE, ACTION_UNDO},
@@ -714,6 +723,8 @@ static void format_config(const Config *config, TextBuffer *out)
 {
     static const char *const PLACEMENT_KEYS[PANEL_COUNT] = {"toolbar_pos", "properties_pos",
                                                             "history_pos"};
+    static const char *const PINNED_KEYS[PANEL_COUNT] = {"toolbar_pinned", "properties_pinned",
+                                                         "history_pinned"};
     out_text(out, "# Configuration. Unknown or malformed lines are ignored.\n");
     out_setting_int(out, "double_press_ms", config->doubleWindowMs);
     out_setting_int(out, "long_press_ms", config->longPressMs);
@@ -732,6 +743,9 @@ static void format_config(const Config *config, TextBuffer *out)
     out_setting_bool(out, "ui_exclude_from_capture", config->ui.excludeFromCapture);
     for (int i = 0; i < PANEL_COUNT; i++) {
         out_placement(out, PLACEMENT_KEYS[i], config->ui.placement[i]);
+    }
+    for (int i = 0; i < PANEL_COUNT; i++) {
+        out_setting_bool(out, PINNED_KEYS[i], config->ui.pinned[i]);
     }
     out_setting_bool(out, "reset_bindings", true);
     for (int i = 0; i < config->bindingCount; i++) {

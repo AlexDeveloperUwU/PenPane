@@ -28,7 +28,7 @@ Ctrl+Z undoes, Ctrl+Y or Ctrl+Shift+Z redoes. History is unlimited.
 
 ## Floating tools and a second screen
 
-The toolbar, the properties panel and the undo and redo panel are three separate windows. Drag any of them by its grip to another monitor. Choose the drawing screen and the tools screen from the tray menu. By default the tools are excluded from screen capture, so people watching a shared screen do not see them. The tools collapse to a small handle after a few seconds without the pen and expand when the pen hovers over the handle.
+The toolbar, the properties panel and the undo and redo panel are three separate windows. Drag any of them by its grip to another monitor. Choose the drawing screen and the tools screen from the tray menu. By default the tools are excluded from screen capture, so people watching a shared screen do not see them. Each one shows as a small handle until you click it, and an opened one folds back into its handle about a second after the pen or pointer leaves it. The pin button next to the grip keeps that panel open; the setting is remembered per panel. With drawing off only the toolbar handle is shown: click it to open the toolbar, then use its drawing button to start drawing.
 
 ## Buttons on the pen
 

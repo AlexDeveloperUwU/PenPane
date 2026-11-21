@@ -1,6 +1,6 @@
 # 0022. Islands collapse to a handle and free their pixels when hidden
 
-- Status: accepted
+- Status: accepted; the hover expansion and the handle click that toggles drawing are superseded by 0090
 - Date: 2026-11-21
 
 ## Problem

@@ -2,8 +2,10 @@
  * @file ui_preview.c
  * @brief Visual harness: shows the three islands over a dark background and applies their events.
  *
- * Options: --tool N, --sections HEX, --autohide MS, --idle (drawing off, toolbar handle only),
+ * Options: --tool N, --sections HEX, --autohide MS (islands start as handles and open on click),
+ * --pin HEX (bit 0 toolbar, 1 properties, 2 history pinned open), --idle (drawing off, toolbar only),
  * --lock, --whiteboard, --noundo, --demo (cycles state every second), --quit MS.
+ * Without --autohide every island stays expanded.
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -65,8 +67,7 @@ static void on_event(void *user, const UiEvent *event)
     Preview *preview = user;
     UiModel *model = &preview->model;
     switch (event->kind) {
-    case UI_EVENT_SELECT_TOOL: model->tool = event->tool; break;
-    case UI_EVENT_SET_STROKE: model->style.stroke = STROKE_PALETTE[event->index]; break;
+    case UI_EVENT_SELECT_TOOL: model->tool = event->tool; break;    case UI_EVENT_SET_STROKE: model->style.stroke = STROKE_PALETTE[event->index]; break;
     case UI_EVENT_SET_FILL: model->style.fill = FILL_PALETTE[event->index]; break;
     case UI_EVENT_SET_WIDTH: model->style.width = WIDTH_PRESETS[event->index]; break;
     case UI_EVENT_SET_STROKE_STYLE: model->style.strokeStyle = (StrokeStyle)event->index; break;
@@ -87,6 +88,13 @@ static void on_event(void *user, const UiEvent *event)
     case UI_EVENT_PANEL_MOVED:
         printf("moved panel %d to %d,%d\n", (int)event->panel, event->x, event->y);
         fflush(stdout);
+        break;
+    case UI_EVENT_PANEL_PINNED:
+        preview->settings.pinned[event->panel] = event->index != 0;
+        printf("panel %d pinned %d\n", (int)event->panel, event->index);
+        fflush(stdout);
+        break;
+    case UI_EVENT_SLIDER_END:
         break;
     }
     ui_update(preview->ui, model);
@@ -160,6 +168,11 @@ static void parse_arguments(Preview *preview, int argc, wchar_t **argv, bool *id
         } else if (wcscmp(argv[i], L"--autohide") == 0 && i + 1 < argc) {
             preview->settings.autoHide = true;
             preview->settings.autoHideMs = _wtoi(argv[++i]);
+        } else if (wcscmp(argv[i], L"--pin") == 0 && i + 1 < argc) {
+            unsigned mask = (unsigned)wcstoul(argv[++i], NULL, 16);
+            for (int panel = 0; panel < PANEL_COUNT; panel++) {
+                preview->settings.pinned[panel] = (mask >> panel & 1u) != 0;
+            }
         } else if (wcscmp(argv[i], L"--quit") == 0 && i + 1 < argc) {
             preview->quitMs = _wtoi(argv[++i]);
         } else if (wcscmp(argv[i], L"--idle") == 0) {

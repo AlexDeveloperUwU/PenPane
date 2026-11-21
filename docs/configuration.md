@@ -25,16 +25,19 @@ The application reads one plain-text file. Every key is optional: a missing key 
 | `draw_monitor` | `0` | 0 to 15 | Monitor that holds the drawing surface. 0 is the primary monitor. |
 | `ui_monitor` | `0` | 0 to 15 | Monitor that holds the toolbar and panels. 0 is the primary monitor. |
 | `tool_lock` | `true` | boolean | Keep the selected tool after drawing one element instead of returning to the select tool. |
-| `ui_auto_hide` | `true` | boolean | Hide the toolbar and panels when the pen is drawing or has been idle. |
-| `ui_auto_hide_ms` | `4000` | 500 to 60000 | Idle time before the panels hide. |
+| `ui_auto_hide` | `true` | boolean | Collapse an open toolbar or panel to its handle after the pointer leaves it. When `false`, panels stay open once opened, as if all were pinned. |
+| `ui_auto_hide_ms` | `1200` | 500 to 60000 | Time after the pointer leaves an unpinned panel before it collapses. |
 | `ui_exclude_from_capture` | `true` | boolean | Keep the toolbar and panels out of screen recordings and screenshots. |
 | `toolbar_pos` | not set | `x,y` | Saved top-left screen position of the toolbar. Negative values are valid on monitors left of or above the primary one. |
 | `properties_pos` | not set | `x,y` | Saved position of the properties panel. |
 | `history_pos` | not set | `x,y` | Saved position of the history panel. |
+| `toolbar_pinned` | `false` | boolean | Keep the toolbar open. Written when you press its pin button. |
+| `properties_pinned` | `false` | boolean | Keep the properties panel open. |
+| `history_pinned` | `false` | boolean | Keep the history panel open. |
 | `reset_bindings` | not set | boolean | When `true`, removes every binding collected so far, including the defaults. Saved files always start their bindings with it. |
 | `bind` | see below | `trigger gesture action` | Assigns an action to a trigger and gesture. May appear many times. |
 
-The three position keys are written when you move a panel and are absent until then.
+The three position keys are written when you move a panel and are absent until then. The three pinned keys are written with every save and apply on reload.
 
 ## Bindings
 
@@ -137,9 +140,12 @@ draw_monitor = 0
 ui_monitor = 0
 tool_lock = true
 ui_auto_hide = true
-ui_auto_hide_ms = 4000
+ui_auto_hide_ms = 1200
 ui_exclude_from_capture = true
 toolbar_pos = 640,24
+toolbar_pinned = true
+properties_pinned = false
+history_pinned = false
 reset_bindings = true
 bind = F13 single undo
 bind = F13 double redo

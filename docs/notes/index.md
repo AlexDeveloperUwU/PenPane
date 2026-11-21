@@ -55,3 +55,4 @@ One note per non-obvious decision, written from `_template.md`.
 | [0079](0079-pointer-identity-and-stale-pointer-recovery.md) | Only the pointer that started a stroke may continue or end it |
 | [0080](0080-cancel-discards-the-tool-finished-flag.md) | Cancelling an interaction discards the tool-finished flag |
 | [0081](0081-toolchain-download-is-verified-by-checksum.md) | The toolchain download is verified against a pinned SHA-256 |
+| [0090](0090-panels-open-on-click-and-can-be-pinned.md) | Panels open on click and can be pinned |

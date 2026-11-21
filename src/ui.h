@@ -38,6 +38,7 @@ typedef struct UiSettings {
     bool autoHide;
     int autoHideMs;
     bool excludeFromCapture;
+    bool pinned[PANEL_COUNT];
 } UiSettings;
 
 /** @brief Sections shown in the properties panel; bitmask for UiModel.sections. */
@@ -71,7 +72,8 @@ typedef enum UiEventKind {
     UI_EVENT_SET_PRESSURE,
     UI_EVENT_SET_OPACITY,
     UI_EVENT_PANEL_MOVED,
-    UI_EVENT_SLIDER_END
+    UI_EVENT_SLIDER_END,
+    UI_EVENT_PANEL_PINNED
 } UiEventKind;
 
 /**
@@ -89,6 +91,8 @@ typedef enum UiEventKind {
  *  - UI_EVENT_PANEL_MOVED: panel, x and y hold the new top-left position.
  *  - UI_EVENT_SLIDER_END: the slider drag that produced the preceding UI_EVENT_SET_OPACITY events is over
  *    (button released or capture lost); no other field is used.
+ *  - UI_EVENT_PANEL_PINNED: panel is the island and index is 1 when it is now pinned open, 0 when it
+ *    is unpinned. The UI has already applied the change to its own settings copy.
  */
 typedef struct UiEvent {
     UiEventKind kind;
@@ -135,9 +139,11 @@ void ui_destroy(Ui *ui);
 void ui_update(Ui *ui, const UiModel *model);
 
 /**
- * @brief Applies changed preferences at runtime: auto-hide, its delay and capture exclusion.
+ * @brief Applies changed preferences at runtime: auto-hide, its delay, pinned islands and capture exclusion.
  *
- * Saved placements are replaced too but islands are not moved; use ui_place_defaults for that.
+ * Pinned islands (and every island when auto-hide is off) expand at once; unpinned expanded islands
+ * collapse after the delay once the pointer is away. Saved placements are replaced too but islands
+ * are not moved; use ui_place_defaults for that.
  * @param ui Instance to change.
  * @param settings New preferences; copied.
  */
@@ -146,9 +152,10 @@ void ui_apply_settings(Ui *ui, const UiSettings *settings);
 /**
  * @brief Shows or hides the UI for the current overlay state.
  *
- * With drawing true all islands are shown (subject to auto-hide). With drawing false only the
- * toolbar's collapsed handle stays visible so drawing can be re-entered with the pen. With
- * visible false everything is hidden.
+ * With drawing true all islands are shown. With drawing false only the toolbar stays visible, so the
+ * user can open it and start drawing from its button. An island that is not pinned shows as a handle
+ * until it is clicked and collapses again shortly after the pointer leaves; a pinned island stays
+ * open. With visible false everything is hidden.
  * @param ui Instance to change.
  * @param visible false hides every island.
  * @param drawing true while the overlay captures input.
