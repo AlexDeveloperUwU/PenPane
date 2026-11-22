@@ -15,7 +15,7 @@ It is one executable of about 121 KB, written in C11 against the Win32 API. Ther
 - **Pen pressure:** real pressure is used when the tablet reports it; otherwise stroke width follows speed, using the model measured from Excalidraw.
 - **Floating tools:** the toolbar, the properties panel and the undo and redo panel are separate windows that open on click, fold back into a handle when you leave them, and can be pinned open.
 - **Two monitors:** choose the screen you draw on and the screen that holds the tools. The tools are excluded from screen capture by default, so an audience watching a shared screen does not see them.
-- **Copy as PNG:** put the drawing on the clipboard, with transparency in desktop mode.
+- **Copy or save as PNG:** put the drawing on the clipboard or write it to a file, with transparency in desktop mode.
 - **Tiny footprint:** measured on Windows 11 with the real executable (see [docs/measurements.md](docs/measurements.md)):
 
 | Quantity | Value |

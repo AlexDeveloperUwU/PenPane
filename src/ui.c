@@ -37,6 +37,7 @@ typedef struct Island {
     bool handleHover;
     bool tracking;
     bool timerActive;
+    bool awaitFirstHover;
     bool pointerDown;
     bool dragging;
     bool dragCandidate;
@@ -232,8 +233,8 @@ static void island_timer_sync(Island *island)
         island->timerActive = false;
     }
     const UiSettings *settings = &island->ui->settings;
-    if (island->shown && !island->collapsed && !island_keeps_open(island) && !island->pointerDown &&
-        !island_cursor_inside(island)) {
+    if (island->shown && !island->collapsed && !island->awaitFirstHover && !island_keeps_open(island) &&
+        !island->pointerDown && !island_cursor_inside(island)) {
         UINT delay = settings->autoHideMs > 0 ? (UINT)settings->autoHideMs : AUTO_HIDE_DEFAULT_MS;
         if (delay < AUTO_HIDE_MIN_MS) {
             delay = AUTO_HIDE_MIN_MS;
@@ -387,7 +388,7 @@ static void island_show(Island *island)
 {
     island_read_scale(island);
     island_rebuild_layout(island);
-    island->collapsed = !island_keeps_open(island);
+    island->collapsed = !island_keeps_open(island) && !island->awaitFirstHover;
     island->handleHover = false;
     island->tracking = false;
     island->shown = true;
@@ -804,6 +805,7 @@ static void island_release(Island *island, int x, int y)
  */
 static void island_hover_move(Island *island, int x, int y)
 {
+    island->awaitFirstHover = false;
     if (!island->tracking) {
         TRACKMOUSEEVENT track = {sizeof track, TME_LEAVE, island->window, 0};
         if (TrackMouseEvent(&track)) {
@@ -953,6 +955,7 @@ Ui *ui_create(HINSTANCE instance, UiEventHandler handler, void *user, const UiSe
         island->id = (PanelId)i;
         island->hover = -1;
         island->pressed = -1;
+        island->awaitFirstHover = i == PANEL_TOOLBAR;
         island->window = CreateWindowExW(WS_EX_LAYERED | WS_EX_TOPMOST | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE,
                                          ISLAND_CLASS, L"PenPane island", WS_POPUP, 0, 0, 1, 1, NULL, NULL,
                                          instance, island);

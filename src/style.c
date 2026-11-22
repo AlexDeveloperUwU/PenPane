@@ -17,7 +17,7 @@ const float WIDTH_PRESETS[WIDTH_PRESET_COUNT] = {STROKE_WIDTH_THIN, STROKE_WIDTH
 
 Style style_default(void)
 {
-    Style style = {STROKE_PALETTE[0], 0, WIDTH_PRESETS[1], 1.0f, STROKE_SOLID, true};
+    Style style = {STROKE_PALETTE[0], 0, WIDTH_PRESETS[1], 1.0f, STROKE_SOLID, true, TEXT_FACE_HANDWRITTEN};
     return style;
 }
 

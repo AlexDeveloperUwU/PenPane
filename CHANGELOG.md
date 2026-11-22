@@ -4,12 +4,17 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [0.2.0] - 2026-11-22
 
 - Renamed from Ink to PenPane (note 0091): `penpane.exe`, `penpane.ini`, window and synchronization object names, tray tooltip and registry value. An existing `ink.ini` next to the executable is copied to `penpane.ini` once (note 0092).
 
 ### Added
 
+- Copy and Save buttons in the history panel, a Save drawing as PNG action (`save_png`) and a tray entry; the file dialog loads lazily.
+- Text fonts: Handwritten, Normal (Segoe UI) and Legible (Atkinson Hyperlegible when installed, otherwise Verdana), chosen from a Font row in the properties panel.
+- Laser Trace or Pointer option (`laser_pointer` in the configuration); pointer mode shows a dot that follows the pen or mouse.
+- The toolbar starts expanded and folds away after the first hover, so the app is noticeable on dark backgrounds.
+- Clearer drawing and interaction mode icons, placed first on the toolbar.
 - Application icon and version information (`res/penpane.rc`, `res/penpane.ico`, `scripts/make-icon.ps1`); the tray tooltip shows the version.
 - Public repository files: README, license (GPL-3.0-or-later, note 0093), contributing guide, code of conduct, security policy, issue and pull request templates, CI and release workflows, Doxyfile, `docs/README.md`.
 - Panels open on click instead of hover, close shortly after the pointer leaves, and each has a pin button that keeps it open (saved as toolbar_pinned, properties_pinned, history_pinned).
@@ -27,6 +32,8 @@ All notable changes to this project are documented here. The format follows
 
 ### Changed
 
+- Drawing mode keeps a visual surface sized to the annotations plus a constant-alpha input window (drawing memory about 16 MB to 2-5 MB); copying as PNG allocates only the annotation extent.
+- The laser fade is linear instead of holding full width before vanishing.
 - Passthrough keeps a surface only as large as the annotations; memory is trimmed whenever the app is idle (hidden working set 10 MB to 0.3 MB).
 - Rasterizer fast paths and a size-optimized build (99 KB release executable, faster startup).
 - Text services are disabled when only plain Latin keyboard layouts are installed.
@@ -35,6 +42,8 @@ All notable changes to this project are documented here. The format follows
 
 ### Fixed
 
+- The eraser leaves no trace after the pen is lifted.
+- Short laser strokes and taps now fade completely and reach the release position instead of stopping partway.
 - Display changes, Explorer restarts and resume are now received (hidden top-level window); the tray icon is retried when registration fails.
 - Emergency exit has a fallback chain and reports when it is degraded.
 - Plain typing keys can no longer be bound as global hotkeys.

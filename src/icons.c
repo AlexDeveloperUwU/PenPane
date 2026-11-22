@@ -245,18 +245,73 @@ static void draw_mode(const Pen *pen, bool whiteboard)
 }
 
 /**
- * @brief Draws the drawing on or off symbol, a freehand scribble that is struck out when off.
+ * @brief Draws the drawing on or off symbol: a pencil over a wavy line while drawing, a mouse
+ *        arrow while the desktop stays interactive.
  * @param pen Drawing context.
  * @param on true when drawing is enabled.
  */
 static void draw_drawing(const Pen *pen, bool on)
 {
-    static const float scribble[] = {2.2f, 10.8f, 4.6f, 5.4f,  7.2f,  10.6f,
-                                     9.6f, 5.4f,  11.4f, 8.4f, 13.8f, 6.6f};
-    poly(pen, scribble, 6, false);
-    if (!on) {
-        line(pen, 2.6f, 13.6f, 13.4f, 2.4f);
+    static const float wave[] = {7.0f, 13.6f, 8.6f, 12.2f, 10.2f, 13.6f, 11.8f, 12.2f, 13.4f, 13.6f};
+    static const float cursor[] = {4.0f, 2.4f, 4.0f, 12.8f, 6.6f, 10.4f, 8.4f, 14.0f, 10.2f, 13.2f, 8.5f, 9.8f,
+                                   12.0f, 9.6f};
+    if (on) {
+        draw_pencil(pen);
+        poly(pen, wave, 5, false);
+    } else {
+        poly(pen, cursor, 7, true);
+        poly_fill(pen, cursor, 7);
     }
+}
+
+/**
+ * @brief Draws two overlapping sheets, the copy symbol.
+ * @param pen Drawing context.
+ */
+static void draw_copy(const Pen *pen)
+{
+    static const float back[] = {6.0f, 11.4f, 3.6f, 11.4f, 2.6f, 10.4f, 2.6f, 4.0f,
+                                 3.6f, 3.0f,  11.0f, 3.0f, 12.0f, 4.0f, 12.0f, 6.0f};
+    poly(pen, back, 8, false);
+    box(pen, 6.0f, 6.0f, 8.0f, 8.0f, 1.4f);
+}
+
+/**
+ * @brief Draws the font choice symbols: a slanted wobbly A, a plain A and a wide A with serifs.
+ * @param pen Drawing context.
+ * @param face 0 handwritten, 1 normal, 2 legible.
+ */
+static void draw_font(const Pen *pen, int face)
+{
+    if (face == 0) {
+        static const float hand[] = {2.6f, 13.2f, 4.4f, 8.0f, 6.6f, 3.0f, 8.6f, 5.4f, 10.6f, 9.6f, 13.4f, 13.4f};
+        poly(pen, hand, 6, false);
+        line(pen, 4.8f, 10.4f, 11.0f, 9.8f);
+    } else if (face == 1) {
+        static const float plain[] = {3.4f, 13.2f, 8.0f, 2.8f, 12.6f, 13.2f};
+        poly(pen, plain, 3, false);
+        line(pen, 5.2f, 9.6f, 10.8f, 9.6f);
+    } else {
+        static const float wide[] = {3.0f, 13.0f, 8.0f, 2.8f, 13.0f, 13.0f};
+        poly(pen, wide, 3, false);
+        line(pen, 4.8f, 9.4f, 11.2f, 9.4f);
+        line(pen, 1.8f, 13.0f, 4.6f, 13.0f);
+        line(pen, 11.4f, 13.0f, 14.2f, 13.0f);
+        line(pen, 6.6f, 2.8f, 9.4f, 2.8f);
+    }
+}
+
+/**
+ * @brief Draws a floppy disk, the save symbol.
+ * @param pen Drawing context.
+ */
+static void draw_save(const Pen *pen)
+{
+    static const float shutter[] = {5.2f, 2.5f, 5.2f, 6.2f, 10.8f, 6.2f, 10.8f, 2.5f};
+    static const float label[] = {5.2f, 13.5f, 5.2f, 9.6f, 10.8f, 9.6f, 10.8f, 13.5f};
+    box(pen, 2.5f, 2.5f, 11.0f, 11.0f, 1.4f);
+    poly(pen, shutter, 4, false);
+    poly(pen, label, 4, false);
 }
 
 /**
@@ -387,6 +442,21 @@ static bool draw_icon(Pen *pen, Icon icon)
         pen->mirror = true;
         draw_undo(pen);
         break;
+    case ICON_COPY: draw_copy(pen); break;
+    case ICON_SAVE: draw_save(pen); break;
+    case ICON_LASER_TRAIL: {
+        static const float trail[] = {2.4f, 12.6f, 5.0f, 8.0f, 8.0f, 9.6f, 10.6f, 5.4f};
+        poly(pen, trail, 4, false);
+        dot(pen, 12.2f, 4.2f, 1.8f);
+        break;
+    }
+    case ICON_LASER_POINTER:
+        dot(pen, 8.0f, 8.0f, 2.4f);
+        arc(pen, 8.0f, 8.0f, 5.6f, 0.0f, 360.0f);
+        break;
+    case ICON_FONT_HAND: draw_font(pen, 0); break;
+    case ICON_FONT_NORMAL: draw_font(pen, 1); break;
+    case ICON_FONT_LEGIBLE: draw_font(pen, 2); break;
     case ICON_STYLE_SOLID: draw_stroke_style(pen, 0); break;
     case ICON_STYLE_DASHED: draw_stroke_style(pen, 1); break;
     case ICON_STYLE_DOTTED: draw_stroke_style(pen, 2); break;

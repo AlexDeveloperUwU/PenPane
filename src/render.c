@@ -350,7 +350,7 @@ static void render_text(Canvas *canvas, const Element *element, RECT area)
         return;
     }
     Mask mask;
-    if (!text_make_mask(&mask, TEXT_FONT_CANVAS, element->text, element->fontSize,
+    if (!text_make_mask(&mask, text_font_for_face(element->style.face), element->text, element->fontSize,
                         (int)element->from.x, (int)element->from.y)) {
         return;
     }
@@ -504,10 +504,11 @@ void render_text_caret(Canvas *canvas, const Element *element, const RECT *clip)
     const wchar_t *text = element->text ? element->text : L"";
     const wchar_t *lastLine = wcsrchr(text, L'\n');
     lastLine = lastLine ? lastLine + 1 : text;
-    text_measure(TEXT_FONT_CANVAS, text, element->fontSize, &width, &height);
+    TextFont font = text_font_for_face(element->style.face);
+    text_measure(font, text, element->fontSize, &width, &height);
     int lineWidth = 0;
     int lineHeight = 0;
-    text_measure(TEXT_FONT_CANVAS, lastLine, element->fontSize, &lineWidth, &lineHeight);
+    text_measure(font, lastLine, element->fontSize, &lineWidth, &lineHeight);
     int lineTop = (int)element->from.y + height - lineHeight;
     Point top = {element->from.x + (float)lineWidth + 1.0f, (float)lineTop + 2.0f};
     Point bottom = {top.x, (float)(lineTop + (lineHeight > 4 ? lineHeight - 2 : lineHeight))};

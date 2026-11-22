@@ -167,7 +167,17 @@ static bool clipboard_put(UINT format, HGLOBAL handle)
     return true;
 }
 
-bool clipboard_copy_region(HWND owner, const Canvas *canvas, RECT region, bool opaqueBackdrop)
+/**
+ * @brief Converts a canvas region to straight-alpha RGBA rows.
+ * @param canvas Source canvas holding premultiplied pixels.
+ * @param region Region to convert; clipped to the canvas.
+ * @param opaqueBackdrop true to force full alpha.
+ * @param outWidth Receives the width of the clipped region.
+ * @param outHeight Receives the height of the clipped region.
+ * @return Newly allocated rows, or NULL when the region is empty or memory ran out.
+ */
+static uint8_t *region_to_rgba(const Canvas *canvas, RECT region, bool opaqueBackdrop, int *outWidth,
+                               int *outHeight)
 {
     if (region.left < 0) region.left = 0;
     if (region.top < 0) region.top = 0;
@@ -176,11 +186,11 @@ bool clipboard_copy_region(HWND owner, const Canvas *canvas, RECT region, bool o
     int width = region.right - region.left;
     int height = region.bottom - region.top;
     if (width <= 0 || height <= 0) {
-        return false;
+        return NULL;
     }
     uint8_t *rgba = malloc((size_t)width * (size_t)height * 4);
     if (!rgba) {
-        return false;
+        return NULL;
     }
     for (int y = 0; y < height; y++) {
         const uint32_t *row = canvas->pixels + (size_t)(region.top + y) * canvas->width + region.left;
@@ -201,6 +211,47 @@ bool clipboard_copy_region(HWND owner, const Canvas *canvas, RECT region, bool o
             out[x * 4 + 2] = (uint8_t)(blue > 255 ? 255 : blue);
             out[x * 4 + 3] = (uint8_t)alpha;
         }
+    }
+    *outWidth = width;
+    *outHeight = height;
+    return rgba;
+}
+
+bool clipboard_save_region(const Canvas *canvas, RECT region, bool opaqueBackdrop, const wchar_t *path)
+{
+    int width;
+    int height;
+    uint8_t *rgba = region_to_rgba(canvas, region, opaqueBackdrop, &width, &height);
+    if (!rgba) {
+        return false;
+    }
+    size_t pngSize = 0;
+    uint8_t *png = encode_png(rgba, width, height, &pngSize);
+    free(rgba);
+    if (!png) {
+        return false;
+    }
+    HANDLE file = CreateFileW(path, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+    bool ok = false;
+    if (file != INVALID_HANDLE_VALUE) {
+        DWORD written = 0;
+        ok = WriteFile(file, png, (DWORD)pngSize, &written, NULL) && written == pngSize;
+        CloseHandle(file);
+        if (!ok) {
+            DeleteFileW(path);
+        }
+    }
+    free(png);
+    return ok;
+}
+
+bool clipboard_copy_region(HWND owner, const Canvas *canvas, RECT region, bool opaqueBackdrop)
+{
+    int width;
+    int height;
+    uint8_t *rgba = region_to_rgba(canvas, region, opaqueBackdrop, &width, &height);
+    if (!rgba) {
+        return false;
     }
     size_t pngSize = 0;
     uint8_t *png = encode_png(rgba, width, height, &pngSize);

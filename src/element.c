@@ -101,8 +101,8 @@ FloatRect element_box(const Element *element)
     case ELEMENT_TEXT: {
         int width = 0;
         int height = 0;
-        text_measure(TEXT_FONT_CANVAS, element->text ? element->text : L"", element->fontSize,
-                     &width, &height);
+        text_measure(text_font_for_face(element->style.face), element->text ? element->text : L"",
+                     element->fontSize, &width, &height);
         return (FloatRect){element->from.x, element->from.y, element->from.x + (float)width,
                            element->from.y + (float)height};
     }

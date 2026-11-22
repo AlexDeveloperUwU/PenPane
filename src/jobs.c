@@ -19,6 +19,7 @@ typedef struct CopyJob {
     Canvas canvas;
     RECT region;
     bool opaque;
+    wchar_t path[MAX_PATH];
 } CopyJob;
 
 /** @brief Shared queue state; the lock protects everything below it. */
@@ -74,7 +75,11 @@ static DWORD WINAPI worker_main(LPVOID parameter)
         if (save) {
             config_save(&save->config, save->path);
         } else if (haveCopy) {
-            clipboard_copy_region(copy.owner, &copy.canvas, copy.region, copy.opaque);
+            if (copy.path[0]) {
+                clipboard_save_region(&copy.canvas, copy.region, copy.opaque, copy.path);
+            } else {
+                clipboard_copy_region(copy.owner, &copy.canvas, copy.region, copy.opaque);
+            }
             canvas_destroy(&copy.canvas);
         }
     }
@@ -120,12 +125,26 @@ bool jobs_save_config(const Config *config, const wchar_t *path)
     return started;
 }
 
-bool jobs_copy_region(HWND owner, Canvas *canvas, RECT region, bool opaqueBackdrop)
+/**
+ * @brief Queues an export of a canvas region, to the clipboard or to a file.
+ * @param owner Clipboard owner window.
+ * @param canvas Rendered canvas; ownership moves to the job on success.
+ * @param region Region to export.
+ * @param opaqueBackdrop true when the region is fully opaque.
+ * @param path Destination file, or NULL for the clipboard.
+ * @return true when queued.
+ */
+static bool queue_export(HWND owner, Canvas *canvas, RECT region, bool opaqueBackdrop, const wchar_t *path)
 {
     ensure_lock();
     EnterCriticalSection(&g_lock);
     if (g_copy.pending) {
         canvas_destroy(&g_copy.canvas);
+    }
+    g_copy.path[0] = 0;
+    if (path) {
+        wcsncpy(g_copy.path, path, MAX_PATH - 1);
+        g_copy.path[MAX_PATH - 1] = 0;
     }
     g_copy.owner = owner;
     g_copy.canvas = *canvas;
@@ -141,6 +160,16 @@ bool jobs_copy_region(HWND owner, Canvas *canvas, RECT region, bool opaqueBackdr
     }
     LeaveCriticalSection(&g_lock);
     return started;
+}
+
+bool jobs_copy_region(HWND owner, Canvas *canvas, RECT region, bool opaqueBackdrop)
+{
+    return queue_export(owner, canvas, region, opaqueBackdrop, NULL);
+}
+
+bool jobs_save_region(Canvas *canvas, RECT region, bool opaqueBackdrop, const wchar_t *path)
+{
+    return queue_export(NULL, canvas, region, opaqueBackdrop, path);
 }
 
 void jobs_shutdown(DWORD timeoutMs)

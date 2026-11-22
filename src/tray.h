@@ -41,6 +41,7 @@ typedef enum TrayCommand {
     TRAY_RELOAD_CONFIG,
     TRAY_OPEN_CONFIG,
     TRAY_COPY_PNG,
+    TRAY_SAVE_PNG,
     TRAY_TOGGLE_START_WITH_WINDOWS,
     TRAY_QUIT
 } TrayCommand;

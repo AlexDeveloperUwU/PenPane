@@ -30,6 +30,7 @@
     X(ACTION_TOGGLE_LASER, "toggle_laser")                  \
     X(ACTION_TOGGLE_TOOL_LOCK, "toggle_tool_lock")          \
     X(ACTION_COPY_PNG, "copy_png")                          \
+    X(ACTION_SAVE_PNG, "save_png")                          \
     X(ACTION_EMERGENCY_EXIT, "emergency_exit")
 
 /** @brief Every bindable action. */

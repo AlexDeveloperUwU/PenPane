@@ -58,6 +58,7 @@ static bool config_equal(const Config *a, const Config *b)
         a->defaultStrokeIndex != b->defaultStrokeIndex || a->defaultFillIndex != b->defaultFillIndex ||
         a->defaultWidthIndex != b->defaultWidthIndex || a->autoFadeSeconds != b->autoFadeSeconds ||
         a->drawMonitor != b->drawMonitor || a->uiMonitor != b->uiMonitor || a->toolLock != b->toolLock ||
+        a->laserPointer != b->laserPointer ||
         a->ui.autoHide != b->ui.autoHide || a->ui.autoHideMs != b->ui.autoHideMs ||
         a->ui.excludeFromCapture != b->ui.excludeFromCapture) {
         return false;
@@ -142,6 +143,7 @@ static void test_round_trip(void)
     original.drawMonitor = 1;
     original.uiMonitor = 2;
     original.toolLock = true;
+    original.laserPointer = true;
     original.ui.autoHide = false;
     original.ui.autoHideMs = 1500;
     original.ui.excludeFromCapture = false;

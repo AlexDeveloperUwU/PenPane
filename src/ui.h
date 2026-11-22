@@ -49,6 +49,8 @@ typedef struct UiSettings {
 #define UI_SECTION_STROKE_STYLE 0x08u
 #define UI_SECTION_PRESSURE 0x10u
 #define UI_SECTION_OPACITY 0x20u
+#define UI_SECTION_FONT 0x40u
+#define UI_SECTION_LASER 0x80u
 
 /** @brief Application state the UI renders. */
 typedef struct UiModel {
@@ -60,6 +62,7 @@ typedef struct UiModel {
     bool canRedo;
     bool whiteboard;
     bool drawing;
+    bool laserPointer;
 } UiModel;
 
 /** @brief Kinds of events the UI reports. */
@@ -72,6 +75,8 @@ typedef enum UiEventKind {
     UI_EVENT_SET_STROKE_STYLE,
     UI_EVENT_SET_PRESSURE,
     UI_EVENT_SET_OPACITY,
+    UI_EVENT_SET_FONT,
+    UI_EVENT_SET_LASER_MODE,
     UI_EVENT_PANEL_MOVED,
     UI_EVENT_SLIDER_END,
     UI_EVENT_PANEL_PINNED
@@ -87,6 +92,8 @@ typedef enum UiEventKind {
  *  - UI_EVENT_SET_STROKE / SET_FILL / SET_WIDTH: index is the preset index in the matching table
  *    of style.h.
  *  - UI_EVENT_SET_STROKE_STYLE: index is a StrokeStyle value.
+ *  - UI_EVENT_SET_FONT: index is a TextFace value.
+ *  - UI_EVENT_SET_LASER_MODE: index is 0 for the fading trail and 1 for the pointer dot.
  *  - UI_EVENT_SET_PRESSURE: index is 0 or 1.
  *  - UI_EVENT_SET_OPACITY: value is 0.0 to 1.0 in steps of 0.1.
  *  - UI_EVENT_PANEL_MOVED: panel, x and y hold the new top-left position.

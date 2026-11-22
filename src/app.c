@@ -3,6 +3,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <commdlg.h>
 #include <wtsapi32.h>
 
 #include "config.h"
@@ -29,11 +30,11 @@
 #define ANIMATION_INTERVAL_MS 16
 #define FADE_DURATION_MS 400
 #define DISPLAY_LIMIT TRAY_MAX_MONITORS
-#define HIT_TEST_BACKDROP 0x01000000u
 #define MESSAGE_CLASS L"PenPaneMessageWindow"
 #define SINGLE_INSTANCE_MUTEX L"Local\\PenPaneOverlaySingleInstance"
 #define SCRATCH_KEEP_BYTES (256 * 1024)
 #define PENDING_NOTICE_LIMIT 4
+#define SURFACE_GROW_MIN_PX 128
 
 /** @brief A display and its areas in virtual-desktop coordinates. */
 typedef struct Monitor {
@@ -101,15 +102,21 @@ static Scene *active_scene(void)
 }
 
 /**
- * @brief Backdrop color for the current mode and state.
- * @return Transparent, hit-testable transparent, or opaque whiteboard color.
+ * @brief Backdrop color for the current mode.
+ * @return Transparent, or the opaque whiteboard color.
  */
 static Color backdrop_color(void)
 {
-    if (app.whiteboard) {
-        return COLOR_CANVAS_DARK;
-    }
-    return app.drawing ? HIT_TEST_BACKDROP : 0;
+    return app.whiteboard ? COLOR_CANVAS_DARK : 0;
+}
+
+/**
+ * @brief Tells whether drawing runs with a separate input window and a click-through visual window.
+ * @return true for drawing on the desktop; whiteboard keeps one opaque window.
+ */
+static bool two_window_mode(void)
+{
+    return app.drawing && !app.whiteboard;
 }
 
 /**
@@ -191,16 +198,19 @@ static uint32_t now_ms(void)
  */
 static void focus_overlay(void)
 {
+    HWND target = overlay_focus_window(&app.overlay);
     HWND foreground = GetForegroundWindow();
-    if (foreground == app.overlay.window) {
+    if (foreground == target) {
         return;
     }
-    app.previousForeground = foreground;
+    if (foreground != app.overlay.window) {
+        app.previousForeground = foreground;
+    }
     DWORD foregroundThread = foreground ? GetWindowThreadProcessId(foreground, NULL) : 0;
     DWORD thisThread = GetCurrentThreadId();
     bool attached = foregroundThread && foregroundThread != thisThread &&
                     AttachThreadInput(thisThread, foregroundThread, TRUE);
-    SetForegroundWindow(app.overlay.window);
+    SetForegroundWindow(target);
     if (attached) {
         AttachThreadInput(thisThread, foregroundThread, FALSE);
     }
@@ -214,7 +224,7 @@ static void restore_focus(void)
     HWND target = app.previousForeground;
     app.previousForeground = NULL;
     if (target && IsWindow(target) && IsWindowVisible(target) &&
-        GetForegroundWindow() == app.overlay.window) {
+        GetForegroundWindow() == overlay_focus_window(&app.overlay)) {
         SetForegroundWindow(target);
     }
 }
@@ -318,6 +328,8 @@ static unsigned sections_for_state(void)
     case TOOL_TEXT:
         type = ELEMENT_TEXT;
         break;
+    case TOOL_LASER:
+        return UI_SECTION_LASER;
     default:
         return 0;
     }
@@ -332,7 +344,7 @@ static unsigned sections_for_state(void)
     case ELEMENT_PEN:
         return UI_SECTION_STROKE | UI_SECTION_WIDTH | UI_SECTION_PRESSURE | UI_SECTION_OPACITY;
     case ELEMENT_TEXT:
-        return UI_SECTION_STROKE | UI_SECTION_WIDTH | UI_SECTION_OPACITY;
+        return UI_SECTION_STROKE | UI_SECTION_FONT | UI_SECTION_WIDTH | UI_SECTION_OPACITY;
     }
     return 0;
 }
@@ -351,6 +363,7 @@ static void app_sync_ui(void)
     model.toolLocked = app.controller.toolLocked;
     model.style = selection ? selection->style : app.controller.style;
     model.sections = sections_for_state();
+    model.laserPointer = app.controller.laserPointer;
     model.canUndo = scene_can_undo(active_scene());
     model.canRedo = scene_can_redo(active_scene());
     model.whiteboard = app.whiteboard;
@@ -359,29 +372,59 @@ static void app_sync_ui(void)
 }
 
 /**
- * @brief Surface rectangle the overlay needs: the whole monitor while drawing, otherwise the annotation extent.
- * @return Rectangle in monitor coordinates; a single pixel when nothing is visible.
+ * @brief Union of scene element bounds and transient drawing bounds.
+ * @return Dirty region in monitor coordinates, empty when nothing is visible.
  */
-static RECT wanted_surface(void)
+static Dirty annotation_extent(void)
 {
-    const Monitor *monitor = &app.monitors[draw_monitor()];
-    RECT full = {0, 0, monitor->bounds.right - monitor->bounds.left,
-                 monitor->bounds.bottom - monitor->bounds.top};
-    if (app.drawing || app.whiteboard) {
-        return full;
-    }
     const Scene *scene = active_scene();
     Dirty extent;
     dirty_reset(&extent);
     for (int i = 0; i < scene->count; i++) {
         dirty_add(&extent, element_bounds(&scene->items[i]));
     }
+    controller_add_transient_bounds(&app.controller, &extent);
+    return extent;
+}
+
+/**
+ * @brief Surface rectangle the overlay needs: the whole monitor for whiteboard, the annotation extent otherwise.
+ *
+ * In two-window drawing the extent is padded and clamped to the monitor. With keepCurrent the current
+ * surface is kept while it still covers the extent, so the surface is reallocated only when growth is needed.
+ * @param keepCurrent true to avoid reallocating a surface that already covers the extent.
+ * @return Rectangle in monitor coordinates; a single pixel when nothing is visible.
+ */
+static RECT wanted_surface(bool keepCurrent)
+{
+    const Monitor *monitor = &app.monitors[draw_monitor()];
+    RECT full = {0, 0, monitor->bounds.right - monitor->bounds.left,
+                 monitor->bounds.bottom - monitor->bounds.top};
+    if (app.whiteboard) {
+        return full;
+    }
+    RECT current = canvas_area(&app.overlay.canvas);
+    bool hasCurrent = current.right > current.left && current.bottom > current.top;
+    Dirty extent = annotation_extent();
     RECT area;
     if (extent.empty || !rect_intersect(extent.rect, full, &area)) {
         RECT single = {0, 0, 1, 1};
-        return single;
+        return app.drawing && keepCurrent && hasCurrent ? current : single;
     }
-    return area;
+    if (!app.drawing) {
+        return area;
+    }
+    if (keepCurrent && hasCurrent && current.left <= area.left && current.top <= area.top &&
+        current.right >= area.right && current.bottom >= area.bottom) {
+        return current;
+    }
+    int padX = (area.right - area.left) / 4;
+    int padY = (area.bottom - area.top) / 4;
+    padX = padX > SURFACE_GROW_MIN_PX ? padX : SURFACE_GROW_MIN_PX;
+    padY = padY > SURFACE_GROW_MIN_PX ? padY : SURFACE_GROW_MIN_PX;
+    RECT grown = {area.left - padX, area.top - padY, area.right + padX, area.bottom + padY};
+    rect_intersect(grown, full, &grown);
+    return grown;
 }
 
 /**
@@ -403,7 +446,7 @@ static void update_animation_timer(void)
 }
 
 /**
- * @brief Repaints the dirty regions of the overlay and presents them, resizing the surface in passthrough when needed.
+ * @brief Repaints the dirty regions of the overlay and presents them, resizing the surface outside whiteboard when needed.
  */
 static void app_flush(void)
 {
@@ -413,8 +456,8 @@ static void app_flush(void)
     if (!app.overlayReady) {
         return;
     }
-    if (!app.drawing && !app.whiteboard && !repaint.empty) {
-        RECT wanted = wanted_surface();
+    if (!app.whiteboard && (app.drawing || !repaint.empty)) {
+        RECT wanted = wanted_surface(true);
         RECT current = canvas_area(&app.overlay.canvas);
         if (!EqualRect(&wanted, &current) && overlay_set_surface(&app.overlay, wanted)) {
             render_everything();
@@ -473,8 +516,12 @@ static void app_apply_state(void)
         if (!app.overlayReady && !create_overlay()) {
             return;
         }
+        if (!app.drawing) {
+            restore_focus();
+        }
         overlay_set_bounds(&app.overlay, app.monitors[draw_monitor()].bounds);
-        if (!overlay_set_surface(&app.overlay, wanted_surface())) {
+        if (!overlay_set_input_window(&app.overlay, two_window_mode(), app.instance) ||
+            !overlay_set_surface(&app.overlay, wanted_surface(false))) {
             destroy_overlay();
             return;
         }
@@ -485,13 +532,10 @@ static void app_apply_state(void)
         overlay_set_visible(&app.overlay, true);
         if (app.drawing) {
             focus_overlay();
-        } else {
-            restore_focus();
-            SetWindowPos(app.overlay.window, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
-            if (app.config.autoFadeSeconds > 0 && scene->count > 0) {
-                SetTimer(app.messageWindow, TIMER_FADE_WAIT, (UINT)app.config.autoFadeSeconds * 1000, NULL);
-            }
+        } else if (app.config.autoFadeSeconds > 0 && scene->count > 0) {
+            SetTimer(app.messageWindow, TIMER_FADE_WAIT, (UINT)app.config.autoFadeSeconds * 1000, NULL);
         }
+        overlay_raise(&app.overlay);
     }
     if (app.ui) {
         ui_set_visible(app.ui, true, app.drawing);
@@ -567,20 +611,21 @@ static void select_tool(Tool tool)
 }
 
 /**
- * @brief Copies the active drawing to the clipboard as PNG.
+ * @brief Renders the active drawing into a canvas that covers only the exported area.
+ * @param export Receives the canvas; the caller owns it on success.
+ * @param local Receives the exported rectangle in the canvas' own pixels.
+ * @return false when there is nothing to export or memory ran out.
  */
-static void copy_drawing_png(void)
+static bool render_export(Canvas *export, RECT *local)
 {
     Scene *scene = active_scene();
     RECT region = {0, 0, 0, 0};
-    RECT surface = {0, 0, 0, 0};
     const Monitor *monitor = &app.monitors[draw_monitor()];
     int width = monitor->bounds.right - monitor->bounds.left;
     int height = monitor->bounds.bottom - monitor->bounds.top;
-    surface.right = width;
-    surface.bottom = height;
     if (app.whiteboard) {
-        region = surface;
+        region.right = width;
+        region.bottom = height;
     } else {
         Dirty extent;
         dirty_reset(&extent);
@@ -588,16 +633,92 @@ static void copy_drawing_png(void)
             dirty_add(&extent, element_bounds(&scene->items[i]));
         }
         if (extent.empty) {
-            return;
+            return false;
         }
         region = extent.rect;
     }
+    RECT bounds = {0, 0, width, height};
+    IntersectRect(&region, &region, &bounds);
+    int exportWidth = region.right - region.left;
+    int exportHeight = region.bottom - region.top;
+    if (exportWidth <= 0 || exportHeight <= 0 || !canvas_create(export, exportWidth, exportHeight)) {
+        return false;
+    }
+    export->originX = region.left;
+    export->originY = region.top;
+    render_scene(export, scene, &region, app.whiteboard ? COLOR_CANVAS_DARK : 0);
+    SetRect(local, 0, 0, exportWidth, exportHeight);
+    return true;
+}
+
+/**
+ * @brief Copies the active drawing to the clipboard as PNG.
+ */
+static void copy_drawing_png(void)
+{
     Canvas export;
-    if (!canvas_create(&export, width, height)) {
+    RECT local;
+    if (!render_export(&export, &local)) {
         return;
     }
-    render_scene(&export, scene, &surface, app.whiteboard ? COLOR_CANVAS_DARK : 0);
-    if (!jobs_copy_region(app.messageWindow, &export, region, app.whiteboard)) {
+    if (!jobs_copy_region(app.messageWindow, &export, local, app.whiteboard)) {
+        canvas_destroy(&export);
+    }
+}
+
+/**
+ * @brief Asks where to save a PNG with the system save dialog, loaded only when needed.
+ * @param path Receives the chosen path.
+ * @param size Capacity of path in characters.
+ * @return false when the user cancelled or the dialog is unavailable.
+ */
+static bool choose_png_path(wchar_t *path, DWORD size)
+{
+    typedef BOOL(WINAPI * SaveDialog)(LPOPENFILENAMEW);
+    HMODULE library = LoadLibraryW(L"comdlg32.dll");
+    SaveDialog dialog = library ? (SaveDialog)(void *)GetProcAddress(library, "GetSaveFileNameW") : NULL;
+    bool chosen = false;
+    if (dialog) {
+        SYSTEMTIME now;
+        GetLocalTime(&now);
+        swprintf(path, size, L"PenPane %04d-%02d-%02d %02d-%02d-%02d.png", now.wYear, now.wMonth, now.wDay,
+                 now.wHour, now.wMinute, now.wSecond);
+        OPENFILENAMEW dialogInfo = {0};
+        dialogInfo.lStructSize = sizeof dialogInfo;
+        dialogInfo.hwndOwner = app.overlayReady ? overlay_focus_window(&app.overlay) : app.messageWindow;
+        dialogInfo.lpstrFilter = L"PNG image (*.png)\0*.png\0";
+        dialogInfo.lpstrFile = path;
+        dialogInfo.nMaxFile = size;
+        dialogInfo.lpstrDefExt = L"png";
+        dialogInfo.lpstrTitle = L"Save drawing as PNG";
+        dialogInfo.Flags = OFN_OVERWRITEPROMPT | OFN_PATHMUSTEXIST | OFN_NOCHANGEDIR | OFN_EXPLORER;
+        chosen = dialog(&dialogInfo) != FALSE;
+    }
+    if (library) {
+        FreeLibrary(library);
+    }
+    return chosen;
+}
+
+/**
+ * @brief Saves the active drawing as a PNG file chosen by the user.
+ */
+static void save_drawing_png(void)
+{
+    Canvas export;
+    RECT local;
+    if (!render_export(&export, &local)) {
+        return;
+    }
+    wchar_t path[MAX_PATH];
+    bool chosen = choose_png_path(path, ARRAYSIZE(path));
+    if (app.overlayReady) {
+        overlay_raise(&app.overlay);
+    }
+    if (app.ui) {
+        ui_raise(app.ui);
+    }
+    if (!chosen || !jobs_save_region(&export, local, app.whiteboard, path)) {
         canvas_destroy(&export);
     }
 }
@@ -743,6 +864,9 @@ static void perform_action(Action action)
         break;
     case ACTION_COPY_PNG:
         copy_drawing_png();
+        break;
+    case ACTION_SAVE_PNG:
+        save_drawing_png();
         break;
     case ACTION_EMERGENCY_EXIT:
         app.quitting = true;
@@ -972,6 +1096,18 @@ static void on_ui_event(void *user, const UiEvent *event)
     case UI_EVENT_SET_STROKE_STYLE:
         style.strokeStyle = (StrokeStyle)event->index;
         change_style(style);
+        break;
+    case UI_EVENT_SET_FONT:
+        style.face = (TextFace)event->index;
+        change_style(style);
+        break;
+    case UI_EVENT_SET_LASER_MODE:
+        controller_cancel(&app.controller);
+        app.controller.laserPointer = event->index != 0;
+        app.config.laserPointer = app.controller.laserPointer;
+        save_config();
+        app_flush();
+        app_sync_ui();
         break;
     case UI_EVENT_SET_PRESSURE:
         style.pressure = event->index != 0;
@@ -1246,8 +1382,7 @@ static void handle_resume(void)
         handle_pointer(2, (POINT){0, 0}, -1.0f, false);
     }
     if (app.overlayReady) {
-        SetWindowPos(app.overlay.window, HWND_TOPMOST, 0, 0, 0, 0,
-                     SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+        overlay_raise(&app.overlay);
         render_everything();
     }
     if (app.ui) {
@@ -1295,6 +1430,7 @@ static void reload_config(void)
     app.controller.style.fill = FILL_PALETTE[app.config.defaultFillIndex];
     app.controller.style.width = WIDTH_PRESETS[app.config.defaultWidthIndex];
     app.controller.toolLocked = app.config.toolLock;
+    app.controller.laserPointer = app.config.laserPointer;
     if (errors[0]) {
         notify(L"Configuration warnings", errors);
     }
@@ -1374,6 +1510,9 @@ static void handle_tray_event(const TrayEvent *event)
         break;
     case TRAY_COPY_PNG:
         copy_drawing_png();
+        break;
+    case TRAY_SAVE_PNG:
+        save_drawing_png();
         break;
     case TRAY_TOGGLE_START_WITH_WINDOWS:
         autostart_set(!autostart_get());
@@ -1484,7 +1623,7 @@ static LONG WINAPI crash_filter(EXCEPTION_POINTERS *info)
 {
     (void)info;
     if (app.overlayReady && app.overlay.window) {
-        ShowWindow(app.overlay.window, SW_HIDE);
+        overlay_set_visible(&app.overlay, false);
     }
     return EXCEPTION_EXECUTE_HANDLER;
 }

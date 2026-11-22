@@ -134,6 +134,20 @@ static void build_toolbar(UiLayout *layout, const UiModel *model, bool pinned, f
 
     x = divider_add(layout, scale, x, y, button);
 
+    UiItem *drawing = button_action(layout, x, y, button,
+                                    model->drawing ? ICON_DRAWING_ON : ICON_DRAWING_OFF,
+                                    ACTION_TOGGLE_OVERLAY);
+    drawing->selected = model->drawing;
+    x += button + gap;
+
+    UiItem *mode = button_action(layout, x, y, button,
+                                 model->whiteboard ? ICON_MODE_WHITEBOARD : ICON_MODE_DESKTOP,
+                                 ACTION_TOGGLE_MODE);
+    mode->selected = model->whiteboard;
+    x += button + gap;
+
+    x = divider_add(layout, scale, x, y, button);
+
     UiItem *lock = button_action(layout, x, y, button, model->toolLocked ? ICON_LOCK_CLOSED : ICON_LOCK_OPEN,
                                  ACTION_TOGGLE_TOOL_LOCK);
     lock->selected = model->toolLocked;
@@ -153,18 +167,6 @@ static void build_toolbar(UiLayout *layout, const UiModel *model, bool pinned, f
     }
 
     x = divider_add(layout, scale, x, y, button);
-
-    UiItem *mode = button_action(layout, x, y, button,
-                                 model->whiteboard ? ICON_MODE_WHITEBOARD : ICON_MODE_DESKTOP,
-                                 ACTION_TOGGLE_MODE);
-    mode->selected = model->whiteboard;
-    x += button + gap;
-
-    UiItem *drawing = button_action(layout, x, y, button,
-                                    model->drawing ? ICON_DRAWING_ON : ICON_DRAWING_OFF,
-                                    ACTION_TOGGLE_OVERLAY);
-    drawing->selected = model->drawing;
-    x += button + gap;
 
     button_action(layout, x, y, button, ICON_EXIT, ACTION_EMERGENCY_EXIT);
     x += button;
@@ -192,6 +194,12 @@ static void build_history(UiLayout *layout, const UiModel *model, bool pinned, f
     button_action(layout, x, y, button, ICON_UNDO, ACTION_UNDO)->enabled = model->canUndo;
     x += button + gap;
     button_action(layout, x, y, button, ICON_REDO, ACTION_REDO)->enabled = model->canRedo;
+    x += button + gap;
+
+    x = divider_add(layout, scale, x, y, button);
+    button_action(layout, x, y, button, ICON_COPY, ACTION_COPY_PNG);
+    x += button + gap;
+    button_action(layout, x, y, button, ICON_SAVE, ACTION_SAVE_PNG);
     x += button;
 
     layout->width = x + pad;
@@ -244,15 +252,16 @@ static void swatches_add(UiLayout *layout, float scale, int y, const Color *pale
  * @param layout Layout to extend.
  * @param scale Scale factor.
  * @param y Top of the row.
- * @param icons Icons of the three buttons.
+ * @param icons Icons of the buttons.
+ * @param count Number of buttons.
  * @param selected Index of the selected button.
  * @param kind Event kind emitted when a button is chosen.
  */
-static void choices_add(UiLayout *layout, float scale, int y, const Icon icons[3], int selected,
+static void choices_add(UiLayout *layout, float scale, int y, const Icon *icons, int count, int selected,
                         UiEventKind kind)
 {
     int size = ui_px(scale, SMALL_BUTTON);
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < count; i++) {
         int x = ui_px(scale, SECTION_PAD) + i * (size + ui_px(scale, SMALL_BUTTON_GAP));
         UiItem *item = item_add(layout, ITEM_BUTTON, x, y, size, size);
         item->icon = icons[i];
@@ -273,6 +282,8 @@ static void build_properties(UiLayout *layout, const UiModel *model, bool pinned
 {
     static const Icon widthIcons[3] = {ICON_WIDTH_THIN, ICON_WIDTH_MEDIUM, ICON_WIDTH_BOLD};
     static const Icon styleIcons[3] = {ICON_STYLE_SOLID, ICON_STYLE_DASHED, ICON_STYLE_DOTTED};
+    static const Icon fontIcons[3] = {ICON_FONT_HAND, ICON_FONT_NORMAL, ICON_FONT_LEGIBLE};
+    static const Icon laserIcons[2] = {ICON_LASER_TRAIL, ICON_LASER_POINTER};
     int pad = ui_px(scale, SECTION_PAD);
     int gap = ui_px(scale, SECTION_GAP);
     int cell = ui_px(scale, SWATCH_CELL);
@@ -303,12 +314,22 @@ static void build_properties(UiLayout *layout, const UiModel *model, bool pinned
     }
     if (model->sections & UI_SECTION_WIDTH) {
         y = title_add(layout, scale, y, L"Stroke width");
-        choices_add(layout, scale, y, widthIcons, style_width_index(style->width), UI_EVENT_SET_WIDTH);
+        choices_add(layout, scale, y, widthIcons, 3, style_width_index(style->width), UI_EVENT_SET_WIDTH);
+        y += ui_px(scale, SMALL_BUTTON) + gap;
+    }
+    if (model->sections & UI_SECTION_FONT) {
+        y = title_add(layout, scale, y, L"Font");
+        choices_add(layout, scale, y, fontIcons, 3, (int)style->face, UI_EVENT_SET_FONT);
+        y += ui_px(scale, SMALL_BUTTON) + gap;
+    }
+    if (model->sections & UI_SECTION_LASER) {
+        y = title_add(layout, scale, y, L"Laser");
+        choices_add(layout, scale, y, laserIcons, 2, model->laserPointer ? 1 : 0, UI_EVENT_SET_LASER_MODE);
         y += ui_px(scale, SMALL_BUTTON) + gap;
     }
     if (model->sections & UI_SECTION_STROKE_STYLE) {
         y = title_add(layout, scale, y, L"Stroke style");
-        choices_add(layout, scale, y, styleIcons, (int)style->strokeStyle, UI_EVENT_SET_STROKE_STYLE);
+        choices_add(layout, scale, y, styleIcons, 3, (int)style->strokeStyle, UI_EVENT_SET_STROKE_STYLE);
         y += ui_px(scale, SMALL_BUTTON) + gap;
     }
     if (model->sections & UI_SECTION_PRESSURE) {

@@ -19,6 +19,7 @@
 #define ERASER_RADIUS TRAIL_ERASER_RADIUS
 #define ERASER_LIFETIME_MS TRAIL_ERASER_LIFETIME_MS
 #define ERASER_COLOR COLOR_ERASER_TRAIL
+#define TRANSIENT_MARGIN 16
 
 /**
  * @brief Adds a rectangle to the repaint region.
@@ -165,6 +166,10 @@ void controller_cancel(Controller *controller)
         repaint_add(controller, trail_bounds(&controller->eraser));
         trail_clear(&controller->eraser);
     }
+    if (controller->laserDotVisible) {
+        repaint_add(controller, laser_dot_bounds(controller->laserDot));
+        controller->laserDotVisible = false;
+    }
     controller->interaction = INTERACTION_NONE;
     controller->toolFinished = false;
 }
@@ -303,10 +308,25 @@ static void erase_along(Controller *controller, Point from, Point to)
 }
 
 /**
- * @brief Adds a point to a trail, recording old and new bounds for repaint.
+ * @brief Moves the laser pointer dot and schedules the repaint of its old and new areas.
+ * @param controller Controller to update.
+ * @param position New dot center.
+ */
+static void move_laser_dot(Controller *controller, Point position)
+{
+    if (controller->laserDotVisible) {
+        repaint_add(controller, laser_dot_bounds(controller->laserDot));
+    }
+    controller->laserDot = position;
+    controller->laserDotVisible = true;
+    repaint_add(controller, laser_dot_bounds(position));
+}
+
+/**
+ * @brief Extends a trail and schedules the repaint of its old and new areas.
  * @param controller Controller to update.
  * @param trail Trail to extend.
- * @param position New point.
+ * @param position Raw pointer position.
  * @param nowMs Monotonic millisecond clock.
  */
 static void extend_trail(Controller *controller, Trail *trail, Point position, uint32_t nowMs)
@@ -481,7 +501,11 @@ void controller_pointer_down(Controller *controller, const PointerSample *sample
         break;
     case TOOL_LASER:
         controller->interaction = INTERACTION_LASER;
-        extend_trail(controller, &controller->laser, sample->position, sample->timeMs);
+        if (controller->laserPointer) {
+            move_laser_dot(controller, sample->position);
+        } else {
+            extend_trail(controller, &controller->laser, sample->position, sample->timeMs);
+        }
         break;
     case TOOL_TEXT:
         controller->draft = element_make(ELEMENT_TEXT, &controller->style);
@@ -509,6 +533,10 @@ void controller_pointer_down(Controller *controller, const PointerSample *sample
 
 void controller_pointer_move(Controller *controller, const PointerSample *sample, bool down)
 {
+    if (controller->scene && controller->tool == TOOL_LASER && controller->laserPointer) {
+        move_laser_dot(controller, sample->position);
+        return;
+    }
     if (!controller->scene || !down) {
         return;
     }
@@ -545,7 +573,6 @@ void controller_pointer_move(Controller *controller, const PointerSample *sample
 
 void controller_pointer_up(Controller *controller, const PointerSample *sample)
 {
-    (void)sample;
     if (!controller->scene) {
         return;
     }
@@ -574,9 +601,15 @@ void controller_pointer_up(Controller *controller, const PointerSample *sample)
             scene_commit(controller->scene);
             controller->selected = -1;
         }
+        repaint_add(controller, trail_bounds(&controller->eraser));
+        trail_clear(&controller->eraser);
         break;
     }
     case INTERACTION_LASER:
+        repaint_add(controller, trail_bounds(&controller->laser));
+        trail_settle(&controller->laser, sample->timeMs);
+        repaint_add(controller, trail_bounds(&controller->laser));
+        break;
     case INTERACTION_NONE:
         break;
     }
@@ -745,6 +778,29 @@ void controller_draw_overlays(const Controller *controller, Canvas *canvas, cons
     }
     trail_render(&controller->eraser, canvas, clip, nowMs);
     trail_render(&controller->laser, canvas, clip, nowMs);
+    if (controller->laserDotVisible && controller->tool == TOOL_LASER && controller->laserPointer) {
+        laser_dot_render(canvas, clip, controller->laserDot);
+    }
+}
+
+void controller_add_transient_bounds(const Controller *controller, Dirty *extent)
+{
+    if (controller->hasDraft) {
+        dirty_add(extent, rect_inflate(element_bounds(&controller->draft), TRANSIENT_MARGIN));
+    }
+    if (controller->scene && controller->selected >= 0 && controller->selected < controller->scene->count) {
+        const Element *selected = &controller->scene->items[controller->selected];
+        dirty_add(extent, rect_inflate(render_selection_bounds(selected), TRANSIENT_MARGIN));
+    }
+    if (controller->laser.count > 0) {
+        dirty_add(extent, rect_inflate(trail_bounds(&controller->laser), TRANSIENT_MARGIN));
+    }
+    if (controller->eraser.count > 0) {
+        dirty_add(extent, rect_inflate(trail_bounds(&controller->eraser), TRANSIENT_MARGIN));
+    }
+    if (controller->laserDotVisible) {
+        dirty_add(extent, rect_inflate(laser_dot_bounds(controller->laserDot), TRANSIENT_MARGIN));
+    }
 }
 
 void controller_take_dirty(Controller *controller, Dirty *repaint, Dirty *direct)

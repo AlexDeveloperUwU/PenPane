@@ -14,12 +14,22 @@
 /** @brief Font roles. */
 typedef enum TextFont {
     TEXT_FONT_UI,
-    TEXT_FONT_CANVAS
+    TEXT_FONT_CANVAS,
+    TEXT_FONT_CANVAS_NORMAL,
+    TEXT_FONT_CANVAS_LEGIBLE
 } TextFont;
 
 /**
+ * @brief Maps a TextFace value of a style to the canvas font role that draws it.
+ * @param face Value of the TextFace enum; out-of-range values give the handwritten role.
+ * @return Font role to pass to the measuring and drawing functions.
+ */
+TextFont text_font_for_face(int face);
+
+/**
  * @brief Measures text, supporting multiple lines separated by '\n'.
- * @param font Font role: UI uses Segoe UI, canvas uses a handwriting-friendly sans font available on Windows.
+ * @param font Font role: UI uses Segoe UI; canvas uses a handwriting font when installed, the normal role
+ *        Segoe UI and the legible role Atkinson Hyperlegible or Verdana when installed.
  * @param text Text to measure.
  * @param pixelSize Font height in pixels.
  * @param width Receives the width in pixels.

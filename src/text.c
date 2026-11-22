@@ -34,6 +34,7 @@ static int g_fontNext;
 static Surface g_surface;
 static int g_canvasFaceKnown;
 static const wchar_t *g_canvasFace = L"Segoe UI";
+static const wchar_t *g_legibleFace = L"Segoe UI";
 
 /**
  * @brief Records that a font family exists; used as the enumeration callback.
@@ -97,6 +98,11 @@ static void resolve_canvas_face(void)
     if (font_exists(g_surface.dc, L"Segoe Print")) {
         g_canvasFace = L"Segoe Print";
     }
+    if (font_exists(g_surface.dc, L"Atkinson Hyperlegible")) {
+        g_legibleFace = L"Atkinson Hyperlegible";
+    } else if (font_exists(g_surface.dc, L"Verdana")) {
+        g_legibleFace = L"Verdana";
+    }
 }
 
 /**
@@ -113,7 +119,9 @@ static HFONT font_get(TextFont role, int size)
         }
     }
     resolve_canvas_face();
-    const wchar_t *face = role == TEXT_FONT_CANVAS ? g_canvasFace : L"Segoe UI";
+    const wchar_t *face = role == TEXT_FONT_CANVAS ? g_canvasFace
+                          : role == TEXT_FONT_CANVAS_LEGIBLE ? g_legibleFace
+                                                             : L"Segoe UI";
     HFONT font = CreateFontW(-size, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET,
                              OUT_TT_PRECIS, CLIP_DEFAULT_PRECIS, ANTIALIASED_QUALITY,
                              DEFAULT_PITCH | FF_DONTCARE, face);
@@ -238,6 +246,11 @@ static void measure_selected(const wchar_t *text, int *width, int *lineHeight, i
     }
 }
 
+TextFont text_font_for_face(int face)
+{
+    return face == 1 ? TEXT_FONT_CANVAS_NORMAL : (face == 2 ? TEXT_FONT_CANVAS_LEGIBLE : TEXT_FONT_CANVAS);
+}
+
 void text_measure(TextFont font, const wchar_t *text, int pixelSize, int *width, int *height)
 {
     *width = 0;
@@ -319,4 +332,5 @@ void text_shutdown(void)
     g_fontNext = 0;
     g_canvasFaceKnown = 0;
     g_canvasFace = L"Segoe UI";
+    g_legibleFace = L"Segoe UI";
 }

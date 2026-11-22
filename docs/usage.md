@@ -34,6 +34,6 @@ The toolbar, the properties panel and the undo and redo panel are three separate
 
 Configure the pen buttons in the tablet driver to send rarely used keys, for example F13 and F14, then bind actions with the tray menu: Remap buttons, choose an action, then press the button the way you want to use it (single, double or long press). Default placeholders: F13 single undo, F13 double toggle overlay, F14 single next tool, F14 double toggle mode, F14 long clear. Details in [configuration.md](configuration.md).
 
-## Copy as PNG
+## Copy and save as PNG
 
-Bind `copy_png` or use the tray menu. The desktop drawing is copied with transparency, the whiteboard with its background.
+Use the copy and save buttons in the undo and redo panel, bind `copy_png` or `save_png`, or use the tray menu. The desktop drawing is exported with transparency, the whiteboard with its background. Save opens the system save dialog and writes the file in the background.

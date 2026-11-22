@@ -60,6 +60,9 @@ typedef struct Controller {
     FloatRect startBox;
     Trail laser;
     Trail eraser;
+    bool laserPointer;
+    bool laserDotVisible;
+    Point laserDot;
     bool editingText;
     Dirty repaint;
     Dirty direct;
@@ -187,6 +190,15 @@ bool controller_animate(Controller *controller, uint32_t nowMs);
  */
 void controller_draw_overlays(const Controller *controller, Canvas *canvas, const RECT *clip,
                               uint32_t nowMs);
+
+/**
+ * @brief Grows an extent by the bounds of transient drawing: draft, text caret, selection handles and trails.
+ *
+ * Margins are generous so that handles, caret and trail width stay inside the bounds.
+ * @param controller Controller to query.
+ * @param extent Dirty region to grow; unchanged when nothing transient is visible.
+ */
+void controller_add_transient_bounds(const Controller *controller, Dirty *extent);
 
 /**
  * @brief Collects regions that changed.

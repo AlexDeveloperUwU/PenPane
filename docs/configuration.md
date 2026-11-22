@@ -25,6 +25,7 @@ The application reads one plain-text file. Every key is optional: a missing key 
 | `draw_monitor` | `0` | 0 to 15 | Monitor that holds the drawing surface. 0 is the primary monitor. |
 | `ui_monitor` | `0` | 0 to 15 | Monitor that holds the toolbar and panels. 0 is the primary monitor. |
 | `tool_lock` | `true` | boolean | Keep the selected tool after drawing one element instead of returning to the select tool. |
+| `laser_pointer` | `false` | boolean | The laser tool shows a dot that follows the pointer instead of a fading trail. Also a button in the properties panel while the laser tool is active. |
 | `ui_auto_hide` | `true` | boolean | Collapse an open toolbar or panel to its handle after the pointer leaves it. When `false`, panels stay open once opened, as if all were pinned. |
 | `ui_auto_hide_ms` | `1200` | 500 to 60000 | Time after the pointer leaves an unpinned panel before it collapses. |
 | `ui_exclude_from_capture` | `true` | boolean | Keep the toolbar and panels out of screen recordings and screenshots. |
@@ -99,7 +100,7 @@ Because a `double` binding makes the single action wait for the window to expire
 
 ### Actions
 
-`toggle_overlay`, `toggle_mode`, `tool_select`, `tool_rectangle`, `tool_ellipse`, `tool_arrow`, `tool_line`, `tool_pen`, `tool_laser`, `tool_text`, `tool_eraser`, `next_tool`, `previous_tool`, `cycle_color`, `cycle_width`, `undo`, `redo`, `clear`, `toggle_laser`, `toggle_tool_lock`, `copy_png`, `emergency_exit`.
+`toggle_overlay`, `toggle_mode`, `tool_select`, `tool_rectangle`, `tool_ellipse`, `tool_arrow`, `tool_line`, `tool_pen`, `tool_laser`, `tool_text`, `tool_eraser`, `next_tool`, `previous_tool`, `cycle_color`, `cycle_width`, `undo`, `redo`, `clear`, `toggle_laser`, `toggle_tool_lock`, `copy_png`, `save_png`, `emergency_exit`.
 
 Names are case-insensitive.
 

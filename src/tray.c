@@ -28,6 +28,7 @@
 #define ID_OPEN_CONFIG 9
 #define ID_AUTOSTART 10
 #define ID_QUIT 11
+#define ID_SAVE_PNG 12
 #define ID_DRAW_MONITOR_BASE 100
 #define ID_UI_MONITOR_BASE 200
 #define ID_LEARN_BASE 1000
@@ -291,6 +292,7 @@ static HMENU menu_build(const TrayState *state)
     }
     AppendMenuW(menu, MF_SEPARATOR, 0, NULL);
     AppendMenuW(menu, MF_STRING, ID_COPY_PNG, L"Copy drawing as PNG");
+    AppendMenuW(menu, MF_STRING, ID_SAVE_PNG, L"Save drawing as PNG...");
     AppendMenuW(menu, MF_STRING, ID_RELOAD_CONFIG, L"Reload config");
     AppendMenuW(menu, MF_STRING, ID_OPEN_CONFIG, L"Open config file");
     AppendMenuW(menu, MF_STRING | (state->startWithWindows ? MF_CHECKED : 0), ID_AUTOSTART,
@@ -319,6 +321,7 @@ static bool event_from_command(int id, TrayEvent *event)
         {ID_AUTO_HIDE, TRAY_TOGGLE_AUTO_HIDE_UI},
         {ID_CANCEL_LEARN, TRAY_CANCEL_LEARN},
         {ID_COPY_PNG, TRAY_COPY_PNG},
+        {ID_SAVE_PNG, TRAY_SAVE_PNG},
         {ID_RELOAD_CONFIG, TRAY_RELOAD_CONFIG},
         {ID_OPEN_CONFIG, TRAY_OPEN_CONFIG},
         {ID_AUTOSTART, TRAY_TOGGLE_START_WITH_WINDOWS},

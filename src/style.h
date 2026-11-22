@@ -21,6 +21,14 @@ typedef enum StrokeStyle {
     STROKE_DOTTED
 } StrokeStyle;
 
+/** @brief Typeface of text elements. */
+typedef enum TextFace {
+    TEXT_FACE_HANDWRITTEN,
+    TEXT_FACE_NORMAL,
+    TEXT_FACE_LEGIBLE,
+    TEXT_FACE_COUNT
+} TextFace;
+
 /** @brief Appearance applied to new elements and editable on selected ones. */
 typedef struct Style {
     Color stroke;
@@ -29,6 +37,7 @@ typedef struct Style {
     float opacity;
     StrokeStyle strokeStyle;
     bool pressure;
+    TextFace face;
 } Style;
 
 /** @brief The five stroke preset colors in dark theme. */

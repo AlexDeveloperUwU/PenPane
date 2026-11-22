@@ -36,6 +36,16 @@ bool jobs_save_config(const Config *config, const wchar_t *path);
 bool jobs_copy_region(HWND owner, Canvas *canvas, RECT region, bool opaqueBackdrop);
 
 /**
+ * @brief Queues saving a canvas region as a PNG file.
+ * @param canvas Fully rendered canvas; on success its ownership moves to the job and it is zeroed.
+ * @param region Region to save.
+ * @param opaqueBackdrop true when the region is fully opaque.
+ * @param path Destination file path; copied before the call returns.
+ * @return true when queued; on false the caller still owns the canvas.
+ */
+bool jobs_save_region(Canvas *canvas, RECT region, bool opaqueBackdrop, const wchar_t *path);
+
+/**
  * @brief Waits for running work to finish and discards work that has not started.
  * @param timeoutMs Longest time to wait for the worker.
  */

@@ -5,7 +5,10 @@
 #include <string.h>
 
 #include "mask_scratch.h"
+#include "theme.h"
 
+#define LASER_DOT_RADIUS 5.0f
+#define LASER_DOT_GLOW_RADIUS 11.0f
 #define TRAIL_FRAME_MS 16.0f
 #define TRAIL_LASER_TAPER_LENGTH 50.0f
 #define TRAIL_ERASER_TAPER_LENGTH 10.0f
@@ -37,6 +40,7 @@ static int trail_index(const Trail *trail, int n)
 
 void trail_add(Trail *trail, Point position, uint32_t nowMs)
 {
+    trail->raw = position;
     if (trail->count == 0) {
         trail->smoothed = position;
     } else {
@@ -48,6 +52,15 @@ void trail_add(Trail *trail, Point position, uint32_t nowMs)
     trail->head = (trail->head + 1) % TRAIL_CAPACITY;
     if (trail->count < TRAIL_CAPACITY) {
         trail->count++;
+    }
+}
+
+void trail_settle(Trail *trail, uint32_t nowMs)
+{
+    for (int i = 0; i < 6 && trail->count > 0 &&
+                    hypotf(trail->raw.x - trail->smoothed.x, trail->raw.y - trail->smoothed.y) > 0.5f;
+         i++) {
+        trail_add(trail, trail->raw, nowMs);
     }
 }
 
@@ -110,14 +123,39 @@ static float width_factor(const Trail *trail, uint32_t ageMs, float distanceToHe
     float life = 1.0f - (float)ageMs / (float)trail->lifetimeMs;
     life = life < 0.0f ? 0.0f : life;
     float taper = (trail->taperLength - fminf(trail->taperLength, distanceToHead)) / trail->taperLength;
-    return fminf(ease_out(life), ease_out(taper));
+    return fminf(life, ease_out(taper));
+}
+
+RECT laser_dot_bounds(Point center)
+{
+    FloatRect box = {center.x, center.y, center.x, center.y};
+    return rect_from_float(box, LASER_DOT_GLOW_RADIUS + 2.0f);
+}
+
+void laser_dot_render(Canvas *canvas, const RECT *clip, Point center)
+{
+    RECT bounds = laser_dot_bounds(center);
+    RECT area;
+    if (!rect_intersect(bounds, *clip, &area)) {
+        return;
+    }
+    Mask glow;
+    if (mask_scratch_acquire(&glow, area)) {
+        mask_add_ellipse_fill(&glow, center, LASER_DOT_GLOW_RADIUS, LASER_DOT_GLOW_RADIUS);
+        mask_blend(canvas, &glow, (COLOR_LASER & 0x00FFFFFFu) | 0x55000000u);
+    }
+    Mask core;
+    if (mask_scratch_acquire(&core, area)) {
+        mask_add_ellipse_fill(&core, center, LASER_DOT_RADIUS, LASER_DOT_RADIUS);
+        mask_blend(canvas, &core, COLOR_LASER);
+    }
 }
 
 void trail_render(const Trail *trail, Canvas *canvas, const RECT *clip, uint32_t nowMs)
 {
     RECT bounds = trail_bounds(trail);
     RECT area;
-    if (trail->count < 2 || !rect_intersect(bounds, *clip, &area)) {
+    if (trail->count < 1 || !rect_intersect(bounds, *clip, &area)) {
         return;
     }
     Mask mask;
@@ -127,6 +165,9 @@ void trail_render(const Trail *trail, Canvas *canvas, const RECT *clip, uint32_t
     const TrailPoint *newest = &trail->points[trail_index(trail, trail->count - 1)];
     const TrailPoint *newer = newest;
     float radiusNewer = trail->maxRadius * width_factor(trail, nowMs - newer->timeMs, 0.0f);
+    if (trail->count == 1) {
+        mask_add_capsule(&mask, newest->position, newest->position, radiusNewer, radiusNewer);
+    }
     for (int i = trail->count - 2; i >= 0; i--) {
         const TrailPoint *older = &trail->points[trail_index(trail, i)];
         float distance = (float)(newest->timeMs - older->timeMs) / TRAIL_FRAME_MS;

@@ -40,6 +40,7 @@ typedef struct Trail {
     float taperLength;
     float smoothing;
     Point smoothed;
+    Point raw;
 } Trail;
 
 /**
@@ -65,6 +66,13 @@ void trail_init(Trail *trail, float maxRadius, uint32_t lifetimeMs, Color color,
 void trail_add(Trail *trail, Point position, uint32_t nowMs);
 
 /**
+ * @brief Lets the streamlined head catch up with the last raw position, as when the pointer is released.
+ * @param trail Trail to extend.
+ * @param nowMs Monotonic millisecond clock.
+ */
+void trail_settle(Trail *trail, uint32_t nowMs);
+
+/**
  * @brief Drops points that have fully faded.
  * @param trail Trail to prune.
  * @param nowMs Monotonic millisecond clock.
@@ -84,6 +92,21 @@ void trail_clear(Trail *trail);
  * @return Bounding rectangle, empty when the trail has no points.
  */
 RECT trail_bounds(const Trail *trail);
+
+/**
+ * @brief Pixel bounds of the laser pointer dot.
+ * @param center Dot center.
+ * @return Bounding rectangle including the glow.
+ */
+RECT laser_dot_bounds(Point center);
+
+/**
+ * @brief Draws the laser pointer dot, a solid core with a soft glow, clipped to a rectangle.
+ * @param canvas Target canvas.
+ * @param clip Pixel rectangle to restrict drawing to.
+ * @param center Dot center.
+ */
+void laser_dot_render(Canvas *canvas, const RECT *clip, Point center);
 
 /**
  * @brief Draws the trail onto a canvas, clipped to a rectangle.

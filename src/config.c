@@ -536,6 +536,11 @@ static bool apply_setting(Config *config, const char *key, char *value, const ch
             return false;
         }
         config->toolLock = flag;
+    } else if (strcasecmp(key, "laser_pointer") == 0) {
+        if (!parse_bool(value, &flag)) {
+            return false;
+        }
+        config->laserPointer = flag;
     } else if (strcasecmp(key, "ui_auto_hide") == 0) {
         if (!parse_bool(value, &flag)) {
             return false;
@@ -663,6 +668,7 @@ void config_defaults(Config *config)
     config->defaultTool = TOOL_PEN;
     config->defaultWidthIndex = 1;
     config->toolLock = true;
+    config->laserPointer = false;
     config->ui.autoHide = true;
     config->ui.autoHideMs = 1200;
     config->ui.excludeFromCapture = true;
@@ -739,6 +745,7 @@ static void format_config(const Config *config, TextBuffer *out)
     out_setting_int(out, "draw_monitor", config->drawMonitor);
     out_setting_int(out, "ui_monitor", config->uiMonitor);
     out_setting_bool(out, "tool_lock", config->toolLock);
+    out_setting_bool(out, "laser_pointer", config->laserPointer);
     out_setting_bool(out, "ui_auto_hide", config->ui.autoHide);
     out_setting_int(out, "ui_auto_hide_ms", config->ui.autoHideMs);
     out_setting_bool(out, "ui_exclude_from_capture", config->ui.excludeFromCapture);

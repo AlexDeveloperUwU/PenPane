@@ -1,6 +1,6 @@
 PROJECT_NAME           = "PenPane"
 PROJECT_BRIEF          = "Screen annotation overlay for Windows"
-PROJECT_NUMBER         = 0.1.0
+PROJECT_NUMBER         = 0.2.0
 OUTPUT_DIRECTORY       = docs/api
 INPUT                  = src
 FILE_PATTERNS          = *.c *.h

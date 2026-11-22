@@ -95,6 +95,8 @@ static void on_event(void *user, const UiEvent *event)
         printf("panel %d pinned %d\n", (int)event->panel, event->index);
         fflush(stdout);
         break;
+    case UI_EVENT_SET_FONT: model->style.face = (TextFace)event->index; break;
+    case UI_EVENT_SET_LASER_MODE: model->laserPointer = event->index != 0; break;
     case UI_EVENT_SLIDER_END:
         break;
     }

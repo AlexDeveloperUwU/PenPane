@@ -51,6 +51,7 @@ typedef struct Config {
     int drawMonitor;
     int uiMonitor;
     bool toolLock;
+    bool laserPointer;
     UiSettings ui;
 } Config;
 
