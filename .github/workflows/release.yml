@@ -34,8 +34,9 @@ jobs:
           $line = Select-String -Path src\version.h -Pattern 'define PENPANE_VERSION_STRING "([^"]+)"'
           $version = $line.Matches[0].Groups[1].Value
           "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
-          gh release view "v$version" --repo "${{ github.repository }}" *> $null
-          $exists = $LASTEXITCODE -eq 0
+          $tags = @(gh release list --repo "${{ github.repository }}" --limit 200 --json tagName --jq ".[].tagName")
+          if ($LASTEXITCODE -ne 0) { throw "Could not list the releases." }
+          $exists = $tags -contains "v$version"
           "publish=$((-not $exists).ToString().ToLower())" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
           if ($exists) { Write-Host "Release v$version already exists; nothing to publish." }
 
