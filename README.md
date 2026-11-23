@@ -1,14 +1,23 @@
 # PenPane
 
+<a href="https://github.com/AlexDeveloperUwU#ai-usage"><img src="https://raw.githubusercontent.com/AlexDeveloperUwU/alexdeveloperuwu/main/assets/ai/generated.svg" alt="AI usage: Generated" width="360"/></a>
+
+This project was fully generated with AI: I gave the orders and prompts, and I reviewed the result.
+
 PenPane is a small native screen-annotation overlay for Windows 10 and 11. It draws over whatever is on screen for presentations, demos and teaching, or turns into a dark whiteboard. It is built for pen tablets: the two buttons of the pen can control every action through global hotkeys, and the drawing feel follows Excalidraw.
 
-It is one executable of about 121 KB, written in C11 against the Win32 API. There is no runtime, no installer and no UI toolkit, and when it is idle it uses no CPU.
+It is one executable of about 150 KB, written in C11 against the Win32 API. There is no runtime, no installer and no UI toolkit, and when it is idle it uses no CPU.
 
 ![A sample annotation: a highlighted region, an arrow, a circled item and hand-drawn strokes](docs/images/sample-drawing.png)
 
 ## Features
 
-- **Tools:** selection (move, resize, delete), rectangle, ellipse, arrow, line, pen, laser pointer, text and eraser, with Excalidraw's shortcuts, stroke and background colors, three widths, solid, dashed and dotted styles, opacity and unlimited undo and redo.
+- **Tools:** selection (move, resize, delete), rectangle, ellipse, diamond, arrow (one head or two), line, pen, laser pointer, text and eraser. The starting tool is select, so nothing is drawn by accident. Stroke and background colors, three widths plus pressure, solid, dashed and dotted styles, opacity and unlimited undo and redo.
+- **Colors:** five presets, a color picker with a hex field, an optional pastel row and your own colors from the configuration file.
+- **Your toolbar:** reorder or hide tools in the settings window; the number keys follow the order.
+- **Laser pointer:** a fading trail; short or quick strokes fade tail first, like long ones.
+- **Hide, clear, settings:** an eye button hides the drawings without deleting them, the trash asks before clearing, and the gear at the end of the toolbar opens settings with reset buttons.
+- **Optional debug log:** a small plain-text log you switch on only when something misbehaves; it costs nothing while off.
 - **Desktop and whiteboard modes:** desktop draws on a transparent layer over live content; whiteboard is an opaque dark canvas. Each keeps its own drawing and history.
 - **Click-through:** with drawing off the annotations stay visible while mouse, touch and pen input reach the applications below.
 - **Pen button gestures:** bind any action to a key or mouse button as a single press, a double press or a long press. Learn mode lets you press the button you want to bind instead of typing its name.
@@ -32,22 +41,24 @@ It is one executable of about 121 KB, written in C11 against the Win32 API. Ther
 
 ## Quick start
 
-1. Download `penpane.exe` and `penpane.exe.sha256` from the Releases page of the repository and check the file: `(Get-FileHash penpane.exe).Hash` must match the contents of the checksum file.
-2. Run `penpane.exe`. It lives in the notification area and shows a small toolbar handle. Put the program in a folder you can write to, because it keeps `penpane.ini` next to the executable.
+1. Download `PenPane.exe` and `PenPane.exe.sha256` from the Releases page of the repository and check the file: `(Get-FileHash PenPane.exe).Hash` must match the contents of the checksum file.
+2. Run `PenPane.exe`. It lives in the notification area and shows a small toolbar handle. Put the program in a folder you can write to, because it keeps `PenPane.ini` next to the executable.
 3. Start it a second time, or click the toolbar handle and then its drawing button, to turn drawing on or off. Right-click the tray icon for modes, screens, remapping, copying as PNG, starting with Windows and quitting.
 4. `Ctrl+Alt+Shift+Esc` always quits. If another program owns that combination, PenPane falls back to `Ctrl+Alt+Shift+F12` and tells you.
 
 | Tool | Key |
 |---|---|
-| Selection | V or 1 |
-| Rectangle | R or 2 |
-| Ellipse | O or 4 |
-| Arrow | A or 5 |
-| Line | L or 6 |
-| Pen | P, X or 7 |
+| Selection | V |
+| Rectangle | R |
+| Ellipse | O |
+| Diamond | D |
+| Arrow | A |
+| Line | L |
+| Pen | P or X |
 | Laser | K |
-| Text | T or 8 |
-| Eraser | E or 0 |
+| Text | T |
+| Eraser | E |
+| Tool by place in the toolbar | 1 to 9, 0 for the tenth |
 | Tool lock | Q |
 | Undo, redo | Ctrl+Z, Ctrl+Y or Ctrl+Shift+Z |
 
@@ -61,9 +72,13 @@ PenPane does not talk to tablet drivers. It reacts to keys and mouse buttons, so
 2. Out of the box `F13` single press is undo, `F13` double press toggles drawing, `F14` single press selects the next tool, `F14` double press toggles desktop and whiteboard, and `F14` long press clears.
 3. To change a binding, choose Remap buttons in the tray menu, pick an action, and press the button the way you want to use it (single, double or long).
 
+## When something does not work
+
+Turn on "Write a debug log" in the settings (or set `debug_log = true` in `PenPane.ini`). PenPane then writes `PenPane.log` next to the executable: start-up, configuration warnings, mode changes, window failures, display and lock events, tray notices and crashes, one short line each, never pointer movement. The file is capped at 1 MB (the older file is kept as `PenPane.log.1`). Attach it to a bug report; it contains no drawings and no text you typed.
+
 ## Configuration
 
-Settings live in a plain-text `penpane.ini` next to the executable. Every key is optional and the file can be edited by hand and reloaded from the tray menu. See [docs/configuration.md](docs/configuration.md) for every key and the binding syntax.
+Settings live in a plain-text `PenPane.ini` next to the executable. Every key is optional and the file can be edited by hand and reloaded from the tray menu. See [docs/configuration.md](docs/configuration.md) for every key and the binding syntax.
 
 ## Building from source
 
@@ -75,7 +90,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts\build.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts\test.ps1
 ```
 
-The result is `build\penpane.exe`. Details, measuring and API documentation are in [docs/building.md](docs/building.md).
+The result is `build\PenPane.exe`. Details, measuring and API documentation are in [docs/building.md](docs/building.md).
 
 ## Limitations
 

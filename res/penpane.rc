@@ -26,7 +26,7 @@ BEGIN
             VALUE "FileVersion", PENPANE_VERSION_STRING
             VALUE "InternalName", "penpane"
             VALUE "LegalCopyright", "Copyright (C) 2026 PenPane contributors, GPL-3.0-or-later"
-            VALUE "OriginalFilename", "penpane.exe"
+            VALUE "OriginalFilename", "PenPane.exe"
             VALUE "ProductName", PENPANE_PRODUCT_NAME
             VALUE "ProductVersion", PENPANE_VERSION_STRING
         END

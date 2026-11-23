@@ -1,0 +1,17 @@
+name: Question
+description: Ask how to do something
+labels: ["question"]
+body:
+  - type: markdown
+    attributes:
+      value: Check the README and docs/usage.md first.
+  - type: textarea
+    id: question
+    attributes:
+      label: What do you want to do
+    validations:
+      required: true
+  - type: textarea
+    id: tried
+    attributes:
+      label: What you tried

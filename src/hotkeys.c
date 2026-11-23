@@ -949,6 +949,13 @@ bool hotkeys_handle_message(Hotkeys *hotkeys, UINT message, WPARAM wparam, LPARA
     return false;
 }
 
+void hotkeys_suspend(Hotkeys *hotkeys)
+{
+    if (hotkeys != NULL) {
+        unregister_all(hotkeys);
+    }
+}
+
 bool hotkeys_learn_begin(Hotkeys *hotkeys, Action action)
 {
     if (hotkeys == NULL || hotkeys->learn.active) {

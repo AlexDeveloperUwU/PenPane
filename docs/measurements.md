@@ -1,6 +1,6 @@
 # Measurements
 
-CPU and memory of the real `build\penpane.exe`, before and after the optimization pass. Screen 2560x1376 at 100 percent, one display, Windows 11, release build. Every number comes from `scripts\measure.ps1` unless a row says otherwise.
+CPU and memory of the real `build\PenPane.exe`, before and after the optimization pass. Screen 2560x1376 at 100 percent, one display, Windows 11, release build. Every number comes from `scripts\measure.ps1` unless a row says otherwise.
 
 ## Method
 
@@ -8,7 +8,7 @@ CPU and memory of the real `build\penpane.exe`, before and after the optimizatio
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts\measure.ps1 -IdleSeconds 60
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts\measure.ps1 -Only startup -StartupRuns 15
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts\measure.ps1 -Only leak -Cycles 500
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts\measure.ps1 -Exe path\to\other\penpane.exe -Json result.json
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\measure.ps1 -Exe path\to\other\PenPane.exe -Json result.json
 ```
 
 The script copies the executable into a scratch directory with a `penpane.ini` that sets `tool_lock = true` and binds `F22` to `clear`, so every run starts from the same configuration. It drives the program only through its public surface: a second launch toggles drawing, `SetCursorPos` and `mouse_event` draw strokes, `keybd_event` sends `Ctrl+Z`, `F22`, a double `F14` (whiteboard), `K` and `P` (laser and pen) and finally `Ctrl+Alt+Shift+Esc`. A WinForms window under the overlay counts the clicks that reach it, once with drawing off (must be 1) and once with drawing on (must be 0).

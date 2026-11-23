@@ -1,8 +1,11 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later */
 #include "ui.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <wchar.h>
+#include <wctype.h>
 #include <windowsx.h>
 
 #include "shapes_ui.h"
@@ -38,12 +41,19 @@ typedef struct Island {
     bool tracking;
     bool timerActive;
     bool awaitFirstHover;
+    bool savedCollapsed;
+    bool hasSaved;
+    bool inEyeMode;
     bool pointerDown;
     bool dragging;
     bool dragCandidate;
     bool dragMoved;
     bool sliderActive;
     float sliderLast;
+    float sliderLast2;
+    bool hexEditing;
+    int hexLength;
+    wchar_t hexText[8];
     POINT dragCursor;
     POINT dragOrigin;
     unsigned handleSignature;
@@ -58,10 +68,11 @@ struct Ui {
     UiModel model;
     bool visible;
     bool drawing;
-    Island islands[PANEL_COUNT];
+    Island islands[PANEL_ISLAND_COUNT];
 };
 
 static LRESULT CALLBACK island_procedure(HWND window, UINT message, WPARAM wparam, LPARAM lparam);
+static void island_set_focusable(Island *island, bool focusable);
 
 /**
  * @brief Reads the display scale of an island window; the single place where DPI is queried.
@@ -124,7 +135,31 @@ static bool island_cursor_inside(const Island *island)
 static bool island_keeps_open(const Island *island)
 {
     const UiSettings *settings = &island->ui->settings;
-    return !settings->autoHide || settings->pinned[island->id];
+    return UI_PANEL_IS_DIALOG(island->id) || !settings->autoHide || settings->pinned[island->id] ||
+           (island->id == PANEL_HISTORY && island->ui->model.drawingsHidden);
+}
+
+/**
+ * @brief Centers the dialog on the monitor that hosts the toolbar.
+ * @param island The dialog island, its layout already built.
+ */
+static void island_center_dialog(Island *island)
+{
+    const Island *anchor = &island->ui->islands[PANEL_TOOLBAR];
+    RECT reference = {anchor->x, anchor->y, anchor->x + 1, anchor->y + 1};
+    MONITORINFO info;
+    info.cbSize = sizeof info;
+    HMONITOR monitor = MonitorFromRect(&reference, MONITOR_DEFAULTTONEAREST);
+    if (!monitor || !GetMonitorInfoW(monitor, &info)) {
+        return;
+    }
+    int cascade = ui_px(island->scale, 28) * (int)(island->id - PANEL_SETTINGS);
+    island->x = info.rcWork.left + (info.rcWork.right - info.rcWork.left - island->layout.width) / 2 + cascade;
+    island->y = info.rcWork.top + (info.rcWork.bottom - info.rcWork.top - island->layout.height) / 2 + cascade;
+    if (island->shown) {
+        SetWindowPos(island->window, NULL, island->x - island->margin, island->y - island->margin, 0, 0,
+                     SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
+    }
 }
 
 /**
@@ -136,6 +171,14 @@ static void island_build_layout(const Island *island, UiLayout *layout)
 {
     ui_layout_build(island->id, &island->ui->model, island->ui->settings.pinned[island->id], island->scale,
                     layout);
+    if (island->hexEditing) {
+        for (int i = 0; i < layout->count; i++) {
+            if (layout->items[i].kind == ITEM_HEX) {
+                swprintf(layout->items[i].text, UI_ITEM_TEXT_CHARS, L"#%ls|", island->hexText);
+                layout->items[i].selected = true;
+            }
+        }
+    }
 }
 
 /**
@@ -389,9 +432,16 @@ static void island_show(Island *island)
     island_read_scale(island);
     island_rebuild_layout(island);
     island->collapsed = !island_keeps_open(island) && !island->awaitFirstHover;
+    if (island->hasSaved) {
+        island->collapsed = island->savedCollapsed && !island_keeps_open(island);
+        island->hasSaved = false;
+    }
     island->handleHover = false;
     island->tracking = false;
     island->shown = true;
+    if (UI_PANEL_IS_DIALOG(island->id)) {
+        island_center_dialog(island);
+    }
     island_apply_geometry(island);
     if (island->hasCanvas) {
         SetWindowPos(island->window, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
@@ -412,6 +462,10 @@ static void island_hide(Island *island)
     }
     if (GetCapture() == island->window) {
         ReleaseCapture();
+    }
+    if (island->hexEditing) {
+        island->hexEditing = false;
+        island_set_focusable(island, false);
     }
     ShowWindow(island->window, SW_HIDE);
     if (island->hasCanvas) {
@@ -558,11 +612,16 @@ static void island_update(Island *island)
     bool sameGeometry = previousScale == island->scale && next.count == island->layout.count &&
                         next.width == island->layout.width && next.height == island->layout.height;
     if (!sameGeometry) {
+        bool sizeChanged = previousScale != island->scale || next.width != island->layout.width ||
+                           next.height != island->layout.height;
         island->layout = next;
         island->hover = -1;
         island->pressed = -1;
         island->sliderActive = false;
         if (island->shown) {
+            if (UI_PANEL_IS_DIALOG(island->id) && sizeChanged) {
+                island_center_dialog(island);
+            }
             island_apply_geometry(island);
         }
         return;
@@ -600,15 +659,171 @@ static void island_refresh_visibility(Island *island)
     const Ui *ui = island->ui;
     bool want = ui->visible && (ui->drawing || island->id == PANEL_TOOLBAR) &&
                 (island->id != PANEL_PROPERTIES || ui->model.sections != 0);
+    if (UI_PANEL_IS_DIALOG(island->id)) {
+        want = ui->visible && (ui->model.dialogs & UI_DIALOG_BIT(island->id)) != 0;
+    }
+    bool eyeMode = ui->visible && ui->model.drawingsHidden && !UI_PANEL_IS_DIALOG(island->id);
+    if (eyeMode) {
+        want = island->id == PANEL_HISTORY;
+    }
     if (!want) {
         if (island->shown) {
+            island->savedCollapsed = island->collapsed;
+            island->hasSaved = eyeMode;
             island_hide(island);
         }
         return;
     }
     if (!island->shown) {
         island_show(island);
+        island->inEyeMode = eyeMode;
+        return;
     }
+    if (island->id == PANEL_HISTORY && eyeMode != island->inEyeMode) {
+        island->inEyeMode = eyeMode;
+        if (eyeMode) {
+            island->savedCollapsed = island->collapsed;
+            island_expand(island);
+        } else if (island->savedCollapsed && !island_keeps_open(island)) {
+            island_collapse(island);
+        }
+    }
+}
+
+/**
+ * @brief Converts typed hex digits to a color; three digits expand like in CSS.
+ * @param digits Typed digits.
+ * @param length Number of digits.
+ * @param color Receives the opaque color.
+ * @return true when the digits form a color.
+ */
+static bool hex_color(const wchar_t *digits, int length, Color *color)
+{
+    char text[7];
+    if (length == 6) {
+        for (int i = 0; i < 6; i++) {
+            text[i] = (char)digits[i];
+        }
+    } else if (length == 3) {
+        for (int i = 0; i < 3; i++) {
+            text[2 * i] = text[2 * i + 1] = (char)digits[i];
+        }
+    } else {
+        return false;
+    }
+    text[6] = '\0';
+    return color_parse_hex(text, color);
+}
+
+/**
+ * @brief Lets a dialog take the keyboard focus or gives it up again.
+ * @param island Dialog island.
+ * @param focusable true to allow activation and focus the window.
+ */
+static void island_set_focusable(Island *island, bool focusable)
+{
+    LONG_PTR style = GetWindowLongPtrW(island->window, GWL_EXSTYLE);
+    style = focusable ? (style & ~(LONG_PTR)WS_EX_NOACTIVATE) : (style | WS_EX_NOACTIVATE);
+    SetWindowLongPtrW(island->window, GWL_EXSTYLE, style);
+    if (focusable) {
+        SetForegroundWindow(island->window);
+        SetFocus(island->window);
+    }
+}
+
+/**
+ * @brief Starts typing a hex color into the field of the color dialog.
+ * @param island Color dialog island.
+ */
+static void island_hex_begin(Island *island)
+{
+    if (island->hexEditing) {
+        return;
+    }
+    island->hexEditing = true;
+    island->hexLength = 0;
+    island->hexText[0] = L'\0';
+    island_set_focusable(island, true);
+    island_update(island);
+}
+
+/**
+ * @brief Ends typing; a complete color is reported as a stroke color first.
+ * @param island Color dialog island.
+ * @param commit true to apply the typed digits when they form a color.
+ */
+static void island_hex_end(Island *island, bool commit)
+{
+    if (!island->hexEditing) {
+        return;
+    }
+    island->hexEditing = false;
+    island_set_focusable(island, false);
+    Color color;
+    UiEvent event;
+    memset(&event, 0, sizeof event);
+    if (commit && hex_color(island->hexText, island->hexLength, &color)) {
+        event.kind = UI_EVENT_SET_STROKE_COLOR;
+        event.color = color;
+        emit(island->ui, &event);
+    }
+    island_update(island);
+    event.kind = UI_EVENT_EDIT_END;
+    emit(island->ui, &event);
+}
+
+/**
+ * @brief Appends the hex digits found in the clipboard text to the typed value.
+ * @param island Color dialog island.
+ */
+static void island_hex_paste(Island *island)
+{
+    if (!OpenClipboard(island->window)) {
+        return;
+    }
+    HANDLE data = GetClipboardData(CF_UNICODETEXT);
+    const wchar_t *text = data ? (const wchar_t *)GlobalLock(data) : NULL;
+    if (text) {
+        island->hexLength = 0;
+        for (const wchar_t *c = text; *c && island->hexLength < 6; c++) {
+            if (iswxdigit(*c)) {
+                island->hexText[island->hexLength++] = (wchar_t)towupper(*c);
+            }
+        }
+        island->hexText[island->hexLength] = L'\0';
+        GlobalUnlock(data);
+    }
+    CloseClipboard();
+}
+
+/**
+ * @brief Handles a typed character while a hex color is being entered.
+ * @param island Color dialog island.
+ * @param c Character from WM_CHAR.
+ */
+static void island_hex_char(Island *island, wchar_t c)
+{
+    if (c == L'\r') {
+        island_hex_end(island, true);
+        return;
+    }
+    if (c == 27) {
+        island_hex_end(island, false);
+        return;
+    }
+    if (c == L'\b') {
+        if (island->hexLength > 0) {
+            island->hexText[--island->hexLength] = L'\0';
+        }
+    } else if (c == 0x16) {
+        island_hex_paste(island);
+    } else if (island->hexLength < 6 && iswxdigit(c)) {
+        island->hexText[island->hexLength++] = (wchar_t)towupper(c);
+        island->hexText[island->hexLength] = L'\0';
+    } else {
+        return;
+    }
+    island_update(island);
 }
 
 /**
@@ -655,6 +870,10 @@ static void island_press(Island *island, int x, int y)
         return;
     }
     const UiItem *item = &island->layout.items[hit];
+    if (island->hexEditing && item->kind != ITEM_HEX) {
+        island_hex_end(island, true);
+        item = &island->layout.items[hit];
+    }
     if (!item->enabled) {
         island->pointerDown = false;
         ReleaseCapture();
@@ -663,16 +882,21 @@ static void island_press(Island *island, int x, int y)
     island->pressed = hit;
     RECT dirty = {0, 0, 0, 0};
     bool any = false;
-    if (item->kind == ITEM_SLIDER) {
-        float value = ui_slider_value_at(item, cx, island->scale);
+    if (ui_item_draggable(item)) {
+        float value;
+        float second;
+        ui_item_drag_values(item, cx, cy, island->scale, &value, &second);
         UiEvent event = item->event;
         island->sliderActive = true;
         island->sliderLast = value;
+        island->sliderLast2 = second;
         island->layout.items[hit].value = value;
+        island->layout.items[hit].value2 = second;
         island->layout.items[hit].event.value = value;
         island_redraw_item(island, hit, &dirty, &any);
         island_present(island, &dirty);
         event.value = value;
+        event.extra = second;
         emit(island->ui, &event);
         return;
     }
@@ -719,17 +943,22 @@ static void island_drag(Island *island, int x, int y)
     }
     UiItem *item = &island->layout.items[island->pressed];
     if (island->sliderActive) {
-        float value = ui_slider_value_at(item, cx, island->scale);
-        if (value != island->sliderLast) {
+        float value;
+        float second;
+        ui_item_drag_values(item, cx, y - island->margin, island->scale, &value, &second);
+        if (value != island->sliderLast || second != island->sliderLast2) {
             UiEvent event = item->event;
             island->sliderLast = value;
+            island->sliderLast2 = second;
             item->value = value;
+            item->value2 = second;
             item->event.value = value;
             RECT dirty = {0, 0, 0, 0};
             bool any = false;
             island_redraw_item(island, island->pressed, &dirty, &any);
             island_present(island, &dirty);
             event.value = value;
+            event.extra = second;
             emit(island->ui, &event);
         }
         return;
@@ -790,6 +1019,10 @@ static void island_release(Island *island, int x, int y)
     } else if (handleClick) {
         island_expand(island);
     } else if (fire) {
+        if (event.kind == UI_EVENT_EDIT_HEX) {
+            island_hex_begin(island);
+            return;
+        }
         if (event.kind == UI_EVENT_PANEL_PINNED) {
             island_set_pinned(island, event.index != 0);
         }
@@ -895,6 +1128,14 @@ static LRESULT CALLBACK island_procedure(HWND window, UINT message, WPARAM wpara
     case WM_LBUTTONUP:
         island_release(island, GET_X_LPARAM(lparam), GET_Y_LPARAM(lparam));
         return 0;
+    case WM_CHAR:
+        if (island->hexEditing) {
+            island_hex_char(island, (wchar_t)wparam);
+        }
+        return 0;
+    case WM_KILLFOCUS:
+        island_hex_end(island, true);
+        return 0;
     case WM_CAPTURECHANGED:
         if (island->pointerDown) {
             bool sliderEnded = island->sliderActive;
@@ -949,7 +1190,7 @@ Ui *ui_create(HINSTANCE instance, UiEventHandler handler, void *user, const UiSe
     windowClass.lpszClassName = ISLAND_CLASS;
     RegisterClassExW(&windowClass);
 
-    for (int i = 0; i < PANEL_COUNT; i++) {
+    for (int i = 0; i < PANEL_ISLAND_COUNT; i++) {
         Island *island = &ui->islands[i];
         island->ui = ui;
         island->id = (PanelId)i;
@@ -981,7 +1222,7 @@ void ui_destroy(Ui *ui)
     if (!ui) {
         return;
     }
-    for (int i = 0; i < PANEL_COUNT; i++) {
+    for (int i = 0; i < PANEL_ISLAND_COUNT; i++) {
         Island *island = &ui->islands[i];
         if (island->window) {
             DestroyWindow(island->window);
@@ -998,10 +1239,10 @@ void ui_destroy(Ui *ui)
 void ui_update(Ui *ui, const UiModel *model)
 {
     ui->model = *model;
-    for (int i = 0; i < PANEL_COUNT; i++) {
+    for (int i = 0; i < PANEL_ISLAND_COUNT; i++) {
         island_update(&ui->islands[i]);
     }
-    for (int i = 0; i < PANEL_COUNT; i++) {
+    for (int i = 0; i < PANEL_ISLAND_COUNT; i++) {
         island_refresh_visibility(&ui->islands[i]);
     }
 }
@@ -1010,7 +1251,7 @@ void ui_apply_settings(Ui *ui, const UiSettings *settings)
 {
     ui->settings = *settings;
     ui_set_capture_excluded(ui, settings->excludeFromCapture);
-    for (int i = 0; i < PANEL_COUNT; i++) {
+    for (int i = 0; i < PANEL_ISLAND_COUNT; i++) {
         Island *island = &ui->islands[i];
         island_update(island);
         if (island->shown && island->collapsed && island_keeps_open(island)) {
@@ -1024,14 +1265,13 @@ void ui_set_visible(Ui *ui, bool visible, bool drawing)
 {
     ui->visible = visible;
     ui->drawing = drawing;
-    for (int i = 0; i < PANEL_COUNT; i++) {
+    for (int i = 0; i < PANEL_ISLAND_COUNT; i++) {
         island_refresh_visibility(&ui->islands[i]);
     }
 }
 
 void ui_place_defaults(Ui *ui, RECT workArea, bool forceAll)
 {
-    Island *toolbar = &ui->islands[PANEL_TOOLBAR];
     for (int i = 0; i < PANEL_COUNT; i++) {
         Island *island = &ui->islands[i];
         if (!forceAll && ui->settings.placement[i].set) {
@@ -1045,7 +1285,7 @@ void ui_place_defaults(Ui *ui, RECT workArea, bool forceAll)
                 island->y = workArea.top + edge;
             } else if (i == PANEL_PROPERTIES) {
                 island->x = workArea.left + side;
-                island->y = workArea.top + edge + toolbar->layout.height + side;
+                island->y = workArea.top + edge;
             } else {
                 island->x = workArea.left + side;
                 island->y = workArea.bottom - side - island->layout.height;
@@ -1067,7 +1307,7 @@ void ui_place_defaults(Ui *ui, RECT workArea, bool forceAll)
 bool ui_set_capture_excluded(Ui *ui, bool exclude)
 {
     bool ok = true;
-    for (int i = 0; i < PANEL_COUNT; i++) {
+    for (int i = 0; i < PANEL_ISLAND_COUNT; i++) {
         if (!SetWindowDisplayAffinity(ui->islands[i].window, exclude ? EXCLUDE_FROM_CAPTURE : 0)) {
             ok = false;
         }
@@ -1080,7 +1320,7 @@ bool ui_set_capture_excluded(Ui *ui, bool exclude)
 
 void ui_raise(Ui *ui)
 {
-    for (int i = 0; i < PANEL_COUNT; i++) {
+    for (int i = 0; i < PANEL_ISLAND_COUNT; i++) {
         if (ui->islands[i].shown) {
             SetWindowPos(ui->islands[i].window, HWND_TOPMOST, 0, 0, 0, 0,
                          SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
@@ -1090,7 +1330,7 @@ void ui_raise(Ui *ui)
 
 bool ui_contains_point(const Ui *ui, POINT point)
 {
-    for (int i = 0; i < PANEL_COUNT; i++) {
+    for (int i = 0; i < PANEL_ISLAND_COUNT; i++) {
         if (ui->islands[i].shown) {
             RECT rect = island_screen_rect(&ui->islands[i]);
             if (PtInRect(&rect, point)) {
@@ -1100,3 +1340,101 @@ bool ui_contains_point(const Ui *ui, POINT point)
     }
     return false;
 }
+
+#ifdef PENPANE_UI_DUMP
+bool ui_dump(const Ui *ui, const char *path)
+{
+    RECT box = {0x7FFFFFFF, 0x7FFFFFFF, -0x7FFFFFFF, -0x7FFFFFFF};
+    for (int i = 0; i < PANEL_ISLAND_COUNT; i++) {
+        const Island *island = &ui->islands[i];
+        if (island->shown && island->hasCanvas) {
+            RECT rect = {island->x - island->margin, island->y - island->margin,
+                         island->x - island->margin + island->canvas.width,
+                         island->y - island->margin + island->canvas.height};
+            UnionRect(&box, box.left == 0x7FFFFFFF ? &rect : &box, &rect);
+        }
+    }
+    int width = box.right - box.left;
+    int height = box.bottom - box.top;
+    if (width <= 0 || height <= 0) {
+        return false;
+    }
+    size_t stride = ((size_t)width * 3 + 3) & ~(size_t)3;
+    unsigned char *data = malloc(stride * (size_t)height);
+    if (!data) {
+        return false;
+    }
+    for (int y = 0; y < height; y++) {
+        for (int x = 0; x < width; x++) {
+            unsigned char *out = data + (size_t)(height - 1 - y) * stride + (size_t)x * 3;
+            float t = (float)y / (float)height;
+            out[0] = (unsigned char)(120 + 40 * t);
+            out[1] = (unsigned char)(40 + 30 * t);
+            out[2] = (unsigned char)(10 + 20 * t);
+        }
+    }
+    for (int i = 0; i < PANEL_ISLAND_COUNT; i++) {
+        const Island *island = &ui->islands[i];
+        if (!island->shown || !island->hasCanvas) {
+            continue;
+        }
+        for (int y = 0; y < island->canvas.height; y++) {
+            for (int x = 0; x < island->canvas.width; x++) {
+                uint32_t pixel = island->canvas.pixels[(size_t)y * (size_t)island->canvas.width + (size_t)x];
+                int dx = island->x - island->margin + x - box.left;
+                int dy = island->y - island->margin + y - box.top;
+                unsigned alpha = pixel >> 24;
+                unsigned char *out = data + (size_t)(height - 1 - dy) * stride + (size_t)dx * 3;
+                out[0] = (unsigned char)((pixel & 0xFFu) + out[0] * (255u - alpha) / 255u);
+                out[1] = (unsigned char)(((pixel >> 8) & 0xFFu) + out[1] * (255u - alpha) / 255u);
+                out[2] = (unsigned char)(((pixel >> 16) & 0xFFu) + out[2] * (255u - alpha) / 255u);
+            }
+        }
+    }
+    unsigned char header[54] = {'B', 'M'};
+    uint32_t fileSize = (uint32_t)(54 + stride * (size_t)height);
+    memcpy(header + 2, &fileSize, 4);
+    header[10] = 54;
+    header[14] = 40;
+    int32_t w = width;
+    int32_t h = height;
+    memcpy(header + 18, &w, 4);
+    memcpy(header + 22, &h, 4);
+    header[26] = 1;
+    header[28] = 24;
+    FILE *file = fopen(path, "wb");
+    bool ok = file && fwrite(header, 1, 54, file) == 54 && fwrite(data, 1, stride * (size_t)height, file) == stride * (size_t)height;
+    if (file) {
+        fclose(file);
+    }
+    free(data);
+    return ok;
+}
+#endif
+
+#ifdef PENPANE_UI_DUMP
+bool ui_test_drag(Ui *ui, PanelId panel, int kind, const float (*points)[2], int count)
+{
+    Island *island = &ui->islands[panel];
+    const UiItem *item = NULL;
+    for (int i = 0; i < island->layout.count && !item; i++) {
+        item = (int)island->layout.items[i].kind == kind ? &island->layout.items[i] : NULL;
+    }
+    if (!island->shown || !item || count < 2) {
+        return false;
+    }
+    RECT rect = item->rect;
+    for (int i = 0; i < count; i++) {
+        int x = rect.left + (int)((float)(rect.right - rect.left) * points[i][0]) + island->margin;
+        int y = rect.top + (int)((float)(rect.bottom - rect.top) * points[i][1]) + island->margin;
+        if (i == 0) {
+            island_press(island, x, y);
+        } else if (i == count - 1) {
+            island_release(island, x, y);
+        } else {
+            island_drag(island, x, y);
+        }
+    }
+    return true;
+}
+#endif

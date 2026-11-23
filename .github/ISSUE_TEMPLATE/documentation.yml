@@ -1,0 +1,21 @@
+name: Documentation problem
+description: Something in the README or docs is missing, wrong or unclear
+labels: ["documentation"]
+body:
+  - type: input
+    id: location
+    attributes:
+      label: Where
+      description: File and section, for example docs/usage.md, "Colors".
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: What is wrong or missing
+    validations:
+      required: true
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: Suggested text

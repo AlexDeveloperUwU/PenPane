@@ -11,7 +11,7 @@ New-Item -ItemType Directory -Force $outputDirectory | Out-Null
 
 $dependencies = @{
     "test_gesture" = @("gesture.c", "actions.c")
-    "test_config"  = @("config.c", "gesture.c", "actions.c", "tool.c")
+    "test_config"  = @("config.c", "gesture.c", "actions.c", "tool.c", "style.c")
 }
 
 $linkerFlags = @{

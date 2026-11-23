@@ -44,5 +44,5 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: penpane
-          path: build/penpane.exe
+          path: build/PenPane.exe
           if-no-files-found: error

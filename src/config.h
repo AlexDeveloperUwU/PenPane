@@ -44,6 +44,8 @@ typedef struct Config {
     int doubleWindowMs;
     int longPressMs;
     Tool defaultTool;
+    Tool toolOrder[TOOL_COUNT];
+    unsigned hiddenTools;
     int defaultStrokeIndex;
     int defaultFillIndex;
     int defaultWidthIndex;
@@ -52,6 +54,10 @@ typedef struct Config {
     int uiMonitor;
     bool toolLock;
     bool laserPointer;
+    bool palettePastel;
+    bool debugLog;
+    Color customColors[CUSTOM_COLOR_MAX];
+    int customCount;
     UiSettings ui;
 } Config;
 

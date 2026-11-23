@@ -8,8 +8,10 @@
 
 #include "config.h"
 #include "controller.h"
+#include "version.h"
 #include "hotkeys.h"
 #include "jobs.h"
+#include "log.h"
 #include "mask_scratch.h"
 #include "overlay.h"
 #include "render.h"
@@ -23,6 +25,8 @@
 #define TIMER_FADE_WAIT 2
 #define TIMER_FADE_STEP 3
 #define TIMER_TRAY_RETRY 4
+#define TIMER_RESUME_HOTKEYS 5
+#define SEND_KEY_RESUME_MS 400
 #define TRAY_RETRY_FIRST_MS 2000
 #define TRAY_RETRY_LIMIT_MS 30000
 #define JOBS_SHUTDOWN_WAIT_MS 3000
@@ -34,7 +38,6 @@
 #define SINGLE_INSTANCE_MUTEX L"Local\\PenPaneOverlaySingleInstance"
 #define SCRATCH_KEEP_BYTES (256 * 1024)
 #define PENDING_NOTICE_LIMIT 4
-#define SURFACE_GROW_MIN_PX 128
 
 /** @brief A display and its areas in virtual-desktop coordinates. */
 typedef struct Monitor {
@@ -55,11 +58,20 @@ typedef struct App {
     HWND previousForeground;
     Config config;
     wchar_t configPath[MAX_PATH];
+    wchar_t logPath[MAX_PATH];
     Scene scenes[2];
     bool whiteboard;
     bool drawing;
+    bool drawingsHidden;
+    unsigned dialogs;
+    float pickerHue;
+    float pickerSat;
+    float pickerVal;
     bool overlayReady;
     bool learning;
+    unsigned learnTool;
+    bool learnSilent;
+    int settingsTab;
     bool quitting;
     bool configProtected;
     bool emergencyRegistered;
@@ -88,6 +100,12 @@ static void app_apply_state(void);
 
 /** @brief Repaints the dirty regions of the overlay and presents them. */
 static void app_flush(void);
+
+/** @brief Puts every option back to its default. */
+static void reset_options(void);
+
+/** @brief Puts the toolbar and the panels back at their default places. */
+static void reset_positions(void);
 
 /** @brief Pushes the current tool, style and history state to the floating interface. */
 static void app_sync_ui(void);
@@ -316,6 +334,9 @@ static unsigned sections_for_state(void)
     case TOOL_ELLIPSE:
         type = ELEMENT_ELLIPSE;
         break;
+    case TOOL_DIAMOND:
+        type = ELEMENT_DIAMOND;
+        break;
     case TOOL_ARROW:
         type = ELEMENT_ARROW;
         break;
@@ -336,9 +357,12 @@ static unsigned sections_for_state(void)
     switch (type) {
     case ELEMENT_RECTANGLE:
     case ELEMENT_ELLIPSE:
+    case ELEMENT_DIAMOND:
         return UI_SECTION_STROKE | UI_SECTION_FILL | UI_SECTION_WIDTH | UI_SECTION_STROKE_STYLE |
                UI_SECTION_OPACITY;
     case ELEMENT_ARROW:
+        return UI_SECTION_STROKE | UI_SECTION_WIDTH | UI_SECTION_STROKE_STYLE | UI_SECTION_ARROWHEADS |
+               UI_SECTION_OPACITY;
     case ELEMENT_LINE:
         return UI_SECTION_STROKE | UI_SECTION_WIDTH | UI_SECTION_STROKE_STYLE | UI_SECTION_OPACITY;
     case ELEMENT_PEN:
@@ -347,6 +371,30 @@ static unsigned sections_for_state(void)
         return UI_SECTION_STROKE | UI_SECTION_FONT | UI_SECTION_WIDTH | UI_SECTION_OPACITY;
     }
     return 0;
+}
+
+/**
+ * @brief Writes the extra shortcut of a tool, for example "F15" or "Ctrl+F9 x2", or an empty string.
+ * @param tool Tool whose binding is wanted; the first binding of its tool_* action is used.
+ * @param buffer Output buffer.
+ * @param size Buffer size in characters.
+ */
+static void tool_shortcut_text(Tool tool, wchar_t *buffer, int size)
+{
+    buffer[0] = L'\0';
+    Action action = (Action)(ACTION_TOOL_SELECT + (int)tool);
+    for (int i = 0; i < app.config.bindingCount; i++) {
+        const Binding *binding = &app.config.bindings[i];
+        if (binding->action != action) {
+            continue;
+        }
+        static const wchar_t *const SUFFIX[] = {L"", L" x2", L" hold"};
+        wchar_t trigger[24];
+        trigger_to_text(binding->trigger, trigger, 24);
+        _snwprintf(buffer, (size_t)size, L"%ls%ls", trigger, SUFFIX[binding->gesture]);
+        buffer[size - 1] = L'\0';
+        return;
+    }
 }
 
 /**
@@ -364,6 +412,27 @@ static void app_sync_ui(void)
     model.style = selection ? selection->style : app.controller.style;
     model.sections = sections_for_state();
     model.laserPointer = app.controller.laserPointer;
+    memcpy(model.toolOrder, app.config.toolOrder, sizeof model.toolOrder);
+    model.hiddenTools = app.config.hiddenTools;
+    model.drawingsHidden = app.drawingsHidden;
+    model.autoHide = app.config.ui.autoHide;
+    model.excludeCapture = app.config.ui.excludeFromCapture;
+    model.dialogs = app.dialogs;
+    model.pastel = app.config.palettePastel;
+    model.debugLog = app.config.debugLog;
+    model.learningTool = (int)app.learnTool - 1;
+    model.settingsTab = app.settingsTab;
+    for (int t = 0; t < TOOL_COUNT; t++) {
+        tool_shortcut_text((Tool)t, model.toolShortcut[t], UI_SHORTCUT_CHARS);
+    }
+    memcpy(model.custom, app.config.customColors, sizeof model.custom);
+    model.customCount = app.config.customCount;
+    if (color_from_hsv(app.pickerHue, app.pickerSat, app.pickerVal) != (model.style.stroke | 0xFF000000u)) {
+        color_to_hsv(model.style.stroke, &app.pickerHue, &app.pickerSat, &app.pickerVal);
+    }
+    model.pickerHue = app.pickerHue;
+    model.pickerSat = app.pickerSat;
+    model.pickerVal = app.pickerVal;
     model.canUndo = scene_can_undo(active_scene());
     model.canRedo = scene_can_redo(active_scene());
     model.whiteboard = app.whiteboard;
@@ -388,43 +457,27 @@ static Dirty annotation_extent(void)
 }
 
 /**
- * @brief Surface rectangle the overlay needs: the whole monitor for whiteboard, the annotation extent otherwise.
+ * @brief Surface rectangle the overlay needs: the whole monitor while drawing or on the whiteboard, the annotation extent otherwise.
  *
- * In two-window drawing the extent is padded and clamped to the monitor. With keepCurrent the current
- * surface is kept while it still covers the extent, so the surface is reallocated only when growth is needed.
- * @param keepCurrent true to avoid reallocating a surface that already covers the extent.
+ * Drawing keeps a fixed full-monitor surface: growing it during a stroke moved and reallocated the
+ * layered window and made pen strokes visibly stutter.
  * @return Rectangle in monitor coordinates; a single pixel when nothing is visible.
  */
-static RECT wanted_surface(bool keepCurrent)
+static RECT wanted_surface(void)
 {
     const Monitor *monitor = &app.monitors[draw_monitor()];
     RECT full = {0, 0, monitor->bounds.right - monitor->bounds.left,
                  monitor->bounds.bottom - monitor->bounds.top};
-    if (app.whiteboard) {
+    if (app.whiteboard || app.drawing) {
         return full;
     }
-    RECT current = canvas_area(&app.overlay.canvas);
-    bool hasCurrent = current.right > current.left && current.bottom > current.top;
     Dirty extent = annotation_extent();
     RECT area;
     if (extent.empty || !rect_intersect(extent.rect, full, &area)) {
         RECT single = {0, 0, 1, 1};
-        return app.drawing && keepCurrent && hasCurrent ? current : single;
+        return single;
     }
-    if (!app.drawing) {
-        return area;
-    }
-    if (keepCurrent && hasCurrent && current.left <= area.left && current.top <= area.top &&
-        current.right >= area.right && current.bottom >= area.bottom) {
-        return current;
-    }
-    int padX = (area.right - area.left) / 4;
-    int padY = (area.bottom - area.top) / 4;
-    padX = padX > SURFACE_GROW_MIN_PX ? padX : SURFACE_GROW_MIN_PX;
-    padY = padY > SURFACE_GROW_MIN_PX ? padY : SURFACE_GROW_MIN_PX;
-    RECT grown = {area.left - padX, area.top - padY, area.right + padX, area.bottom + padY};
-    rect_intersect(grown, full, &grown);
-    return grown;
+    return area;
 }
 
 /**
@@ -435,13 +488,17 @@ static void trim_working_set(void)
     SetProcessWorkingSetSize(GetCurrentProcess(), (SIZE_T)-1, (SIZE_T)-1);
 }
 
+/** @brief true while TIMER_ANIMATE runs; it must not be re-armed, or steady pointer input keeps resetting it. */
+static bool animationTimerOn;
+
 /**
  * @brief Starts the trail animation timer while a laser or eraser trail is visible.
  */
 static void update_animation_timer(void)
 {
-    if (app.controller.laser.count > 0 || app.controller.eraser.count > 0) {
+    if (!animationTimerOn && (app.controller.laser.count > 0 || app.controller.eraser.count > 0)) {
         SetTimer(app.messageWindow, TIMER_ANIMATE, ANIMATION_INTERVAL_MS, NULL);
+        animationTimerOn = true;
     }
 }
 
@@ -457,12 +514,14 @@ static void app_flush(void)
         return;
     }
     if (!app.whiteboard && (app.drawing || !repaint.empty)) {
-        RECT wanted = wanted_surface(true);
+        RECT wanted = wanted_surface();
         RECT current = canvas_area(&app.overlay.canvas);
-        if (!EqualRect(&wanted, &current) && overlay_set_surface(&app.overlay, wanted)) {
-            render_everything();
-            update_animation_timer();
-            return;
+        if (!EqualRect(&wanted, &current)) {
+            if (overlay_set_surface(&app.overlay, wanted)) {
+                render_everything();
+                update_animation_timer();
+                return;
+            }
         }
     }
     RECT surface = canvas_area(&app.overlay.canvas);
@@ -505,7 +564,9 @@ static void app_apply_state(void)
 {
     refresh_monitors();
     Scene *scene = active_scene();
-    bool wantVisible = app.drawing || (!app.whiteboard && scene->count > 0);
+    bool wantVisible = app.drawing || (!app.whiteboard && scene->count > 0 && !app.drawingsHidden);
+    LOG("state: drawing=%d whiteboard=%d hidden=%d items=%d overlay=%d", app.drawing, app.whiteboard,
+        app.drawingsHidden, scene->count, wantVisible);
     cancel_fade();
     if (!wantVisible) {
         if (app.overlayReady) {
@@ -514,6 +575,7 @@ static void app_apply_state(void)
         destroy_overlay();
     } else {
         if (!app.overlayReady && !create_overlay()) {
+            LOG("overlay window could not be created (error %lu)", GetLastError());
             return;
         }
         if (!app.drawing) {
@@ -521,7 +583,8 @@ static void app_apply_state(void)
         }
         overlay_set_bounds(&app.overlay, app.monitors[draw_monitor()].bounds);
         if (!overlay_set_input_window(&app.overlay, two_window_mode(), app.instance) ||
-            !overlay_set_surface(&app.overlay, wanted_surface(false))) {
+            !overlay_set_surface(&app.overlay, wanted_surface())) {
+            LOG("overlay input window or surface could not be set up (error %lu)", GetLastError());
             destroy_overlay();
             return;
         }
@@ -538,7 +601,7 @@ static void app_apply_state(void)
         overlay_raise(&app.overlay);
     }
     if (app.ui) {
-        ui_set_visible(app.ui, true, app.drawing);
+        ui_set_visible(app.ui, true, app.drawing || app.drawingsHidden);
         ui_raise(app.ui);
     }
     app_sync_ui();
@@ -578,8 +641,49 @@ static void set_drawing(bool drawing)
         controller_cancel(&app.controller);
         app_flush();
     }
+    if (drawing) {
+        app.drawingsHidden = false;
+    }
     app.drawing = drawing;
     app_apply_state();
+}
+
+/**
+ * @brief Hides every drawing so the desktop can be used, or shows them again; nothing is deleted.
+ *
+ * Hiding ends drawing mode but the panels stay up so the drawings can be brought back; showing
+ * them again goes back to drawing mode, so the panels stay up in both states.
+ */
+static void toggle_drawings(void)
+{
+    if (app.whiteboard) {
+        return;
+    }
+    if (app.drawingsHidden) {
+        app.drawingsHidden = false;
+        app.drawing = true;
+    } else {
+        controller_cancel(&app.controller);
+        app_flush();
+        app.drawingsHidden = true;
+        app.drawing = false;
+    }
+    app_apply_state();
+}
+
+/**
+ * @brief Opens or closes one dialog, leaving the others as they are, and pushes the change to the UI.
+ * @param dialog Dialog island: PANEL_SETTINGS, PANEL_CONFIRM or PANEL_COLOR.
+ * @param open true to show it.
+ */
+static void set_dialog(PanelId dialog, bool open)
+{
+    if (open) {
+        app.dialogs |= UI_DIALOG_BIT(dialog);
+    } else {
+        app.dialogs &= ~UI_DIALOG_BIT(dialog);
+    }
+    app_sync_ui();
 }
 
 /**
@@ -591,6 +695,7 @@ static void set_whiteboard(bool whiteboard)
     controller_cancel(&app.controller);
     app_flush();
     app.whiteboard = whiteboard;
+    app.drawingsHidden = false;
     app.drawing = true;
     app.controller.selected = -1;
     app_apply_state();
@@ -798,6 +903,15 @@ static void perform_action(Action action)
     case ACTION_TOGGLE_MODE:
         set_whiteboard(!app.whiteboard);
         break;
+    case ACTION_TOGGLE_DRAWINGS:
+        toggle_drawings();
+        break;
+    case ACTION_ASK_CLEAR:
+        set_dialog(PANEL_CONFIRM, true);
+        break;
+    case ACTION_OPEN_SETTINGS:
+        set_dialog(PANEL_SETTINGS, (app.dialogs & UI_DIALOG_BIT(PANEL_SETTINGS)) == 0);
+        break;
     case ACTION_TOOL_SELECT:
     case ACTION_TOOL_RECTANGLE:
     case ACTION_TOOL_ELLIPSE:
@@ -806,9 +920,10 @@ static void perform_action(Action action)
     case ACTION_TOOL_PEN:
     case ACTION_TOOL_LASER:
     case ACTION_TOOL_TEXT:
-    case ACTION_TOOL_ERASER: {
+    case ACTION_TOOL_ERASER:
+    case ACTION_TOOL_DIAMOND: {
         static const Tool MAP[] = {TOOL_SELECT, TOOL_RECTANGLE, TOOL_ELLIPSE, TOOL_ARROW, TOOL_LINE,
-                                   TOOL_PEN,    TOOL_LASER,     TOOL_TEXT,    TOOL_ERASER};
+                                   TOOL_PEN,    TOOL_LASER,     TOOL_TEXT,    TOOL_ERASER, TOOL_DIAMOND};
         select_tool(MAP[action - ACTION_TOOL_SELECT]);
         break;
     }
@@ -910,6 +1025,7 @@ static void describe_binding(Binding binding, wchar_t *buffer, int size)
  */
 static void notify(const wchar_t *title, const wchar_t *text)
 {
+    LOG("notice: %ls - %ls", title, text);
     if (app.tray && tray_notify(app.tray, title, text)) {
         return;
     }
@@ -1035,6 +1151,27 @@ static void apply_hotkeys(void)
 }
 
 /**
+ * @brief Types a key into the window that has the keyboard focus, for the key box of a pen driver.
+ *
+ * PenPane's own hotkeys are released for a moment, because a registered hotkey would take the key
+ * (F13 for instance) before the focused window sees it.
+ * @param virtualKey Virtual-key code to press and release.
+ */
+static void send_key(WORD virtualKey)
+{
+    hotkeys_suspend(app.hotkeys);
+    INPUT input[2];
+    memset(input, 0, sizeof input);
+    input[0].type = INPUT_KEYBOARD;
+    input[0].ki.wVk = virtualKey;
+    input[1] = input[0];
+    input[1].ki.dwFlags = KEYEVENTF_KEYUP;
+    UINT sent = SendInput(2, input, sizeof(INPUT));
+    LOG("send key 0x%02X sent=%u", (unsigned)virtualKey, sent);
+    SetTimer(app.messageWindow, TIMER_RESUME_HOTKEYS, SEND_KEY_RESUME_MS, NULL);
+}
+
+/**
  * @brief Receives the result of learn mode and stores the new binding.
  * @param user Unused.
  * @param action Action being learned.
@@ -1045,21 +1182,32 @@ static void on_learn_result(void *user, Action action, Binding binding, LearnOut
 {
     (void)user;
     app.learning = false;
+    bool replace = app.learnTool != 0;
+    app.learnTool = 0;
     if (outcome == LEARN_REJECTED) {
         notify(L"Button not bound", L"A key that types text must be combined with Ctrl, Alt or Win.");
+        app_sync_ui();
         return;
     }
     if (outcome != LEARN_CAPTURED) {
-        notify(L"Learning cancelled", L"No button was bound.");
+        if (!app.learnSilent) {
+            notify(L"Learning cancelled", L"No button was bound.");
+        }
+        app_sync_ui();
         return;
     }
     binding.action = action;
+    if (replace) {
+        config_clear_action(&app.config, action);
+    }
     if (!config_set_binding(&app.config, binding)) {
         notify(L"Button not bound", L"The list of bound buttons is full.");
+        app_sync_ui();
         return;
     }
     save_config();
     apply_hotkeys();
+    app_sync_ui();
     wchar_t text[160];
     describe_binding(binding, text, 160);
     notify(L"Button bound", text);
@@ -1076,7 +1224,106 @@ static void on_ui_event(void *user, const UiEvent *event)
     Style style = current_style();
     switch (event->kind) {
     case UI_EVENT_ACTION:
+        if (event->action == ACTION_CLEAR) {
+            app.dialogs &= ~UI_DIALOG_BIT(PANEL_CONFIRM);
+        }
         perform_action(event->action);
+        break;
+    case UI_EVENT_CLOSE_DIALOG:
+        set_dialog(event->panel, false);
+        break;
+    case UI_EVENT_EDIT_END:
+        if (app.drawing && app.overlayReady) {
+            focus_overlay();
+        }
+        break;
+    case UI_EVENT_SET_ARROWHEADS:
+        style.arrowHeads = (ArrowHeads)event->index;
+        change_style(style);
+        break;
+    case UI_EVENT_RESET_OPTIONS:
+        reset_options();
+        break;
+    case UI_EVENT_RESET_POSITIONS:
+        reset_positions();
+        break;
+    case UI_EVENT_SEND_KEY:
+        send_key((WORD)event->index);
+        break;
+    case UI_EVENT_TOOL_SHORTCUT:
+        if (app.learning) {
+            hotkeys_learn_cancel(app.hotkeys);
+        } else if (hotkeys_learn_begin(app.hotkeys, (Action)(ACTION_TOOL_SELECT + (int)event->tool))) {
+            app.learning = true;
+            app.learnTool = (unsigned)event->tool + 1;
+            app_sync_ui();
+        }
+        break;
+    case UI_EVENT_TOOL_SHORTCUT_KEY: {
+        app.learnSilent = true;
+        hotkeys_learn_cancel(app.hotkeys);
+        app.learnSilent = false;
+        Action action = (Action)(ACTION_TOOL_SELECT + (int)event->tool);
+        Binding binding = {{TRIGGER_KEY, (unsigned)event->index, 0}, GESTURE_SINGLE, action};
+        config_clear_action(&app.config, action);
+        if (config_set_binding(&app.config, binding)) {
+            save_config();
+            apply_hotkeys();
+            wchar_t text[160];
+            describe_binding(binding, text, 160);
+            notify(L"Button bound", text);
+        }
+        app_sync_ui();
+        break;
+    }
+    case UI_EVENT_SETTINGS_TAB:
+        app.settingsTab = event->index;
+        app_sync_ui();
+        break;
+    case UI_EVENT_TOOL_SHORTCUT_CLEAR:
+        config_clear_action(&app.config, (Action)(ACTION_TOOL_SELECT + (int)event->tool));
+        save_config();
+        apply_hotkeys();
+        app_sync_ui();
+        break;
+    case UI_EVENT_EDIT_HEX:
+        break;
+    case UI_EVENT_TOOL_MOVE: {
+        Tool *order = app.config.toolOrder;
+        for (int i = 0; i < TOOL_COUNT; i++) {
+            int other = i + event->index;
+            if (order[i] == event->tool && other >= 0 && other < TOOL_COUNT) {
+                Tool swap = order[i];
+                order[i] = order[other];
+                order[other] = swap;
+                break;
+            }
+        }
+        save_config();
+        app_sync_ui();
+        break;
+    }
+    case UI_EVENT_TOOL_VISIBLE: {
+        unsigned mask = app.config.hiddenTools;
+        mask = event->index != 0 ? (mask & ~(1u << event->tool)) : (mask | (1u << event->tool));
+        if (mask != (1u << TOOL_COUNT) - 1u) {
+            app.config.hiddenTools = mask;
+            save_config();
+        }
+        app_sync_ui();
+        break;
+    }
+    case UI_EVENT_SET_AUTO_HIDE:
+        app.config.ui.autoHide = event->index != 0;
+        save_config();
+        ui_apply_settings(app.ui, &app.config.ui);
+        app_sync_ui();
+        break;
+    case UI_EVENT_SET_EXCLUDE_CAPTURE:
+        app.config.ui.excludeFromCapture = event->index != 0;
+        save_config();
+        ui_apply_settings(app.ui, &app.config.ui);
+        app_sync_ui();
         break;
     case UI_EVENT_SELECT_TOOL:
         select_tool(event->tool);
@@ -1085,12 +1332,45 @@ static void on_ui_event(void *user, const UiEvent *event)
         style.stroke = STROKE_PALETTE[event->index];
         change_style(style);
         break;
+    case UI_EVENT_SET_STROKE_COLOR:
+        style.stroke = event->color;
+        change_style(style);
+        break;
+    case UI_EVENT_SET_PASTEL:
+        app.config.palettePastel = event->index != 0;
+        save_config();
+        app_sync_ui();
+        break;
+    case UI_EVENT_SET_DEBUG_LOG:
+        app.config.debugLog = event->index != 0;
+        log_set(app.config.debugLog, app.logPath);
+        LOG("log on, PenPane %s", PENPANE_VERSION_STRING);
+        save_config();
+        app_sync_ui();
+        break;
+    case UI_EVENT_OPEN_PICKER:
+        set_dialog(PANEL_COLOR, (app.dialogs & UI_DIALOG_BIT(PANEL_COLOR)) == 0);
+        break;
+    case UI_EVENT_PICK_HUE:
+    case UI_EVENT_PICK_SV:
+        if (event->kind == UI_EVENT_PICK_HUE) {
+            app.pickerHue = event->value;
+        } else {
+            app.pickerSat = event->value;
+            app.pickerVal = event->extra;
+        }
+        style.stroke = color_from_hsv(app.pickerHue, app.pickerSat, app.pickerVal);
+        preview_style(style);
+        break;
     case UI_EVENT_SET_FILL:
         style.fill = FILL_PALETTE[event->index];
         change_style(style);
         break;
     case UI_EVENT_SET_WIDTH:
-        style.width = WIDTH_PRESETS[event->index];
+        style.pressure = event->index >= WIDTH_PRESET_COUNT;
+        if (!style.pressure) {
+            style.width = WIDTH_PRESETS[event->index];
+        }
         change_style(style);
         break;
     case UI_EVENT_SET_STROKE_STYLE:
@@ -1108,10 +1388,6 @@ static void on_ui_event(void *user, const UiEvent *event)
         save_config();
         app_flush();
         app_sync_ui();
-        break;
-    case UI_EVENT_SET_PRESSURE:
-        style.pressure = event->index != 0;
-        change_style(style);
         break;
     case UI_EVENT_SET_OPACITY:
         style.opacity = event->value;
@@ -1155,8 +1431,7 @@ static PointerSample make_sample(POINT screen, float pressure)
  */
 static void after_pointer_event(void)
 {
-    if (controller_take_tool_finished(&app.controller) && !app.controller.toolLocked &&
-        app.controller.tool != TOOL_ERASER && app.controller.tool != TOOL_LASER) {
+    if (controller_take_tool_finished(&app.controller) && !app.controller.toolLocked) {
         controller_set_tool(&app.controller, TOOL_SELECT);
     }
     app_flush();
@@ -1195,6 +1470,7 @@ static bool supersede_stale_pointer(bool isPress)
     if (alive) {
         return false;
     }
+    LOG("stale pointer %u ended before a new press", (unsigned)app.activePointer);
     handle_pointer(2, (POINT){0, 0}, -1.0f, false);
     return true;
 }
@@ -1252,7 +1528,14 @@ static void handle_key(WPARAM key)
         perform_action(ACTION_TOGGLE_TOOL_LOCK);
     } else if (!control) {
         Tool tool;
-        if (tool_from_shortcut((int)key, &tool)) {
+        bool found = false;
+        if (key >= '0' && key <= '9') {
+            found = tool_at_slot(app.config.toolOrder, app.config.hiddenTools, key == '0' ? 9 : (int)key - '1',
+                                 &tool);
+        } else {
+            found = tool_from_shortcut((int)key, &tool);
+        }
+        if (found) {
             select_tool(tool);
         }
     }
@@ -1360,6 +1643,7 @@ static LRESULT CALLBACK overlay_procedure(HWND window, UINT message, WPARAM wpar
 static void handle_display_change(void)
 {
     refresh_monitors();
+    LOG("display change: %d monitor(s)", app.monitorCount);
     if (app.ui) {
         ui_place_defaults(app.ui, app.monitors[panel_monitor()].work, false);
     }
@@ -1377,6 +1661,7 @@ static void handle_display_change(void)
  */
 static void handle_resume(void)
 {
+    LOG("resume or unlock: hooks reset, pointer down=%d", app.pointerDown);
     hotkeys_reset_hooks(app.hotkeys);
     if (app.pointerDown) {
         handle_pointer(2, (POINT){0, 0}, -1.0f, false);
@@ -1412,6 +1697,27 @@ static void build_tray_state(TrayState *state)
 }
 
 /**
+ * @brief Applies the loaded configuration to the controller, the interface and the overlay.
+ */
+static void apply_config(void)
+{
+    refresh_monitors();
+    app.controller.style.stroke = STROKE_PALETTE[app.config.defaultStrokeIndex];
+    app.controller.style.fill = FILL_PALETTE[app.config.defaultFillIndex];
+    app.controller.style.width = WIDTH_PRESETS[app.config.defaultWidthIndex];
+    app.controller.toolLocked = app.config.toolLock;
+    app.controller.laserPointer = app.config.laserPointer;
+    log_set(app.config.debugLog, app.logPath);
+    if (app.ui) {
+        ui_apply_settings(app.ui, &app.config.ui);
+    }
+    if (app.overlayReady) {
+        controller_cancel(&app.controller);
+        app_apply_state();
+    }
+}
+
+/**
  * @brief Loads the configuration file and applies it everywhere.
  */
 static void reload_config(void)
@@ -1419,28 +1725,52 @@ static void reload_config(void)
     wchar_t errors[256] = L"";
     ConfigStatus status = config_load(&app.config, app.configPath, errors, 256);
     app.configProtected = status == CONFIG_UNREADABLE;
+    log_set(app.config.debugLog, app.logPath);
+    LOG("config %s: %ls", status == CONFIG_LOADED ? "loaded" : (status == CONFIG_MISSING ? "missing, defaults" : "unreadable"),
+        errors[0] ? errors : L"no warnings");
     if (status == CONFIG_MISSING) {
         save_config();
     } else if (status == CONFIG_UNREADABLE) {
         notify(L"Configuration not read",
                L"The settings file could not be read. It was left unchanged and the current settings stay in use.");
     }
-    refresh_monitors();
-    app.controller.style.stroke = STROKE_PALETTE[app.config.defaultStrokeIndex];
-    app.controller.style.fill = FILL_PALETTE[app.config.defaultFillIndex];
-    app.controller.style.width = WIDTH_PRESETS[app.config.defaultWidthIndex];
-    app.controller.toolLocked = app.config.toolLock;
-    app.controller.laserPointer = app.config.laserPointer;
     if (errors[0]) {
         notify(L"Configuration warnings", errors);
     }
     apply_hotkeys();
-    if (app.ui) {
-        ui_apply_settings(app.ui, &app.config.ui);
+    apply_config();
+}
+
+/**
+ * @brief Puts every option back to its default; button bindings, custom colors and panel positions stay.
+ */
+static void reset_options(void)
+{
+    Config fresh;
+    config_defaults(&fresh);
+    memcpy(fresh.bindings, app.config.bindings, sizeof fresh.bindings);
+    fresh.bindingCount = app.config.bindingCount;
+    memcpy(fresh.customColors, app.config.customColors, sizeof fresh.customColors);
+    fresh.customCount = app.config.customCount;
+    memcpy(fresh.ui.placement, app.config.ui.placement, sizeof fresh.ui.placement);
+    app.config = fresh;
+    controller_set_tool(&app.controller, app.config.defaultTool);
+    save_config();
+    apply_config();
+    app_sync_ui();
+}
+
+/**
+ * @brief Puts the toolbar and the panels back at their default places on the tools screen.
+ */
+static void reset_positions(void)
+{
+    for (int i = 0; i < PANEL_COUNT; i++) {
+        app.config.ui.placement[i].set = false;
     }
-    if (app.overlayReady) {
-        controller_cancel(&app.controller);
-        app_apply_state();
+    save_config();
+    if (app.ui) {
+        ui_place_defaults(app.ui, app.monitors[panel_monitor()].work, true);
     }
 }
 
@@ -1548,6 +1878,7 @@ static LRESULT CALLBACK message_procedure(HWND window, UINT message, WPARAM wpar
             bool animating = controller_animate(&app.controller, now_ms());
             if (!animating) {
                 KillTimer(window, TIMER_ANIMATE);
+                animationTimerOn = false;
             }
             app_flush();
             if (!animating) {
@@ -1563,6 +1894,11 @@ static LRESULT CALLBACK message_procedure(HWND window, UINT message, WPARAM wpar
         }
         if (wparam == TIMER_FADE_STEP) {
             fade_step();
+            return 0;
+        }
+        if (wparam == TIMER_RESUME_HOTKEYS) {
+            KillTimer(window, TIMER_RESUME_HOTKEYS);
+            apply_hotkeys();
             return 0;
         }
         if (wparam == TIMER_TRAY_RETRY) {
@@ -1616,12 +1952,12 @@ static LRESULT CALLBACK message_procedure(HWND window, UINT message, WPARAM wpar
 
 /**
  * @brief Hides every window when the process crashes so input is never trapped.
- * @param info Exception information, unused.
+ * @param info Exception information; logged when the log is on.
  * @return EXCEPTION_EXECUTE_HANDLER to terminate after cleanup.
  */
 static LONG WINAPI crash_filter(EXCEPTION_POINTERS *info)
 {
-    (void)info;
+    LOG("CRASH code=0x%08lX address=%p", info->ExceptionRecord->ExceptionCode, info->ExceptionRecord->ExceptionAddress);
     if (app.overlayReady && app.overlay.window) {
         overlay_set_visible(&app.overlay, false);
     }
@@ -1664,7 +2000,7 @@ static bool build_sibling_path(const wchar_t *name, size_t nameChars, wchar_t *p
  */
 static bool build_config_path(wchar_t *path, size_t size)
 {
-    static const wchar_t FILE_NAME[] = L"penpane.ini";
+    static const wchar_t FILE_NAME[] = L"PenPane.ini";
     static const wchar_t LEGACY_FILE_NAME[] = L"ink.ini";
     if (!build_sibling_path(FILE_NAME, ARRAYSIZE(FILE_NAME), path, size)) {
         return false;
@@ -1741,7 +2077,10 @@ int app_run(HINSTANCE instance)
         notify(L"Settings location unavailable",
                L"The folder of PenPane is too deeply nested to keep a settings file there. Defaults are used and nothing is saved.");
     }
+    static const wchar_t LOG_NAME[] = L"PenPane.log";
+    build_sibling_path(LOG_NAME, ARRAYSIZE(LOG_NAME), app.logPath, ARRAYSIZE(app.logPath));
     reload_config();
+    LOG("started PenPane %s, %d monitor(s)", PENPANE_VERSION_STRING, app.monitorCount);
     controller_set_tool(&app.controller, app.config.defaultTool);
     app.ui = ui_create(instance, on_ui_event, NULL, &app.config.ui);
     if (app.ui) {

@@ -22,10 +22,16 @@
 #define TRAIL_ERASER_RADIUS 5.0f
 #define TRAIL_ERASER_LIFETIME_MS 200
 
-/** @brief One timestamped trail point. */
+/**
+ * @brief One timestamped trail point.
+ *
+ * A point fades by age. trail_release restamps the points of a short or quick stroke so that it
+ * ages like a long one.
+ */
 typedef struct TrailPoint {
     Point position;
     uint32_t timeMs;
+    bool start;
 } TrailPoint;
 
 /** @brief Ring of recent points plus its look. */
@@ -41,6 +47,7 @@ typedef struct Trail {
     float smoothing;
     Point smoothed;
     Point raw;
+    bool fresh;
 } Trail;
 
 /**
@@ -66,11 +73,27 @@ void trail_init(Trail *trail, float maxRadius, uint32_t lifetimeMs, Color color,
 void trail_add(Trail *trail, Point position, uint32_t nowMs);
 
 /**
+ * @brief Starts a new stroke: the next point is not joined to the previous points and is not streamlined from them.
+ * @param trail Trail to start a stroke on.
+ */
+void trail_begin(Trail *trail);
+
+/**
  * @brief Lets the streamlined head catch up with the last raw position, as when the pointer is released.
  * @param trail Trail to extend.
  * @param nowMs Monotonic millisecond clock.
  */
 void trail_settle(Trail *trail, uint32_t nowMs);
+
+/**
+ * @brief Ends the current stroke so that it fades like a long one, tail first, however short or quick it was.
+ *
+ * A stroke drawn in under 400 ms gets its points restamped evenly along its length over 400 ms, so
+ * the usual age fade and taper shrink its tail before its head, as for a long stroke. Longer strokes
+ * are left alone. Call after trail_settle.
+ * @param trail Trail whose newest stroke ended.
+ */
+void trail_release(Trail *trail);
 
 /**
  * @brief Drops points that have fully faded.

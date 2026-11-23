@@ -1,0 +1,36 @@
+name: Tablet or hardware compatibility
+description: Pen buttons, pressure, multiple monitors or scaling behave differently on your setup
+labels: ["hardware"]
+body:
+  - type: input
+    id: version
+    attributes:
+      label: PenPane version
+      placeholder: "0.3.0"
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: Tablet, pen and driver
+      description: Model and driver version, or "mouse only".
+    validations:
+      required: true
+  - type: textarea
+    id: display
+    attributes:
+      label: Displays
+      description: Number of monitors, resolution and scaling of each, and which one is the drawing screen.
+  - type: textarea
+    id: behavior
+    attributes:
+      label: What happens
+      description: For example pen buttons not reaching PenPane, pressure not detected, strokes in the wrong place.
+    validations:
+      required: true
+  - type: textarea
+    id: log
+    attributes:
+      label: Debug log
+      description: Turn on "Write a debug log" in the settings, reproduce the problem and paste the relevant lines of PenPane.log. It holds no drawings or typed text.
+      render: text

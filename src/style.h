@@ -13,6 +13,8 @@
 #define STROKE_PALETTE_SIZE 5
 #define FILL_PALETTE_SIZE 5
 #define WIDTH_PRESET_COUNT 3
+#define PASTEL_PALETTE_SIZE 6
+#define CUSTOM_COLOR_MAX 18
 
 /** @brief Line pattern of strokes. */
 typedef enum StrokeStyle {
@@ -20,6 +22,13 @@ typedef enum StrokeStyle {
     STROKE_DASHED,
     STROKE_DOTTED
 } StrokeStyle;
+
+/** @brief Whether an arrow has a head at its end only or at both ends. */
+typedef enum ArrowHeads {
+    ARROW_HEAD_END,
+    ARROW_HEAD_BOTH,
+    ARROW_HEAD_COUNT
+} ArrowHeads;
 
 /** @brief Typeface of text elements. */
 typedef enum TextFace {
@@ -38,10 +47,14 @@ typedef struct Style {
     StrokeStyle strokeStyle;
     bool pressure;
     TextFace face;
+    ArrowHeads arrowHeads;
 } Style;
 
 /** @brief The five stroke preset colors in dark theme. */
 extern const Color STROKE_PALETTE[STROKE_PALETTE_SIZE];
+
+/** @brief The optional pastel stroke row. */
+extern const Color PASTEL_PALETTE[PASTEL_PALETTE_SIZE];
 
 /** @brief The five background presets; entry 0 is fully transparent. */
 extern const Color FILL_PALETTE[FILL_PALETTE_SIZE];
@@ -75,5 +88,31 @@ int style_fill_index(Color color);
  * @return Index into WIDTH_PRESETS of the nearest preset.
  */
 int style_width_index(float width);
+
+/**
+ * @brief Converts hue, saturation and value to an opaque color.
+ * @param hue 0 to 1, wrapping.
+ * @param saturation 0 to 1.
+ * @param value 0 to 1.
+ * @return Opaque straight-alpha color.
+ */
+Color color_from_hsv(float hue, float saturation, float value);
+
+/**
+ * @brief Converts a color to hue, saturation and value; alpha is ignored.
+ * @param color Color to convert.
+ * @param hue Receives 0 to 1 (0 for grays).
+ * @param saturation Receives 0 to 1.
+ * @param value Receives 0 to 1.
+ */
+void color_to_hsv(Color color, float *hue, float *saturation, float *value);
+
+/**
+ * @brief Parses "RRGGBB" or "#RRGGBB".
+ * @param text Zero-terminated text.
+ * @param color Receives the opaque color on success.
+ * @return true when the text is a valid hex color.
+ */
+bool color_parse_hex(const char *text, Color *color);
 
 #endif

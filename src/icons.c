@@ -401,6 +401,56 @@ static void draw_pin(Pen *pen, bool pinned)
 }
 
 /**
+ * @brief Draws a settings gear: a ring with eight teeth and a hub.
+ * @param pen Drawing context.
+ */
+static void draw_gear(const Pen *pen)
+{
+    mask_add_ellipse_stroke(pen->mask, at(pen, 8.0f, 8.0f), 4.4f * pen->unit, 4.4f * pen->unit,
+                            pen->half * 2.0f);
+    mask_add_ellipse_stroke(pen->mask, at(pen, 8.0f, 8.0f), 1.7f * pen->unit, 1.7f * pen->unit,
+                            pen->half * 2.0f);
+    for (int tooth = 0; tooth < 8; tooth++) {
+        float angle = (float)tooth * PI_FLOAT / 4.0f;
+        float c = cosf(angle);
+        float s = sinf(angle);
+        line(pen, 8.0f + 5.2f * c, 8.0f + 5.2f * s, 8.0f + 6.9f * c, 8.0f + 6.9f * s);
+    }
+}
+
+/**
+ * @brief Draws a trash can.
+ * @param pen Drawing context.
+ */
+static void draw_trash(const Pen *pen)
+{
+    static const float lid[4] = {2.8f, 4.4f, 13.2f, 4.4f};
+    static const float handle[8] = {6.2f, 4.4f, 6.2f, 2.6f, 9.8f, 2.6f, 9.8f, 4.4f};
+    static const float body[8] = {4.2f, 4.4f, 5.0f, 13.6f, 11.0f, 13.6f, 11.8f, 4.4f};
+    line(pen, lid[0], lid[1], lid[2], lid[3]);
+    poly(pen, handle, 4, false);
+    poly(pen, body, 4, false);
+    line(pen, 6.7f, 7.0f, 6.9f, 11.6f);
+    line(pen, 9.3f, 7.0f, 9.1f, 11.6f);
+}
+
+/**
+ * @brief Draws an eye; the hidden variant has a slash across it.
+ * @param pen Drawing context.
+ * @param hidden true for the crossed-out eye.
+ */
+static void draw_eye(const Pen *pen, bool hidden)
+{
+    static const float outline[16] = {1.4f, 8.0f, 3.8f, 5.2f, 8.0f, 3.8f, 12.2f, 5.2f,
+                                      14.6f, 8.0f, 12.2f, 10.8f, 8.0f, 12.2f, 3.8f, 10.8f};
+    poly(pen, outline, 8, true);
+    dot(pen, 8.0f, 8.0f, 2.0f);
+    if (hidden) {
+        line(pen, 3.0f, 13.4f, 13.0f, 2.6f);
+    }
+}
+
+/**
  * @brief Dispatches to the drawing routine of an icon.
  * @param pen Drawing context.
  * @param icon Icon to draw.
@@ -463,8 +513,46 @@ static bool draw_icon(Pen *pen, Icon icon)
     case ICON_WIDTH_THIN: bar(pen, 2.6f, 13.4f, 8.0f, 1.2f); break;
     case ICON_WIDTH_MEDIUM: bar(pen, 2.6f, 13.4f, 8.0f, 2.6f); break;
     case ICON_WIDTH_BOLD: bar(pen, 2.6f, 13.4f, 8.0f, 4.4f); break;
+    case ICON_PRESSURE:
+        mask_add_capsule(pen->mask, at(pen, 2.6f, 8.0f), at(pen, 13.4f, 8.0f), 0.5f * pen->unit,
+                         2.6f * pen->unit);
+        break;
+    case ICON_SETTINGS: draw_gear(pen); break;
+    case ICON_TRASH: draw_trash(pen); break;
+    case ICON_EYE: draw_eye(pen, false); break;
+    case ICON_EYE_OFF: draw_eye(pen, true); break;
+    case ICON_CLOSE:
+        line(pen, 4.0f, 4.0f, 12.0f, 12.0f);
+        line(pen, 12.0f, 4.0f, 4.0f, 12.0f);
+        break;
+    case ICON_CHEVRON_UP: {
+        static const float shape[6] = {4.0f, 10.0f, 8.0f, 6.0f, 12.0f, 10.0f};
+        poly(pen, shape, 3, false);
+        break;
+    }
+    case ICON_CHEVRON_DOWN: {
+        static const float shape[6] = {4.0f, 6.0f, 8.0f, 10.0f, 12.0f, 6.0f};
+        poly(pen, shape, 3, false);
+        break;
+    }
     case ICON_PIN: draw_pin(pen, true); break;
     case ICON_PIN_OFF: draw_pin(pen, false); break;
+    case ICON_DIAMOND: {
+        static const float shape[8] = {8.0f, 2.2f, 13.8f, 8.0f, 8.0f, 13.8f, 2.2f, 8.0f};
+        poly(pen, shape, 4, true);
+        break;
+    }
+    case ICON_ARROW_END:
+    case ICON_ARROW_BOTH: {
+        line(pen, 2.4f, 8.0f, 13.6f, 8.0f);
+        line(pen, 13.6f, 8.0f, 9.6f, 4.6f);
+        line(pen, 13.6f, 8.0f, 9.6f, 11.4f);
+        if (icon == ICON_ARROW_BOTH) {
+            line(pen, 2.4f, 8.0f, 6.4f, 4.6f);
+            line(pen, 2.4f, 8.0f, 6.4f, 11.4f);
+        }
+        break;
+    }
     default: return false;
     }
     return true;
@@ -491,6 +579,7 @@ Icon icon_for_tool(int tool)
 {
     static const Icon icons[TOOL_COUNT] = {ICON_SELECT, ICON_RECTANGLE, ICON_ELLIPSE,
                                            ICON_ARROW,  ICON_LINE,      ICON_PEN,
-                                           ICON_LASER,  ICON_TEXT,      ICON_ERASER};
+                                           ICON_LASER,  ICON_TEXT,      ICON_ERASER,
+                                           ICON_DIAMOND};
     return (unsigned)tool < TOOL_COUNT ? icons[tool] : ICON_NONE;
 }

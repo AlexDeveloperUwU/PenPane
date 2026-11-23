@@ -1,10 +1,10 @@
 ﻿# SPDX-License-Identifier: GPL-3.0-or-later
 <#
 .SYNOPSIS
-Measures idle CPU, memory, wakeups, leaks and startup time of penpane.exe through the real executable.
+Measures idle CPU, memory, wakeups, leaks and startup time of PenPane.exe through the real executable.
 
 .DESCRIPTION
-Copies the executable into a scratch directory with a known penpane.ini, drives it with synthetic input
+Copies the executable into a scratch directory with a known PenPane.ini, drives it with synthetic input
 (second launch toggles drawing, mouse strokes, hotkeys) and prints one table row per state.
 Idle CPU is reported as TotalProcessorTime and QueryProcessCycleTime deltas over IdleSeconds,
 together with context switch and thread counts. Memory comes from GetProcessMemoryInfo
@@ -17,7 +17,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts\measure.ps1 -IdleSec
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts\measure.ps1 -Only startup,leak -Cycles 500
 #>
 param(
-    [string]$Exe = "build\penpane.exe",
+    [string]$Exe = "build\PenPane.exe",
     [int]$IdleSeconds = 60,
     [int]$SettleSeconds = 8,
     [int]$Strokes = 200,
@@ -97,18 +97,18 @@ function Initialize-Scratch {
     if (Test-Path $scratch) { Remove-Item $scratch -Recurse -Force }
     New-Item -ItemType Directory $scratch | Out-Null
     $source = if ([IO.Path]::IsPathRooted($Exe)) { $Exe } else { Join-Path $root $Exe }
-    Copy-Item $source (Join-Path $scratch "penpane.exe")
-    Set-Content -Path (Join-Path $scratch "penpane.ini") -Value "tool_lock = true`r`nbind = F22 single clear`r`n"
+    Copy-Item $source (Join-Path $scratch "PenPane.exe")
+    Set-Content -Path (Join-Path $scratch "PenPane.ini") -Value "tool_lock = true`r`nbind = F22 single clear`r`n"
 }
 
 function Start-PenPane {
-    $process = [Diagnostics.Process]::Start((Join-Path $scratch "penpane.exe"))
+    $process = [Diagnostics.Process]::Start((Join-Path $scratch "PenPane.exe"))
     Start-Sleep -Milliseconds 1500
     return $process
 }
 
 function Invoke-SecondLaunch {
-    Start-Process (Join-Path $scratch "penpane.exe") | Out-Null
+    Start-Process (Join-Path $scratch "PenPane.exe") | Out-Null
     Start-Sleep -Milliseconds 900
 }
 
@@ -261,7 +261,7 @@ function Measure-Startup {
     for ($run = 0; $run -lt $StartupRuns; $run++) {
         Stop-PenPane
         $watch = [Diagnostics.Stopwatch]::StartNew()
-        $process = [Diagnostics.Process]::Start((Join-Path $scratch "penpane.exe"))
+        $process = [Diagnostics.Process]::Start((Join-Path $scratch "PenPane.exe"))
         $visible = $null
         while ($watch.ElapsedMilliseconds -lt 5000) {
             if ([PenPaneNative]::VisibleWindowCount([uint32]$process.Id) -gt 0) { $visible = $watch.Elapsed.TotalMilliseconds; break }
@@ -304,8 +304,8 @@ function Measure-LongStroke($process) {
 $script:rows = @()
 $script:summary = [ordered]@{}
 Initialize-Scratch
-Write-Host ("exe: {0} bytes  screen {1}x{2}" -f (Get-Item (Join-Path $scratch "penpane.exe")).Length, $screenWidth, $screenHeight)
-$script:summary["exe_bytes"] = (Get-Item (Join-Path $scratch "penpane.exe")).Length
+Write-Host ("exe: {0} bytes  screen {1}x{2}" -f (Get-Item (Join-Path $scratch "PenPane.exe")).Length, $screenWidth, $screenHeight)
+$script:summary["exe_bytes"] = (Get-Item (Join-Path $scratch "PenPane.exe")).Length
 
 try {
     if (Wanted "startup") { Measure-Startup }

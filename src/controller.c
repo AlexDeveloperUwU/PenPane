@@ -242,7 +242,8 @@ static bool begin_draft(Controller *controller, const PointerSample *sample)
 {
     static const ElementType TYPES[TOOL_COUNT] = {ELEMENT_PEN,   ELEMENT_RECTANGLE, ELEMENT_ELLIPSE,
                                                   ELEMENT_ARROW, ELEMENT_LINE,      ELEMENT_PEN,
-                                                  ELEMENT_PEN,   ELEMENT_TEXT,      ELEMENT_PEN};
+                                                  ELEMENT_PEN,   ELEMENT_TEXT,      ELEMENT_PEN,
+                                                  ELEMENT_DIAMOND};
     controller->draft = element_make(TYPES[controller->tool], &controller->style);
     controller->hasDraft = true;
     controller->draft.from = sample->position;
@@ -465,7 +466,7 @@ static void finish_draft(Controller *controller)
     if (draft->type == ELEMENT_PEN) {
         pen_finish(&controller->pen, draft);
     }
-    if (draft->type == ELEMENT_RECTANGLE || draft->type == ELEMENT_ELLIPSE) {
+    if (draft->type == ELEMENT_RECTANGLE || draft->type == ELEMENT_ELLIPSE || draft->type == ELEMENT_DIAMOND) {
         keep = fabsf(draft->to.x - draft->from.x) >= MIN_SHAPE_SIZE ||
                fabsf(draft->to.y - draft->from.y) >= MIN_SHAPE_SIZE;
     } else if (draft->type == ELEMENT_LINE || draft->type == ELEMENT_ARROW) {
@@ -504,6 +505,7 @@ void controller_pointer_down(Controller *controller, const PointerSample *sample
         if (controller->laserPointer) {
             move_laser_dot(controller, sample->position);
         } else {
+            trail_begin(&controller->laser);
             extend_trail(controller, &controller->laser, sample->position, sample->timeMs);
         }
         break;
@@ -603,11 +605,14 @@ void controller_pointer_up(Controller *controller, const PointerSample *sample)
         }
         repaint_add(controller, trail_bounds(&controller->eraser));
         trail_clear(&controller->eraser);
+        controller->toolFinished = true;
         break;
     }
     case INTERACTION_LASER:
+        controller->toolFinished = true;
         repaint_add(controller, trail_bounds(&controller->laser));
         trail_settle(&controller->laser, sample->timeMs);
+        trail_release(&controller->laser);
         repaint_add(controller, trail_bounds(&controller->laser));
         break;
     case INTERACTION_NONE:

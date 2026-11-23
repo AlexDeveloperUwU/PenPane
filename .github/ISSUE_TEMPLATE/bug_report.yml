@@ -10,8 +10,8 @@ body:
     id: version
     attributes:
       label: PenPane version
-      description: Shown in the file properties of penpane.exe and in the tray tooltip.
-      placeholder: "0.2.0"
+      description: Shown in the file properties of PenPane.exe and in the tray tooltip.
+      placeholder: "0.3.0"
     validations:
       required: true
   - type: input
@@ -41,7 +41,13 @@ body:
     id: setup
     attributes:
       label: Setup
-      description: Pen or tablet model and driver, number of monitors, display scaling, and any relevant lines of penpane.ini.
+      description: Pen or tablet model and driver, number of monitors, display scaling, and any relevant lines of PenPane.ini.
+  - type: textarea
+    id: log
+    attributes:
+      label: Debug log
+      description: Optional. Turn on "Write a debug log" in the settings, reproduce the problem and paste the relevant lines of PenPane.log. It holds no drawings or typed text.
+      render: text
   - type: checkboxes
     id: checks
     attributes:

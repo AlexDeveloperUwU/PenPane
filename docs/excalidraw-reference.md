@@ -60,7 +60,7 @@ Sizes: island radius 8 px, button 36 px square with 16 px icons, island padding 
 
 ## Tools and shortcuts
 
-Selection `V`/`1`, rectangle `R`/`2`, ellipse `O`/`4`, arrow `A`/`5`, line `L`/`6`, pen `P` or `X`/`7`, text `T`/`8`, eraser `E`/`0`, laser `K`, tool lock `Q`. Diamond (`D`/`3`) and hand (`H`) are excluded by the project brief.
+Selection `V`/`1`, rectangle `R`/`2`, ellipse `O`/`4`, arrow `A`/`5`, line `L`/`6`, pen `P` or `X`/`7`, text `T`/`8`, eraser `E`/`0`, laser `K`, tool lock `Q`. Hand (`H`) is excluded by the project brief. PenPane adds the diamond (`D`), and the number keys follow the toolbar order instead of Excalidraw's fixed digits.
 
 ## Geometry and behavior
 

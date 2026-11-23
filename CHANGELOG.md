@@ -4,6 +4,37 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [0.3.0] - 2026-11-23
+
+### Added
+
+- Diamond tool (D) and an arrowhead choice (one head or two).
+- Colour picker window with a brightness square, hue strip and hex field (type or paste), and a boxed picker button.
+- Settings window with four tabs: General, Toolbar, Shortcuts and Pen keys.
+- One extra shortcut per tool (Shortcuts tab): learn a key or pen button, or pick F13 to F18 with a click. The built-in keys stay.
+- Pen keys tab: types F13 to F16 into the focused window, so a tablet driver's key box can record keys the keyboard does not have.
+- Optional debug log (`debug_log`, off by default), capped at 1 MB and rotated to `PenPane.log.1`.
+- "Reset all options" and "Reset menu positions" buttons.
+- Release workflow that publishes a GitHub release for each version on `main`, and issue templates for documentation, hardware compatibility and questions.
+
+### Changed
+
+- The program, its configuration and its log are now `PenPane.exe`, `PenPane.ini` and `PenPane.log`.
+- The app starts on the select tool.
+- Tool lock now applies to every tool, pen, eraser and laser included, and is on by default.
+- The desktop/whiteboard button moved to the bottom panel, and the settings gear moved to the end of the toolbar.
+- Settings, Clear canvas and the colour picker are separate windows with rounded corners, a title band and more room.
+- The eye button hides everything except itself and restores each panel to its previous open or closed state.
+- Digit keys follow the toolbar order.
+- New default colours: yellow added, red improved, softer pastel row.
+- Short or quick laser strokes now fade tail first, like long ones.
+
+### Fixed
+
+- The laser and eraser fade animation froze while the pen or mouse kept moving, because its timer was reset on every redraw.
+- Colour picker drags keep following the pointer outside the window.
+- The 0.2.0 note "drawing memory about 16 MB to 2-5 MB" no longer holds: drawing mode now uses a full-monitor surface.
+
 ## [0.2.0] - 2026-11-22
 
 - Renamed from Ink to PenPane (note 0091): `penpane.exe`, `penpane.ini`, window and synchronization object names, tray tooltip and registry value. An existing `ink.ini` next to the executable is copied to `penpane.ini` once (note 0092).

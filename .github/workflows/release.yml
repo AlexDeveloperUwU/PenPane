@@ -1,11 +1,23 @@
+# WHEN:   A push to main that changes src/version.h (a new version was committed), or manually.
+# WHAT:   Builds and tests the program, then publishes a GitHub release v<version> with PenPane.exe and
+#         its checksum. The tag is created by the release. Nothing happens when that release already exists.
+# WRITES: A tag and a release on this repository.
+#
 name: Release
 
 on:
   push:
-    tags: ["v*"]
+    branches: [main]
+    paths:
+      - src/version.h
+  workflow_dispatch:
 
 permissions:
   contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
 
 jobs:
   release:
@@ -13,22 +25,29 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - name: Check that the tag matches the version
+      - name: Read the version and skip when it is already released
+        id: version
         shell: powershell
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           $line = Select-String -Path src\version.h -Pattern 'define PENPANE_VERSION_STRING "([^"]+)"'
           $version = $line.Matches[0].Groups[1].Value
-          if ("${{ github.ref_name }}" -ne "v$version") {
-            throw "Tag ${{ github.ref_name }} does not match version $version in src\version.h."
-          }
+          "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          gh release view "v$version" --repo "${{ github.repository }}" *> $null
+          $exists = $LASTEXITCODE -eq 0
+          "publish=$((-not $exists).ToString().ToLower())" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          if ($exists) { Write-Host "Release v$version already exists; nothing to publish." }
 
       - name: Cache toolchain
+        if: steps.version.outputs.publish == 'true'
         uses: actions/cache@v6
         with:
           path: ${{ runner.temp }}\tools
           key: llvm-mingw-20261117-ucrt-x86_64
 
       - name: Install toolchain
+        if: steps.version.outputs.publish == 'true'
         id: toolchain
         shell: powershell
         run: |
@@ -37,21 +56,40 @@ jobs:
           "path=$($path | Select-Object -Last 1)" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
 
       - name: Build
+        if: steps.version.outputs.publish == 'true'
         shell: powershell
         run: powershell -NoProfile -ExecutionPolicy Bypass -File scripts\build.ps1 -Toolchain "${{ steps.toolchain.outputs.path }}"
 
       - name: Test
+        if: steps.version.outputs.publish == 'true'
         shell: powershell
         run: powershell -NoProfile -ExecutionPolicy Bypass -File scripts\test.ps1 -Toolchain "${{ steps.toolchain.outputs.path }}"
 
       - name: Compute checksum
+        if: steps.version.outputs.publish == 'true'
         shell: powershell
         run: |
-          $hash = (Get-FileHash build\penpane.exe -Algorithm SHA256).Hash.ToLower()
-          [System.IO.File]::WriteAllText("$PWD\build\penpane.exe.sha256", "$hash  penpane.exe`n")
+          $hash = (Get-FileHash build\PenPane.exe -Algorithm SHA256).Hash.ToLower()
+          [System.IO.File]::WriteAllText("$PWD\build\PenPane.exe.sha256", "$hash  PenPane.exe`n")
+
+      - name: Take the release notes from the changelog
+        if: steps.version.outputs.publish == 'true'
+        shell: powershell
+        run: |
+          $version = "${{ steps.version.outputs.version }}"
+          $lines = Get-Content CHANGELOG.md
+          $start = ($lines | Select-String -SimpleMatch "## [$version]" | Select-Object -First 1).LineNumber
+          if (-not $start) { throw "CHANGELOG.md has no entry for $version." }
+          $notes = @()
+          foreach ($line in $lines[$start..($lines.Count - 1)]) {
+            if ($line -like "## [*") { break }
+            $notes += $line
+          }
+          Set-Content -Path build\notes.md -Value $notes -Encoding utf8
 
       - name: Create release
+        if: steps.version.outputs.publish == 'true'
         shell: powershell
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "${{ github.ref_name }}" build\penpane.exe build\penpane.exe.sha256 --title "PenPane ${{ github.ref_name }}" --generate-notes --verify-tag
+        run: gh release create "v${{ steps.version.outputs.version }}" build\PenPane.exe build\PenPane.exe.sha256 --title "PenPane v${{ steps.version.outputs.version }}" --notes-file build\notes.md --target "${{ github.sha }}"

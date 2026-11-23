@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later */
 #include <math.h>
+#include <stdint.h>
 #include <string.h>
 
 #include "shapes_ui.h"
@@ -10,6 +11,7 @@
 #define COLOR_GRIP_HOVER 0xFF9A9AA6u
 #define COLOR_DIVIDER 0xFF3F3F49u
 #define COLOR_TITLE 0xFF9C9CA8u
+#define COLOR_HEADER 0xFF2E2E37u
 #define COLOR_PRESSED 0xFF383750u
 #define COLOR_TRACK 0xFF3A3A44u
 #define COLOR_TRACK_HOVER 0xFF474752u
@@ -45,6 +47,22 @@ static Color with_alpha(Color color, unsigned alpha)
 }
 
 /**
+ * @brief Scales the brightness of a color, keeping its alpha.
+ * @param color Straight-alpha color.
+ * @param factor Multiplier for the red, green and blue channels.
+ * @return Adjusted color.
+ */
+static Color shade(Color color, float factor)
+{
+    Color result = color & 0xFF000000u;
+    for (int shift = 0; shift <= 16; shift += 8) {
+        float channel = (float)((color >> shift) & 0xFFu) * factor;
+        result |= (Color)(channel > 255.0f ? 255.0f : channel) << shift;
+    }
+    return result;
+}
+
+/**
  * @brief Draws one line of UI text inside a box.
  * @param canvas Target canvas.
  * @param text Text to draw.
@@ -60,6 +78,28 @@ static void draw_label(Canvas *canvas, const wchar_t *text, int size, const RECT
     int height;
     text_measure(TEXT_FONT_UI, text, size, &width, &height);
     int x = alignRight ? box->right - width : box->left;
+    int y = box->top + (box->bottom - box->top - height) / 2;
+    Mask mask;
+    if (text_make_mask(&mask, TEXT_FONT_UI, text, size, x, y)) {
+        mask_blend(canvas, &mask, color);
+        mask_destroy(&mask);
+    }
+}
+
+/**
+ * @brief Draws one line of UI text centered in a box.
+ * @param canvas Target canvas.
+ * @param text Text to draw.
+ * @param size Pixel size of the font.
+ * @param box Box the text is centered in.
+ * @param color Text color.
+ */
+static void draw_label_centered(Canvas *canvas, const wchar_t *text, int size, const RECT *box, Color color)
+{
+    int width;
+    int height;
+    text_measure(TEXT_FONT_UI, text, size, &width, &height);
+    int x = box->left + (box->right - box->left - width) / 2;
     int y = box->top + (box->bottom - box->top - height) / 2;
     Mask mask;
     if (text_make_mask(&mask, TEXT_FONT_UI, text, size, x, y)) {
@@ -199,6 +239,211 @@ static void paint_button(Canvas *canvas, const UiItem *item, const RECT *rect, I
 }
 
 /**
+ * @brief Paints a text button; selected buttons use the primary color.
+ * @param canvas Target canvas.
+ * @param item Button item.
+ * @param rect Button rectangle in canvas pixels.
+ * @param state Interaction state.
+ * @param scale Scale factor.
+ */
+static void paint_text_button(Canvas *canvas, const UiItem *item, const RECT *rect, ItemState state,
+                              float scale)
+{
+    float left = (float)rect->left;
+    float top = (float)rect->top;
+    float width = (float)(rect->right - rect->left);
+    float height = (float)(rect->bottom - rect->top);
+    float radius = (float)ui_px(scale, BUTTON_RADIUS);
+    Color text = COLOR_ICON;
+    if (item->selected) {
+        Color base = item->color ? item->color : COLOR_PRIMARY;
+        Color fill = state.pressed ? shade(base, 0.85f) : (state.hover ? shade(base, 1.12f) : base);
+        ui_fill_round_rect(canvas, left, top, width, height, radius, fill);
+        text = item->color ? 0xFFFFFFFFu : COLOR_KNOB_ON;
+    } else {
+        if (state.pressed) {
+            ui_fill_round_rect(canvas, left, top, width, height, radius, COLOR_PRESSED);
+        } else if (state.hover) {
+            ui_fill_round_rect(canvas, left, top, width, height, radius, COLOR_ISLAND_HOVER);
+        }
+        ui_stroke_round_rect(canvas, left + 0.5f, top + 0.5f, width - 1.0f, height - 1.0f, radius - 0.5f,
+                             1.0f, COLOR_DIVIDER);
+    }
+    draw_label_centered(canvas, item->text, ui_px(scale, TITLE_FONT_SIZE + 1), rect, text);
+}
+
+/**
+ * @brief Blends an opaque color over an opaque pixel of the canvas.
+ * @param canvas Target canvas.
+ * @param x Pixel x in canvas coordinates.
+ * @param y Pixel y in canvas coordinates.
+ * @param color Opaque source color.
+ * @param coverage 0 to 1 share of the source.
+ */
+static void blend_pixel(Canvas *canvas, int x, int y, Color color, float coverage)
+{
+    if (x < 0 || y < 0 || x >= canvas->width || y >= canvas->height || coverage <= 0.0f) {
+        return;
+    }
+    uint32_t *pixel = &canvas->pixels[(size_t)y * (size_t)canvas->width + (size_t)x];
+    uint32_t result = 0;
+    for (int shift = 0; shift <= 24; shift += 8) {
+        float source = shift == 24 ? 255.0f : (float)((color >> shift) & 0xFFu);
+        float below = (float)((*pixel >> shift) & 0xFFu);
+        result |= (uint32_t)lroundf(below + (source - below) * fminf(coverage, 1.0f)) << shift;
+    }
+    *pixel = result;
+}
+
+/**
+ * @brief Draws a handle ring (dark outline, light ring) around a point.
+ * @param canvas Target canvas.
+ * @param x Center x.
+ * @param y Center y.
+ * @param radius Outer radius of the light ring.
+ * @param fill Color shown inside the ring.
+ */
+static void draw_marker(Canvas *canvas, float x, float y, float radius, Color fill)
+{
+    ui_fill_circle(canvas, x, y, radius + 1.0f, 0x99000000u);
+    ui_fill_circle(canvas, x, y, radius, 0xFFFFFFFFu);
+    ui_fill_circle(canvas, x, y, radius - 2.0f, fill);
+}
+
+/**
+ * @brief Paints the color picker button: a rainbow ring around the current color.
+ * @param canvas Target canvas.
+ * @param item Picker item.
+ * @param rect Item rectangle in canvas pixels.
+ * @param state Interaction state.
+ * @param scale Scale factor.
+ */
+static void paint_picker(Canvas *canvas, const UiItem *item, const RECT *rect, ItemState state, float scale)
+{
+    float cx = (float)(rect->left + rect->right) * 0.5f;
+    float cy = (float)(rect->top + rect->bottom) * 0.5f;
+    float half = (float)ui_px(scale, SWATCH_SIZE) * 0.5f;
+    float radius = (float)ui_px(scale, SWATCH_RADIUS);
+    float rim = 4.0f * scale;
+    for (int y = rect->top; y < rect->bottom; y++) {
+        for (int x = rect->left; x < rect->right; x++) {
+            float dx = (float)x + 0.5f - cx;
+            float dy = (float)y + 0.5f - cy;
+            float qx = fabsf(dx) - (half - radius);
+            float qy = fabsf(dy) - (half - radius);
+            float outside = sqrtf(fmaxf(qx, 0.0f) * fmaxf(qx, 0.0f) + fmaxf(qy, 0.0f) * fmaxf(qy, 0.0f)) +
+                            fminf(fmaxf(qx, qy), 0.0f) - radius;
+            float coverage = fminf(fmaxf(0.5f - outside, 0.0f), 1.0f);
+            if (coverage > 0.0f) {
+                float hue = atan2f(dy, dx) / 6.2831853f;
+                blend_pixel(canvas, x, y, color_from_hsv(hue, 0.85f, 1.0f), coverage);
+            }
+        }
+    }
+    float inner = half - rim;
+    ui_fill_round_rect(canvas, cx - inner, cy - inner, 2.0f * inner, 2.0f * inner, fmaxf(radius - rim * 0.5f, 1.0f),
+                       item->color);
+    if (item->selected) {
+        draw_ring(canvas, rect, 2.0f * scale, COLOR_ACTIVE_BORDER, scale);
+    } else if (state.hover || state.pressed) {
+        draw_ring(canvas, rect, 1.0f * scale, COLOR_SWATCH_HOVER, scale);
+    }
+}
+
+/**
+ * @brief Paints the saturation and brightness square of the color picker.
+ * @param canvas Target canvas.
+ * @param item Square item; hue is in item->hue, saturation in value, brightness in value2.
+ * @param rect Item rectangle in canvas pixels.
+ * @param scale Scale factor.
+ */
+static void paint_sv(Canvas *canvas, const UiItem *item, const RECT *outer, float scale)
+{
+    int margin = ui_px(scale, UI_PICKER_MARGIN);
+    RECT inner = {outer->left + margin, outer->top + margin, outer->right - margin, outer->bottom - margin};
+    const RECT *rect = &inner;
+    int width = rect->right - rect->left;
+    int height = rect->bottom - rect->top;
+    for (int y = 0; y < height; y++) {
+        float brightness = 1.0f - (float)y / (float)(height - 1);
+        for (int x = 0; x < width; x++) {
+            Color color = color_from_hsv(item->hue, (float)x / (float)(width - 1), brightness);
+            blend_pixel(canvas, rect->left + x, rect->top + y, color, 1.0f);
+        }
+    }
+    ui_stroke_round_rect(canvas, (float)rect->left + 0.5f, (float)rect->top + 0.5f, (float)width - 1.0f,
+                         (float)height - 1.0f, 0.0f, 1.0f, COLOR_SWATCH_BORDER);
+    float x = (float)rect->left + item->value * (float)(width - 1) + 0.5f;
+    float y = (float)rect->top + (1.0f - item->value2) * (float)(height - 1) + 0.5f;
+    draw_marker(canvas, x, y, 7.0f * scale, color_from_hsv(item->hue, item->value, item->value2));
+}
+
+/**
+ * @brief Paints the hue strip of the color picker.
+ * @param canvas Target canvas.
+ * @param item Strip item; the hue is in item->value.
+ * @param rect Item rectangle in canvas pixels.
+ * @param scale Scale factor.
+ */
+static void paint_hue(Canvas *canvas, const UiItem *item, const RECT *outer, float scale)
+{
+    int margin = ui_px(scale, UI_PICKER_MARGIN);
+    RECT inner = {outer->left + margin, outer->top + margin, outer->right - margin, outer->bottom - margin};
+    const RECT *rect = &inner;
+    int width = rect->right - rect->left;
+    for (int x = 0; x < width; x++) {
+        Color color = color_from_hsv((float)x / (float)(width - 1), 1.0f, 1.0f);
+        for (int y = rect->top; y < rect->bottom; y++) {
+            blend_pixel(canvas, rect->left + x, y, color, 1.0f);
+        }
+    }
+    float x = (float)rect->left + item->value * (float)(width - 1) + 0.5f;
+    draw_marker(canvas, x, (float)(rect->top + rect->bottom) * 0.5f, 8.0f * scale,
+                color_from_hsv(item->value, 1.0f, 1.0f));
+}
+
+/**
+ * @brief Paints the editable hex value field of the color picker.
+ * @param canvas Target canvas.
+ * @param item Field item; selected while it is being typed into.
+ * @param rect Item rectangle in canvas pixels.
+ * @param state Interaction state.
+ * @param scale Scale factor.
+ */
+static void paint_hex(Canvas *canvas, const UiItem *item, const RECT *rect, ItemState state, float scale)
+{
+    float left = (float)rect->left;
+    float top = (float)rect->top;
+    float width = (float)(rect->right - rect->left);
+    float height = (float)(rect->bottom - rect->top);
+    float radius = (float)ui_px(scale, BUTTON_RADIUS);
+    if (state.hover && !item->selected) {
+        ui_fill_round_rect(canvas, left, top, width, height, radius, COLOR_ISLAND_HOVER);
+    }
+    ui_stroke_round_rect(canvas, left + 0.5f, top + 0.5f, width - 1.0f, height - 1.0f, radius - 0.5f,
+                         item->selected ? 2.0f : 1.0f, item->selected ? COLOR_ACTIVE_BORDER : COLOR_DIVIDER);
+    RECT text = {rect->left + ui_px(scale, 10), rect->top, rect->right - ui_px(scale, 10), rect->bottom};
+    draw_label(canvas, item->text, ui_px(scale, 14), &text, false, COLOR_ICON);
+}
+
+/**
+ * @brief Paints the title band at the top of a dialog, rounded like the dialog body.
+ * @param canvas Target canvas.
+ * @param rect Band rectangle in canvas pixels.
+ * @param scale Scale factor.
+ */
+static void paint_band(Canvas *canvas, const RECT *rect, float scale)
+{
+    float radius = (float)ui_px(scale, (int)ISLAND_RADIUS);
+    float width = (float)(rect->right - rect->left);
+    float height = (float)(rect->bottom - rect->top);
+    ui_fill_round_rect(canvas, (float)rect->left, (float)rect->top, width, height + radius, radius,
+                       COLOR_HEADER);
+    RECT below = {rect->left, rect->bottom, rect->right, rect->bottom + (int)ceilf(radius)};
+    canvas_fill(canvas, &below, COLOR_ISLAND);
+}
+
+/**
  * @brief Paints the pressure toggle switch.
  * @param canvas Target canvas.
  * @param item Switch item.
@@ -273,7 +518,9 @@ void ui_paint_item(Canvas *canvas, int margin, const UiItem *item, ItemState sta
 {
     RECT rect = {item->rect.left + margin, item->rect.top + margin, item->rect.right + margin,
                  item->rect.bottom + margin};
-    canvas_fill(canvas, &rect, COLOR_ISLAND);
+    if (item->kind != ITEM_BAND) {
+        canvas_fill(canvas, &rect, item->onBand ? COLOR_HEADER : COLOR_ISLAND);
+    }
     switch (item->kind) {
     case ITEM_BUTTON:
         paint_button(canvas, item, &rect, state, scale);
@@ -287,8 +534,8 @@ void ui_paint_item(Canvas *canvas, int margin, const UiItem *item, ItemState sta
         canvas_fill(canvas, &rect, COLOR_DIVIDER);
         break;
     case ITEM_LABEL:
-        draw_label(canvas, item->text, ui_px(scale, TITLE_FONT_SIZE), &rect, item->alignRight,
-                   item->color ? item->color : COLOR_TITLE);
+        draw_label(canvas, item->text, ui_px(scale, item->value > 0.0f ? (int)item->value : TITLE_FONT_SIZE),
+                   &rect, item->alignRight, item->color ? item->color : COLOR_TITLE);
         break;
     case ITEM_SWATCH:
         draw_swatch(canvas, &rect, item->color, item->checker, scale);
@@ -306,6 +553,28 @@ void ui_paint_item(Canvas *canvas, int margin, const UiItem *item, ItemState sta
         break;
     case ITEM_SLIDER:
         paint_slider(canvas, item, &rect, state, scale);
+        break;
+    case ITEM_ICON:
+        icon_draw(canvas, item->icon, (float)(rect.left + rect.right) * 0.5f,
+                  (float)(rect.top + rect.bottom) * 0.5f, (float)ui_px(scale, ICON_SIZE), COLOR_ICON);
+        break;
+    case ITEM_TEXT_BUTTON:
+        paint_text_button(canvas, item, &rect, state, scale);
+        break;
+    case ITEM_PICKER:
+        paint_picker(canvas, item, &rect, state, scale);
+        break;
+    case ITEM_SV:
+        paint_sv(canvas, item, &rect, scale);
+        break;
+    case ITEM_HUE:
+        paint_hue(canvas, item, &rect, scale);
+        break;
+    case ITEM_HEX:
+        paint_hex(canvas, item, &rect, state, scale);
+        break;
+    case ITEM_BAND:
+        paint_band(canvas, &rect, scale);
         break;
     }
 }

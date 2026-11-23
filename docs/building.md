@@ -16,7 +16,7 @@ Installs llvm-mingw into `C:\tools`. The download is checked against a pinned SH
 powershell -ExecutionPolicy Bypass -File scripts\build.ps1
 ```
 
-Produces `build\penpane.exe` (about 121 KB, of which about 17 KB are the icon and version resources). Each source file is compiled on its own: `-Oz` by default, `-Os` for the rasterizer and `-O2` for the blend loop, with link-time optimization and unwind tables kept (note 0063). Add `-Debug` for an unoptimized build with symbols.
+Produces `build\PenPane.exe` (about 150 KB, of which about 17 KB are the icon and version resources). Each source file is compiled on its own: `-Oz` by default, `-Os` for the rasterizer and `-O2` for the blend loop, with link-time optimization and unwind tables kept (note 0063). Add `-Debug` for an unoptimized build with symbols.
 
 The icon and the version information come from `res\penpane.rc`, compiled with `llvm-windres` and linked into the executable. The version lives in `src\version.h`; change it there only. `res\penpane.ico` is produced by `scripts\make-icon.ps1` (a pen nib on a pane, five sizes stored as PNG), so the icon is reproducible and needs no external tool.
 

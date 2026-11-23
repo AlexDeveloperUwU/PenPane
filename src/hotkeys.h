@@ -106,6 +106,12 @@ bool hotkeys_handle_message(Hotkeys *hotkeys, UINT message, WPARAM wparam, LPARA
 bool hotkeys_learn_begin(Hotkeys *hotkeys, Action action);
 
 /**
+ * @brief Releases every keyboard hotkey so the keys reach other programs; hotkeys_apply registers them again.
+ * @param hotkeys Instance.
+ */
+void hotkeys_suspend(Hotkeys *hotkeys);
+
+/**
  * @brief Cancels learn mode if it is running; the learn handler is called with LEARN_CANCELLED.
  * @param hotkeys Instance.
  */

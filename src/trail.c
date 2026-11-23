@@ -14,6 +14,7 @@
 #define TRAIL_ERASER_TAPER_LENGTH 10.0f
 #define TRAIL_LASER_STREAMLINE 0.4f
 #define TRAIL_ERASER_STREAMLINE 0.2f
+#define TRAIL_RELEASE_SPAN_MS 400u
 
 void trail_init(Trail *trail, float maxRadius, uint32_t lifetimeMs, Color color, bool laser)
 {
@@ -41,18 +42,28 @@ static int trail_index(const Trail *trail, int n)
 void trail_add(Trail *trail, Point position, uint32_t nowMs)
 {
     trail->raw = position;
-    if (trail->count == 0) {
+    bool start = trail->fresh || trail->count == 0;
+    if (start) {
         trail->smoothed = position;
+        trail->fresh = false;
     } else {
         trail->smoothed.x += (position.x - trail->smoothed.x) * trail->smoothing;
         trail->smoothed.y += (position.y - trail->smoothed.y) * trail->smoothing;
     }
-    trail->points[trail->head].position = trail->smoothed;
-    trail->points[trail->head].timeMs = nowMs;
+    TrailPoint *slot = &trail->points[trail->head];
+    memset(slot, 0, sizeof *slot);
+    slot->position = trail->smoothed;
+    slot->timeMs = nowMs;
+    slot->start = start;
     trail->head = (trail->head + 1) % TRAIL_CAPACITY;
     if (trail->count < TRAIL_CAPACITY) {
         trail->count++;
     }
+}
+
+void trail_begin(Trail *trail)
+{
+    trail->fresh = true;
 }
 
 void trail_settle(Trail *trail, uint32_t nowMs)
@@ -126,6 +137,42 @@ static float width_factor(const Trail *trail, uint32_t ageMs, float distanceToHe
     return fminf(life, ease_out(taper));
 }
 
+void trail_release(Trail *trail)
+{
+    if (trail->count == 0) {
+        return;
+    }
+    int first = trail->count - 1;
+    while (first > 0 && !trail->points[trail_index(trail, first)].start) {
+        first--;
+    }
+    int count = trail->count - first;
+    uint32_t newest = trail->points[trail_index(trail, trail->count - 1)].timeMs;
+    uint32_t span = newest - trail->points[trail_index(trail, first)].timeMs;
+    if (count < 2 && span == 0) {
+        return;
+    }
+    if (span >= TRAIL_RELEASE_SPAN_MS) {
+        return;
+    }
+    float length = 0.0f;
+    for (int i = first + 1; i < trail->count; i++) {
+        Point a = trail->points[trail_index(trail, i - 1)].position;
+        Point b = trail->points[trail_index(trail, i)].position;
+        length += hypotf(b.x - a.x, b.y - a.y);
+    }
+    float travelled = 0.0f;
+    for (int i = first; i < trail->count; i++) {
+        TrailPoint *point = &trail->points[trail_index(trail, i)];
+        if (i > first) {
+            Point a = trail->points[trail_index(trail, i - 1)].position;
+            travelled += hypotf(point->position.x - a.x, point->position.y - a.y);
+        }
+        float fraction = length > 1.0f ? travelled / length : (float)(i - first) / (float)(count - 1);
+        point->timeMs = newest - (uint32_t)((float)TRAIL_RELEASE_SPAN_MS * (1.0f - fraction));
+    }
+}
+
 RECT laser_dot_bounds(Point center)
 {
     FloatRect box = {center.x, center.y, center.x, center.y};
@@ -172,7 +219,11 @@ void trail_render(const Trail *trail, Canvas *canvas, const RECT *clip, uint32_t
         const TrailPoint *older = &trail->points[trail_index(trail, i)];
         float distance = (float)(newest->timeMs - older->timeMs) / TRAIL_FRAME_MS;
         float radiusOlder = trail->maxRadius * width_factor(trail, nowMs - older->timeMs, distance);
-        mask_add_capsule(&mask, older->position, newer->position, radiusOlder, radiusNewer);
+        if (newer->start) {
+            mask_add_capsule(&mask, newer->position, newer->position, radiusNewer, radiusNewer);
+        } else {
+            mask_add_capsule(&mask, older->position, newer->position, radiusOlder, radiusNewer);
+        }
         newer = older;
         radiusNewer = radiusOlder;
     }

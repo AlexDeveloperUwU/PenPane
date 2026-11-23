@@ -9,7 +9,7 @@ The application reads one plain-text file. Every key is optional: a missing key 
 - UTF-8 with or without a byte-order mark, and LF or CRLF line endings, are accepted. Only ASCII is meaningful.
 - Booleans accept `true`/`false`, `yes`/`no`, `on`/`off`, `1`/`0`.
 - A value outside the documented range invalidates the line; the previous (default) value is kept.
-- A file that does not exist is created with the defaults, except that an `ink.ini` next to the executable (the file name of the former product name) is copied to `penpane.ini` once and then read (note 0092). A file that exists but cannot be read, for example because another program has it locked, is left exactly as it is: the application keeps the settings it already has, shows a notice, and does not save anything until a reload reads the file successfully.
+- A file that does not exist is created with the defaults, except that an `ink.ini` next to the executable (the file name of the former product name) is copied to `PenPane.ini` once and then read (note 0092). A file that exists but cannot be read, for example because another program has it locked, is left exactly as it is: the application keeps the settings it already has, shows a notice, and does not save anything until a reload reads the file successfully.
 
 ## Settings
 
@@ -17,8 +17,13 @@ The application reads one plain-text file. Every key is optional: a missing key 
 |---|---|---|---|
 | `double_press_ms` | `300` | 50 to 2000 | Maximum gap between the two presses of a double gesture. Also the delay added to a single gesture on keys that have a double binding. |
 | `long_press_ms` | `600` | 200 to 5000 | How long a key or button must stay down for a long gesture. |
-| `default_tool` | `pen` | `select`, `rectangle`, `ellipse`, `arrow`, `line`, `pen`, `laser`, `text`, `eraser` | Tool active when the overlay starts. |
+| `default_tool` | `select` | `select`, `rectangle`, `ellipse`, `diamond`, `arrow`, `line`, `pen`, `laser`, `text`, `eraser` | Tool active when the application starts. The default is the select tool, so nothing is drawn by accident. |
+| `hidden_tools` | empty | comma separated tool names | Tools left out of the toolbar. Their shortcuts still work. At least one tool must stay visible. The settings window writes this line for you. |
+| `tool_order` | `select, pen, eraser, text, rectangle, ellipse, diamond, arrow, line, laser` | comma separated tool names | Order of the tool buttons in the toolbar. Tools you leave out follow the listed ones in the default order; unknown or repeated names reject the whole line. The number keys follow this order: `1` is the first visible tool, `2` the second, and so on up to `0` for the tenth. The letter shortcuts do not change. |
 | `default_stroke_index` | `0` | 0 to 4 | Index of the stroke color preset used at start. |
+| `palette_pastel` | `false` | boolean | Show a second row of pastel stroke colors in the properties panel. The settings window has the same switch. |
+| `debug_log` | `false` | boolean | Write `PenPane.log` next to the executable: one timestamped line per start-up, configuration result, mode change, window failure, display, lock or resume event, tray notice and crash. No pointer movement, drawings or typed text. Capped at 1 MB with the older file kept as `PenPane.log.1`. The settings window has the same switch. |
+| `custom_color` | none | `#RRGGBB` | Adds one swatch to a "custom" row under the stroke colors. Repeat the line for more, up to 18 (extra lines are skipped). The leading `#` is optional. |
 | `default_fill_index` | `0` | 0 to 4 | Index of the background preset used at start; 0 is transparent. |
 | `default_width_index` | `1` | 0 to 2 | Index of the stroke width preset used at start: 0 thin, 1 medium, 2 bold. |
 | `auto_fade_seconds` | `0` | 0 to 3600 | Seconds after which finished strokes fade out. 0 keeps strokes until cleared. |
@@ -100,7 +105,7 @@ Because a `double` binding makes the single action wait for the window to expire
 
 ### Actions
 
-`toggle_overlay`, `toggle_mode`, `tool_select`, `tool_rectangle`, `tool_ellipse`, `tool_arrow`, `tool_line`, `tool_pen`, `tool_laser`, `tool_text`, `tool_eraser`, `next_tool`, `previous_tool`, `cycle_color`, `cycle_width`, `undo`, `redo`, `clear`, `toggle_laser`, `toggle_tool_lock`, `copy_png`, `save_png`, `emergency_exit`.
+`toggle_overlay`, `toggle_mode`, `tool_select`, `tool_rectangle`, `tool_ellipse`, `tool_arrow`, `tool_line`, `tool_pen`, `tool_laser`, `tool_text`, `tool_eraser`, `tool_diamond`, `next_tool`, `previous_tool`, `cycle_color`, `cycle_width`, `undo`, `redo`, `clear`, `toggle_laser`, `toggle_tool_lock`, `copy_png`, `save_png`, `toggle_drawings`, `ask_clear`, `open_settings`, `emergency_exit`.
 
 Names are case-insensitive.
 
@@ -122,7 +127,7 @@ Keys that type text cannot be learned or bound on their own (see Triggers); lear
 Pen barrel buttons are not keys, so the tablet driver has to turn them into keystrokes. The recommended mapping is two unused function keys that no other program uses:
 
 1. Open the XP-Pen driver and select your pen or tablet.
-2. In the pen-button settings, set the lower barrel button to send the keyboard key `F13` and the upper barrel button to send `F14`. If the driver's key box does not accept `F13` or `F14`, assign any other unused function key (for example `F15`, `F16`) and learn it with learn mode instead.
+2. In the pen-button settings, set the lower barrel button to send the keyboard key `F13` and the upper barrel button to send `F14`. Most keyboards have no F13 to F24 keys, so the driver's key box cannot record them by typing. PenPane can type them for you: open the settings window, turn drawing off in the toolbar (the settings window stays open), click the key box in the driver, then click **F13** under "Pen buttons" in the PenPane settings. The settings window never takes the keyboard focus, so the key lands in the driver's box. PenPane releases its own hotkeys for a moment so the key is not taken by its own binding. This does not work when the driver runs as administrator and PenPane does not. Otherwise assign a combination you can type, such as `Ctrl+Alt+Shift+F9`, and learn it with learn mode instead.
 3. Leave the buttons in the driver's plain "keyboard key" mode, not a macro or an application shortcut that adds modifiers.
 4. Start this application. The default bindings then give you: button 1 tap undo, button 1 double tap toggle overlay, button 2 tap next tool, button 2 double tap toggle mode, button 2 hold clear.
 
@@ -133,7 +138,7 @@ Pen buttons usually send a press and release in quick succession. Long gestures 
 ```
 double_press_ms = 280
 long_press_ms = 650
-default_tool = pen
+default_tool = select
 default_stroke_index = 0
 default_width_index = 1
 auto_fade_seconds = 0

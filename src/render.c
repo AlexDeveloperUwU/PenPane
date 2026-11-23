@@ -316,8 +316,36 @@ static void render_line(Canvas *canvas, const Element *element, RECT area)
     Point points[2] = {element->from, element->to};
     stroke_path(&mask, points, 2, &element->style);
     if (element->type == ELEMENT_ARROW) {
-        add_arrowhead(&mask, element->from, element->to, visible_width(element->style.width));
+        float width = visible_width(element->style.width);
+        add_arrowhead(&mask, element->from, element->to, width);
+        if (element->style.arrowHeads == ARROW_HEAD_BOTH) {
+            add_arrowhead(&mask, element->to, element->from, width);
+        }
     }
+    mask_blend(canvas, &mask, with_opacity(element->style.stroke, element));
+}
+
+/**
+ * @brief Renders a diamond element: the four edge midpoints of its box joined by straight lines.
+ * @param canvas Target canvas.
+ * @param element Diamond element.
+ * @param area Pixel work area.
+ */
+static void render_diamond(Canvas *canvas, const Element *element, RECT area)
+{
+    FloatRect box = element_box(element);
+    float cx = (box.left + box.right) * 0.5f;
+    float cy = (box.top + box.bottom) * 0.5f;
+    Point points[5] = {{cx, box.top}, {box.right, cy}, {cx, box.bottom}, {box.left, cy}, {cx, box.top}};
+    Mask mask;
+    if (element_is_filled(element) && mask_scratch_acquire(&mask, area)) {
+        mask_add_polygon_fill(&mask, points, 4);
+        mask_blend(canvas, &mask, with_opacity(element->style.fill, element));
+    }
+    if (!mask_scratch_acquire(&mask, area)) {
+        return;
+    }
+    stroke_path(&mask, points, 5, &element->style);
     mask_blend(canvas, &mask, with_opacity(element->style.stroke, element));
 }
 
@@ -376,6 +404,9 @@ void render_element(Canvas *canvas, const Element *element, const RECT *clip)
         break;
     case ELEMENT_ELLIPSE:
         render_ellipse(canvas, element, area);
+        break;
+    case ELEMENT_DIAMOND:
+        render_diamond(canvas, element, area);
         break;
     case ELEMENT_ARROW:
     case ELEMENT_LINE:

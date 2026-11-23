@@ -108,14 +108,14 @@ static void test_defaults(void)
     Action action;
     config_defaults(&config);
     assert(config.doubleWindowMs == 300 && config.longPressMs == 600);
-    assert(config.defaultTool == TOOL_PEN);
+    assert(config.defaultTool == TOOL_SELECT);
     assert(config.defaultStrokeIndex == 0 && config.defaultFillIndex == 0 && config.defaultWidthIndex == 1);
     assert(config.autoFadeSeconds == 0 && config.drawMonitor == 0 && config.uiMonitor == 0);
     assert(config.toolLock);
     assert(config.ui.autoHide && config.ui.autoHideMs == 1200 && config.ui.excludeFromCapture);
     for (int i = 0; i < PANEL_COUNT; i++) {
         assert(!config.ui.placement[i].set);
-        assert(!config.ui.pinned[i]);
+        assert(config.ui.pinned[i]);
     }
     assert(config.bindingCount == 5);
     assert(find_binding(&config, key(VK_F13, 0), GESTURE_SINGLE, &action) && action == ACTION_UNDO);
@@ -161,6 +161,80 @@ static void test_round_trip(void)
     DeleteFileW(path);
 }
 
+/** @brief tool_order loads partial lists, rejects bad ones, and survives a save and load. */
+static void test_tool_order(void)
+{
+    wchar_t path[MAX_PATH];
+    wchar_t errors[256];
+    Config config;
+    scratch_path(L"penpane_test_order.cfg", path, MAX_PATH);
+    write_text(path, "tool_order = Laser, pen\n");
+    assert(config_load(&config, path, errors, 256) == CONFIG_LOADED);
+    assert(config.toolOrder[0] == TOOL_LASER && config.toolOrder[1] == TOOL_PEN);
+    assert(tool_order_valid(config.toolOrder));
+    assert(config.toolOrder[2] == TOOL_SELECT);
+    write_text(path, "tool_order = pen, pen\n");
+    assert(config_load(&config, path, errors, 256) == CONFIG_LOADED);
+    assert(errors[0] != L'\0');
+    Tool defaults[TOOL_COUNT];
+    tool_order_default(defaults);
+    assert(memcmp(config.toolOrder, defaults, sizeof defaults) == 0);
+    write_text(path, "tool_order = hexagon\n");
+    assert(config_load(&config, path, errors, 256) == CONFIG_LOADED);
+    assert(memcmp(config.toolOrder, defaults, sizeof defaults) == 0);
+    write_text(path, "hidden_tools = laser, Text\n");
+    assert(config_load(&config, path, errors, 256) == CONFIG_LOADED);
+    assert(config.hiddenTools == ((1u << TOOL_LASER) | (1u << TOOL_TEXT)));
+    write_text(path, "hidden_tools = select, rectangle, ellipse, arrow, line, pen, laser, text, eraser, diamond\n");
+    assert(config_load(&config, path, errors, 256) == CONFIG_LOADED);
+    assert(config.hiddenTools == 0 && errors[0] != L'\0');
+    write_text(path, "hidden_tools =\n");
+    assert(config_load(&config, path, errors, 256) == CONFIG_LOADED);
+    assert(config.hiddenTools == 0);
+    Tool slot;
+    Tool order[TOOL_COUNT];
+    tool_order_default(order);
+    assert(tool_at_slot(order, 0, 0, &slot) && slot == TOOL_SELECT);
+    assert(tool_at_slot(order, 0, 9, &slot) && slot == TOOL_LASER);
+    assert(tool_at_slot(order, 1u << TOOL_PEN, 1, &slot) && slot == TOOL_ERASER);
+    assert(!tool_at_slot(order, 1u << TOOL_PEN, 9, &slot));
+    DeleteFileW(path);
+}
+
+/** @brief Custom colors and the pastel switch load, reject bad values, survive a save, and HSV round-trips. */
+static void test_custom_colors(void)
+{
+    wchar_t path[MAX_PATH];
+    wchar_t errors[256];
+    Config config;
+    Config loaded;
+    scratch_path(L"penpane_test_colors.cfg", path, MAX_PATH);
+    write_text(path, "palette_pastel = on\ncustom_color = #e63946\ncustom_color = 2A9D8F\ncustom_color = #12\ncustom_color = #GG0000\n");
+    assert(config_load(&config, path, errors, 256) == CONFIG_LOADED);
+    assert(config.palettePastel && config.customCount == 2);
+    assert(config.customColors[0] == 0xFFE63946u && config.customColors[1] == 0xFF2A9D8Fu);
+    assert(errors[0] != L'\0');
+    assert(config_save(&config, path));
+    assert(config_load(&loaded, path, NULL, 0) == CONFIG_LOADED);
+    assert(loaded.palettePastel && loaded.customCount == 2 && loaded.customColors[0] == 0xFFE63946u);
+    char many[1024] = "";
+    for (int i = 0; i < CUSTOM_COLOR_MAX + 2; i++) {
+        strcat(many, "custom_color = #102030\n");
+    }
+    write_text(path, many);
+    assert(config_load(&config, path, errors, 256) == CONFIG_LOADED);
+    assert(config.customCount == CUSTOM_COLOR_MAX && errors[0] != L'\0');
+    DeleteFileW(path);
+    for (unsigned rgb = 0; rgb < 0x1000000u; rgb += 0x010305u) {
+        Color color = 0xFF000000u | rgb;
+        float hue;
+        float saturation;
+        float value;
+        color_to_hsv(color, &hue, &saturation, &value);
+        assert(color_from_hsv(hue, saturation, value) == color);
+    }
+}
+
 /** @brief Pin keys load, a reload replaces earlier values, and malformed values are rejected. */
 static void test_pinned_keys(void)
 {
@@ -168,15 +242,15 @@ static void test_pinned_keys(void)
     wchar_t errors[256];
     Config config;
     scratch_path(L"penpane_test_pinned.cfg", path, MAX_PATH);
-    write_text(path, "toolbar_pinned = true\nproperties_pinned = 1\nhistory_pinned = maybe\n");
-    assert(config_load(&config, path, errors, 256) == CONFIG_LOADED);
-    assert(config.ui.pinned[PANEL_TOOLBAR] && config.ui.pinned[PANEL_PROPERTIES]);
-    assert(!config.ui.pinned[PANEL_HISTORY]);
-    assert(errors[0] != L'\0');
-    write_text(path, "history_pinned = yes\n");
+    write_text(path, "toolbar_pinned = false\nproperties_pinned = 0\nhistory_pinned = maybe\n");
     assert(config_load(&config, path, errors, 256) == CONFIG_LOADED);
     assert(!config.ui.pinned[PANEL_TOOLBAR] && !config.ui.pinned[PANEL_PROPERTIES]);
     assert(config.ui.pinned[PANEL_HISTORY]);
+    assert(errors[0] != L'\0');
+    write_text(path, "history_pinned = no\n");
+    assert(config_load(&config, path, errors, 256) == CONFIG_LOADED);
+    assert(config.ui.pinned[PANEL_TOOLBAR] && config.ui.pinned[PANEL_PROPERTIES]);
+    assert(!config.ui.pinned[PANEL_HISTORY]);
     DeleteFileW(path);
 }
 
@@ -612,6 +686,8 @@ int main(void)
     test_defaults();
     test_round_trip();
     test_pinned_keys();
+    test_tool_order();
+    test_custom_colors();
     test_save_replaces_file();
     test_missing_file();
     test_bad_lines_skipped();
@@ -624,6 +700,6 @@ int main(void)
     test_trigger_parsing();
     test_trigger_to_text_truncation();
     test_legacy_migration();
-    printf("test_config: 18 tests passed\n");
+    printf("test_config: 19 tests passed\n");
     return 0;
 }

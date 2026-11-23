@@ -20,6 +20,7 @@
     X(ACTION_TOOL_LASER, "tool_laser")                      \
     X(ACTION_TOOL_TEXT, "tool_text")                        \
     X(ACTION_TOOL_ERASER, "tool_eraser")                    \
+    X(ACTION_TOOL_DIAMOND, "tool_diamond")                  \
     X(ACTION_NEXT_TOOL, "next_tool")                        \
     X(ACTION_PREVIOUS_TOOL, "previous_tool")                \
     X(ACTION_CYCLE_COLOR, "cycle_color")                    \
@@ -31,6 +32,9 @@
     X(ACTION_TOGGLE_TOOL_LOCK, "toggle_tool_lock")          \
     X(ACTION_COPY_PNG, "copy_png")                          \
     X(ACTION_SAVE_PNG, "save_png")                          \
+    X(ACTION_TOGGLE_DRAWINGS, "toggle_drawings")            \
+    X(ACTION_ASK_CLEAR, "ask_clear")                        \
+    X(ACTION_OPEN_SETTINGS, "open_settings")                \
     X(ACTION_EMERGENCY_EXIT, "emergency_exit")
 
 /** @brief Every bindable action. */

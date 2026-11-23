@@ -1,6 +1,6 @@
 # User interface
 
-The UI is three small floating islands in the Excalidraw dark style, plus a notification-area icon. Colors, sizes and shortcuts come from `docs/excalidraw-reference.md` and `src/theme.h`. The public interface is `src/ui.h` and `src/tray.h`; everything else is private to the module.
+The UI is three small floating islands in the Excalidraw dark style, three independent dialog windows (settings, "Clear canvas" confirmation, color picker; `PANEL_SETTINGS`, `PANEL_CONFIRM`, `PANEL_COLOR`, opened and closed separately through the `UiModel.dialogs` bitmask) and a notification-area icon. Dialogs have a tinted title band with the close button and a rule below it, are centered on the tools screen and cascade slightly so they do not hide each other. Colors, sizes and shortcuts come from `docs/excalidraw-reference.md` and `src/theme.h`. The public interface is `src/ui.h` and `src/tray.h`; everything else is private to the module.
 
 ## Files
 
@@ -22,9 +22,11 @@ All metrics are at 100 percent and multiplied by one scale factor read in `islan
 - Island: background `#232329`, radius 8, padding 4, soft three-layer shadow in a 20 px margin around the content.
 - Buttons: 36 px, 16 px icons, radius 8, hover `#2e2d39`, pressed slightly lighter, selected `#403e6a` with icon `#e0dfff`, disabled icons at 30 percent. Keybinding hints are 10 px in `#7a7a7a` at the bottom right.
 - Pin button: the second element of every island, right after the grip. Unpinned it is a thin outlined push pin tilted by 45 degrees (`ICON_PIN_OFF`); pinned it is an upright solid pin on the selected button background (`ICON_PIN`).
-- Toolbar, left to right: drag grip, pin, divider, tool lock (`Q`), divider, nine tools in `tool.h` order with hints `1 2 4 5 6 7 K 8 0`, divider, desktop or whiteboard mode, drawing on or off, emergency exit.
-- Properties panel (width 211, padding 12) starts with a header row of grip and pin, then the sections chosen by `UiModel.sections`: Stroke (five presets, divider, current color), Background (five presets, the first drawn as a checkerboard), Stroke width and Stroke style (three buttons each), Pressure (switch), Opacity (slider 0 to 100 in steps of 10 with a value label). A selected preset gets a 2 px ring in `#d0ccff`.
-- History panel: grip, pin, divider, undo, redo; disabled buttons do not react to hover or clicks.
+- Toolbar, left to right: drag grip, pin, divider, drawing on or off, divider, tool lock (`Q`), divider, the visible tools in the configured order (`tool_order`, `hidden_tools`) with hints `1` to `9` and `0` by place, which are also the number keys (`tool_at_slot`), divider, settings, emergency exit. The desktop or whiteboard mode button lives in the history island.
+- Properties panel (width 211, padding 12) starts with a header row of grip and pin, then the sections chosen by `UiModel.sections`: Stroke (five presets, divider, the rainbow-ringed picker button, then the optional pastel row and the custom rows), Background (five presets, the first drawn as a checkerboard), Stroke width (three width buttons, plus a fourth, variable, that follows pen pressure for pen strokes) and Stroke style (three buttons), Arrowheads (one head or two; arrows only), Opacity (slider 0 to 100 in steps of 10 with a value label). A selected preset gets a 2 px ring in `#d0ccff`.
+- History panel: grip, pin, divider, undo, redo, divider, copy, save, divider, desktop or whiteboard mode, eye (desktop mode only), trash; disabled buttons do not react to hover or clicks.
+- Color picker dialog: brightness square and hue strip (both drag while the button is held, also outside the window, because the island keeps the mouse capture) and a hex field. Clicking the field lets the dialog take the keyboard focus for a moment; digits, Backspace, Ctrl+V, Enter and Esc are handled in `island_hex_char`, and focus goes back to the overlay afterwards (`UI_EVENT_EDIT_END`).
+- Settings dialog tabs (`UI_EVENT_SETTINGS_TAB`, one tab shown at a time and the dialog keeps one height so it does not jump): General (switches and the two reset buttons), Toolbar (order and visibility), Shortcuts (one extra shortcut per tool: `UI_EVENT_TOOL_SHORTCUT` starts learn mode for the tool's `tool_*` action and replaces its bindings, `UI_EVENT_TOOL_SHORTCUT_KEY` binds F13 to F18 as a single press without pressing it, `UI_EVENT_TOOL_SHORTCUT_CLEAR` removes them), Pen keys (`UI_EVENT_SEND_KEY` types F13 to F16 into the focused window).
 
 ## Behavior
 
@@ -66,12 +68,11 @@ A runtime-generated pen glyph (32-bit ARGB icon created with `CreateIconIndirect
 - Capture exclusion needs Windows 10 version 2004 or later.
 - The collapsed toolbar handle sits at the toolbar's left end, not at its center.
 - A handle near the right or bottom edge expands shifted, so the pointer can end up outside the island; an unpinned island then collapses after the delay.
-- The current-color swatch is display only; there is no color picker.
 - The native tray menu cannot be styled.
 
 ## Preview harness
 
-`tests/ui_preview.c` shows the islands over a dark background and applies their events to a local model. Options: `--tool N`, `--sections HEX`, `--autohide MS` (islands start as handles and open on click), `--pin HEX` (bit 0 toolbar, 1 properties, 2 history), `--idle`, `--lock`, `--whiteboard`, `--noundo`, `--demo`, `--exclude`, `--quit MS`. Build:
+`tests/ui_preview.c` shows the islands over a dark background and applies their events to a local model. Options: `--tool N`, `--sections HEX`, `--autohide MS` (islands start as handles and open on click), `--pin HEX` (bit 0 toolbar, 1 properties, 2 history), `--idle`, `--lock`, `--whiteboard`, `--noundo`, `--demo`, `--exclude`, `--quit MS`, `--dialog settings|confirm|color` (repeatable), `--pastel`, `--custom N`, `--hidden HEX`, `--hide-drawings`. Compiled with `-DPENPANE_UI_DUMP`, `--dump FILE.bmp` writes all shown islands, composited, to a bitmap without needing a visible screen, and `--test-drag` first presses, drags and releases on the color square and hue strip through `ui_test_drag`. Build:
 
     clang -std=c11 -municode -D_WIN32_WINNT=0x0A00 -mwindows -Isrc tests/ui_preview.c src/ui.c src/ui_layout.c src/ui_paint.c src/icons.c src/shapes_ui.c src/text.c src/raster.c src/canvas.c src/style.c src/tool.c -o build/ui_preview.exe -luser32 -lgdi32 -lshell32
 

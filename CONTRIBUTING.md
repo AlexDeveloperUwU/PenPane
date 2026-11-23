@@ -16,7 +16,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts\build.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts\test.ps1
 ```
 
-The build must produce `build\penpane.exe` without warnings and every test program must pass before you open a pull request. More in [docs/building.md](docs/building.md). When you change behavior, add or adjust a test in `tests/`; the model, gesture, configuration, pen and hit-testing code is independent of Windows state and is meant to be tested.
+The build must produce `build\PenPane.exe` without warnings and every test program must pass before you open a pull request. More in [docs/building.md](docs/building.md). When you change behavior, add or adjust a test in `tests/`; the model, gesture, configuration, pen and hit-testing code is independent of Windows state and is meant to be tested.
 
 ## Code style
 

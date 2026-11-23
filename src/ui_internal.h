@@ -14,12 +14,14 @@
 #include "icons.h"
 #include "ui.h"
 
-#define UI_MAX_ITEMS 64
-#define UI_ITEM_TEXT_CHARS 16
+#define UI_MAX_ITEMS 96
+#define UI_ITEM_TEXT_CHARS 48
 #define UI_SHADOW_MARGIN 20
 #define UI_HANDLE_SIZE 28
 #define UI_DRAG_STRIP 24
 #define UI_SLIDER_STEPS 10
+/** @brief Room around the color square and hue strip so their markers repaint cleanly. */
+#define UI_PICKER_MARGIN 9
 
 /** @brief Kinds of visual elements inside an island. */
 typedef enum ItemKind {
@@ -30,7 +32,14 @@ typedef enum ItemKind {
     ITEM_LABEL,
     ITEM_GRIP,
     ITEM_SWITCH,
-    ITEM_SLIDER
+    ITEM_SLIDER,
+    ITEM_ICON,
+    ITEM_TEXT_BUTTON,
+    ITEM_PICKER,
+    ITEM_SV,
+    ITEM_HUE,
+    ITEM_HEX,
+    ITEM_BAND
 } ItemKind;
 
 /** @brief One element of an island with its geometry, look and the event it produces. */
@@ -44,7 +53,10 @@ typedef struct UiItem {
     bool enabled;
     bool checker;
     bool alignRight;
+    bool onBand;
     float value;
+    float value2;
+    float hue;
     wchar_t text[UI_ITEM_TEXT_CHARS];
     UiEvent event;
 } UiItem;
@@ -106,6 +118,24 @@ int ui_layout_hit(const UiLayout *layout, int x, int y);
  * @return Value from 0 to 1 in steps of one tenth.
  */
 float ui_slider_value_at(const UiItem *item, int x, float scale);
+
+/**
+ * @brief Tells whether an item is changed by dragging (slider, color square, hue strip).
+ * @param item Item to test.
+ * @return true for draggable items.
+ */
+bool ui_item_draggable(const UiItem *item);
+
+/**
+ * @brief Converts a pointer position to the values of a draggable item.
+ * @param item Draggable item.
+ * @param x Pointer x relative to the island content.
+ * @param y Pointer y relative to the island content.
+ * @param scale Scale factor.
+ * @param first Receives the slider value, the hue, or the saturation.
+ * @param second Receives the brightness of a color square; 0 for the other kinds.
+ */
+void ui_item_drag_values(const UiItem *item, int x, int y, float scale, float *first, float *second);
 
 /**
  * @brief Paints shadow and body of an island of the given content size onto a cleared canvas.

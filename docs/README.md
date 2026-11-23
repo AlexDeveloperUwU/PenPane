@@ -4,7 +4,7 @@
 |---|---|
 | [overview.md](overview.md) | What PenPane is and is not |
 | [usage.md](usage.md) | Starting, modes, tools, pen buttons, second screen, copy as PNG |
-| [configuration.md](configuration.md) | The `penpane.ini` file, every setting, bindings, gestures, triggers and actions |
+| [configuration.md](configuration.md) | The `PenPane.ini` file, every setting, bindings, gestures, triggers and actions |
 | [building.md](building.md) | Toolchain, build, tests, previews, icon, API documentation, measuring, emergency exit |
 | [architecture.md](architecture.md) | Modules, data flow, states, threads and timers, memory |
 | [input-model.md](input-model.md) | Click-through, capture and focus |

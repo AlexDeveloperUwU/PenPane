@@ -90,6 +90,21 @@ bool hit_element(const Element *element, Point point, float tolerance)
         }
         return distance <= reach;
     }
+    case ELEMENT_DIAMOND: {
+        float cx = (box.left + box.right) * 0.5f;
+        float cy = (box.top + box.bottom) * 0.5f;
+        Point top = {cx, box.top};
+        Point right = {box.right, cy};
+        Point bottom = {cx, box.bottom};
+        Point left = {box.left, cy};
+        if (element_is_filled(element) &&
+            fabsf(point.x - cx) / ((box.right - box.left) * 0.5f + 0.001f) +
+                    fabsf(point.y - cy) / ((box.bottom - box.top) * 0.5f + 0.001f) <= 1.0f) {
+            return true;
+        }
+        return segment_distance(point, top, right) <= reach || segment_distance(point, right, bottom) <= reach ||
+               segment_distance(point, bottom, left) <= reach || segment_distance(point, left, top) <= reach;
+    }
     case ELEMENT_ARROW:
     case ELEMENT_LINE:
         return segment_distance(point, element->from, element->to) <= reach;

@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 param(
     [string]$Toolchain = "C:\tools\llvm-mingw-20261117-ucrt-x86_64",
-    [string]$Output = "build\penpane.exe",
+    [string]$Output = "build\PenPane.exe",
     [switch]$Debug
 )
 $ErrorActionPreference = "Stop"

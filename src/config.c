@@ -501,6 +501,14 @@ static bool apply_setting(Config *config, const char *key, char *value, const ch
         config->longPressMs = number;
     } else if (strcasecmp(key, "default_tool") == 0) {
         return tool_from_name(value, &config->defaultTool);
+    } else if (strcasecmp(key, "tool_order") == 0) {
+        Tool order[TOOL_COUNT];
+        if (!tool_order_parse(value, order)) {
+            return false;
+        }
+        memcpy(config->toolOrder, order, sizeof order);
+    } else if (strcasecmp(key, "hidden_tools") == 0) {
+        return tool_mask_parse(value, &config->hiddenTools);
     } else if (strcasecmp(key, "default_stroke_index") == 0) {
         if (!parse_int(value, 0, STROKE_PALETTE_SIZE - 1, &number)) {
             return false;
@@ -541,6 +549,27 @@ static bool apply_setting(Config *config, const char *key, char *value, const ch
             return false;
         }
         config->laserPointer = flag;
+    } else if (strcasecmp(key, "palette_pastel") == 0) {
+        if (!parse_bool(value, &flag)) {
+            return false;
+        }
+        config->palettePastel = flag;
+    } else if (strcasecmp(key, "debug_log") == 0) {
+        if (!parse_bool(value, &flag)) {
+            return false;
+        }
+        config->debugLog = flag;
+    } else if (strcasecmp(key, "custom_color") == 0) {
+        Color color;
+        if (!color_parse_hex(value, &color)) {
+            *reason = "expected #RRGGBB";
+            return false;
+        }
+        if (config->customCount >= CUSTOM_COLOR_MAX) {
+            *reason = "too many custom colors";
+            return false;
+        }
+        config->customColors[config->customCount++] = color;
     } else if (strcasecmp(key, "ui_auto_hide") == 0) {
         if (!parse_bool(value, &flag)) {
             return false;
@@ -665,12 +694,17 @@ void config_defaults(Config *config)
     memset(config, 0, sizeof *config);
     config->doubleWindowMs = 300;
     config->longPressMs = 600;
-    config->defaultTool = TOOL_PEN;
+    config->defaultTool = TOOL_SELECT;
+    tool_order_default(config->toolOrder);
+    config->hiddenTools = 0;
     config->defaultWidthIndex = 1;
     config->toolLock = true;
     config->laserPointer = false;
     config->ui.autoHide = true;
     config->ui.autoHideMs = 1200;
+    for (int i = 0; i < PANEL_COUNT; i++) {
+        config->ui.pinned[i] = true;
+    }
     config->ui.excludeFromCapture = true;
     const Binding defaults[] = {
         {{TRIGGER_KEY, VK_F13, 0}, GESTURE_SINGLE, ACTION_UNDO},
@@ -738,6 +772,22 @@ static void format_config(const Config *config, TextBuffer *out)
     out_text(out, "default_tool = ");
     out_text(out, tool_name(config->defaultTool));
     out_text(out, "\n");
+    out_text(out, "tool_order = ");
+    for (int i = 0; i < TOOL_COUNT; i++) {
+        out_text(out, i > 0 ? ", " : "");
+        out_text(out, tool_name(config->toolOrder[i]));
+    }
+    out_text(out, "\n");
+    out_text(out, "hidden_tools = ");
+    bool firstHidden = true;
+    for (int i = 0; i < TOOL_COUNT; i++) {
+        if ((config->hiddenTools & (1u << i)) != 0) {
+            out_text(out, firstHidden ? "" : ", ");
+            out_text(out, tool_name((Tool)i));
+            firstHidden = false;
+        }
+    }
+    out_text(out, "\n");
     out_setting_int(out, "default_stroke_index", config->defaultStrokeIndex);
     out_setting_int(out, "default_fill_index", config->defaultFillIndex);
     out_setting_int(out, "default_width_index", config->defaultWidthIndex);
@@ -746,6 +796,20 @@ static void format_config(const Config *config, TextBuffer *out)
     out_setting_int(out, "ui_monitor", config->uiMonitor);
     out_setting_bool(out, "tool_lock", config->toolLock);
     out_setting_bool(out, "laser_pointer", config->laserPointer);
+    out_setting_bool(out, "palette_pastel", config->palettePastel);
+    out_setting_bool(out, "debug_log", config->debugLog);
+    for (int i = 0; i < config->customCount; i++) {
+        static const char HEX[] = "0123456789ABCDEF";
+        Color color = config->customColors[i];
+        char text[10] = {'#', '\0'};
+        for (int digit = 0; digit < 6; digit++) {
+            text[1 + digit] = HEX[(color >> (20 - 4 * digit)) & 0xFu];
+        }
+        text[7] = '\n';
+        text[8] = '\0';
+        out_text(out, "custom_color = ");
+        out_text(out, text);
+    }
     out_setting_bool(out, "ui_auto_hide", config->ui.autoHide);
     out_setting_int(out, "ui_auto_hide_ms", config->ui.autoHideMs);
     out_setting_bool(out, "ui_exclude_from_capture", config->ui.excludeFromCapture);

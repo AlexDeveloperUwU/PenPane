@@ -170,6 +170,7 @@ void element_remap(Element *element, FloatRect oldBox, FloatRect newBox)
 
 bool element_is_filled(const Element *element)
 {
-    return (element->type == ELEMENT_RECTANGLE || element->type == ELEMENT_ELLIPSE) &&
+    return (element->type == ELEMENT_RECTANGLE || element->type == ELEMENT_ELLIPSE ||
+            element->type == ELEMENT_DIAMOND) &&
            (element->style.fill >> 24) != 0;
 }

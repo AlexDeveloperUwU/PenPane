@@ -71,6 +71,84 @@ static void test_short_stroke_fades_steadily(void)
 }
 
 /**
+ * @brief Alpha at a pixel of a rendered trail.
+ * @param canvas Canvas rendered into.
+ * @param x Pixel column.
+ * @return Alpha 0 to 255 on the row of the test strokes.
+ */
+static unsigned alpha_at(const Canvas *canvas, int x)
+{
+    return canvas->pixels[100 * canvas->width + x] >> 24;
+}
+
+/**
+ * @brief A short quick stroke is wiped from its first point to its last once released, and then it is gone.
+ */
+static void test_released_stroke_sweeps_tail_to_head(void)
+{
+    Canvas canvas;
+    assert(canvas_create(&canvas, CANVAS_WIDTH, CANVAS_HEIGHT));
+    Trail trail;
+    uint32_t last = short_stroke(&trail, 6, 60.0f, 8);
+    trail_settle(&trail, last);
+    trail_release(&trail);
+    ink_at(&trail, &canvas, last);
+    assert(alpha_at(&canvas, 102) > 0 && alpha_at(&canvas, 158) > 0);
+    unsigned tailMid = 0;
+    unsigned headMid = 0;
+    for (uint32_t t = last; t < last + 900; t += 16) {
+        ink_at(&trail, &canvas, t);
+        tailMid = alpha_at(&canvas, 106);
+        headMid = alpha_at(&canvas, 150);
+        if (tailMid == 0) {
+            break;
+        }
+    }
+    printf("sweep: tail gone while head alpha is %u\n", headMid);
+    assert(tailMid == 0 && headMid > 0);
+    assert(!trail_prune(&trail, last + 1200));
+    canvas_destroy(&canvas);
+}
+
+/**
+ * @brief Whatever the stroke's length or speed, the wipe starts visible, only ever loses ink, and ends empty.
+ */
+static void test_release_is_independent_of_speed_and_length(void)
+{
+    Canvas canvas;
+    assert(canvas_create(&canvas, CANVAS_WIDTH, CANVAS_HEIGHT));
+    const int counts[] = {1, 2, 3, 6, 40};
+    const float steps[] = {0.0f, 2.0f, 6.0f};
+    const uint32_t gaps[] = {1, 8, 120};
+    for (int c = 0; c < 5; c++) {
+        for (int s = 0; s < 3; s++) {
+            for (int g = 0; g < 3; g++) {
+                Trail trail;
+                trail_init(&trail, TRAIL_LASER_RADIUS, TRAIL_LASER_LIFETIME_MS, 0xFFFF0000u, true);
+                trail_begin(&trail);
+                uint32_t now = 5000;
+                for (int i = 0; i < counts[c]; i++) {
+                    Point p = {20.0f + steps[s] * (float)i, 100.0f};
+                    trail_add(&trail, p, now);
+                    now += gaps[g];
+                }
+                trail_settle(&trail, now);
+                trail_release(&trail);
+                double previous = ink_at(&trail, &canvas, now);
+                assert(previous > 0.0);
+                for (uint32_t t = now + 16; t < now + 1100; t += 16) {
+                    double ink = ink_at(&trail, &canvas, t);
+                    assert(ink <= previous + 1.0);
+                    previous = ink;
+                }
+                assert(!trail_prune(&trail, now + 1100));
+            }
+        }
+    }
+    canvas_destroy(&canvas);
+}
+
+/**
  * @brief A tap with the laser draws a dot that fades, instead of nothing.
  */
 static void test_single_point_is_visible(void)
@@ -182,9 +260,37 @@ static void test_laser_pointer_dot_follows_hover(void)
     canvas_destroy(&canvas);
 }
 
+/**
+ * @brief Two laser strokes in different places are not joined by a line.
+ */
+static void test_separate_strokes_are_not_joined(void)
+{
+    Canvas canvas;
+    assert(canvas_create(&canvas, CANVAS_WIDTH, CANVAS_HEIGHT));
+    Trail trail;
+    trail_init(&trail, TRAIL_LASER_RADIUS, TRAIL_LASER_LIFETIME_MS, 0xFFFF0000u, true);
+    uint32_t now = 1000;
+    for (int i = 0; i < 5; i++, now += 16) {
+        trail_add(&trail, (Point){50.0f + 10.0f * (float)i, 100.0f}, now);
+    }
+    trail_begin(&trail);
+    for (int i = 0; i < 5; i++, now += 16) {
+        trail_add(&trail, (Point){300.0f + 10.0f * (float)i, 100.0f}, now);
+    }
+    ink_at(&trail, &canvas, now);
+    for (int x = 130; x < 280; x++) {
+        assert((canvas.pixels[100 * CANVAS_WIDTH + x] >> 24) == 0);
+    }
+    assert((canvas.pixels[100 * CANVAS_WIDTH + 320] >> 24) > 0);
+    canvas_destroy(&canvas);
+}
+
 int main(void)
 {
+    test_separate_strokes_are_not_joined();
     test_short_stroke_fades_steadily();
+    test_released_stroke_sweeps_tail_to_head();
+    test_release_is_independent_of_speed_and_length();
     test_single_point_is_visible();
     test_laser_reaches_release_position();
     test_eraser_trail_gone_on_release();
