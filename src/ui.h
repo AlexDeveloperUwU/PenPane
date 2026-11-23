@@ -68,6 +68,7 @@ typedef struct UiSettings {
 #define UI_SECTION_FONT 0x40u
 #define UI_SECTION_LASER 0x80u
 #define UI_SECTION_ARROWHEADS 0x100u
+#define UI_SECTION_FONT_SIZE 0x200u
 
 /** @brief Characters of the text that names a tool's extra shortcut, for example "Ctrl+F15 x2". */
 #define UI_SHORTCUT_CHARS 32
@@ -144,7 +145,8 @@ typedef enum UiEventKind {
     UI_EVENT_SLIDER_END,
     UI_EVENT_PANEL_PINNED,
     UI_EVENT_SET_EXPORT_BACKGROUND,
-    UI_EVENT_SET_EXPORT_FULL_SCREEN
+    UI_EVENT_SET_EXPORT_FULL_SCREEN,
+    UI_EVENT_SET_FONT_SIZE
 } UiEventKind;
 
 /**
@@ -158,6 +160,7 @@ typedef enum UiEventKind {
  *    of style.h; for SET_WIDTH an index equal to WIDTH_PRESET_COUNT selects the variable (pressure) width.
  *  - UI_EVENT_SET_STROKE_STYLE: index is a StrokeStyle value.
  *  - UI_EVENT_SET_FONT: index is a TextFace value.
+ *  - UI_EVENT_SET_FONT_SIZE: index is the preset index in FONT_SIZES of style.h.
  *  - UI_EVENT_SET_LASER_MODE: index is 0 for the fading trail and 1 for the pointer dot.
  *  - UI_EVENT_TOOL_MOVE: tool is moved one place in the toolbar; index is -1 (earlier) or 1 (later).
  *  - UI_EVENT_TOOL_VISIBLE: tool is shown (index 1) or hidden (index 0) in the toolbar.

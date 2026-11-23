@@ -127,9 +127,19 @@ bool tool_order_parse(const char *text, Tool order[TOOL_COUNT])
         return false;
     }
     for (int i = 0; i < TOOL_COUNT; i++) {
-        if (!seen[DEFAULT_ORDER[i]]) {
-            order[count++] = DEFAULT_ORDER[i];
+        Tool missing = DEFAULT_ORDER[i];
+        if (seen[missing]) {
+            continue;
         }
+        int at = count;
+        for (int j = 0; i > 0 && j < count; j++) {
+            if (order[j] == DEFAULT_ORDER[i - 1]) {
+                at = j + 1;
+            }
+        }
+        memmove(&order[at + 1], &order[at], (size_t)(count - at) * sizeof order[0]);
+        order[at] = missing;
+        count++;
     }
     return true;
 }

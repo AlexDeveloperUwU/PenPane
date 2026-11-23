@@ -172,7 +172,11 @@ static void test_tool_order(void)
     assert(config_load(&config, path, errors, 256) == CONFIG_LOADED);
     assert(config.toolOrder[0] == TOOL_LASER && config.toolOrder[1] == TOOL_PEN);
     assert(tool_order_valid(config.toolOrder));
-    assert(config.toolOrder[2] == TOOL_SELECT);
+    assert(config.toolOrder[2] == TOOL_HIGHLIGHTER);
+    write_text(path, "tool_order = select, pen, eraser, text, rectangle, ellipse, arrow, line, laser\n");
+    assert(config_load(&config, path, errors, 256) == CONFIG_LOADED);
+    assert(config.toolOrder[2] == TOOL_HIGHLIGHTER && config.toolOrder[3] == TOOL_ERASER);
+    assert(tool_order_valid(config.toolOrder));
     write_text(path, "tool_order = pen, pen\n");
     assert(config_load(&config, path, errors, 256) == CONFIG_LOADED);
     assert(errors[0] != L'\0');

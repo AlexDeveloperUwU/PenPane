@@ -31,22 +31,6 @@ static void repaint_add(Controller *controller, RECT rect)
     dirty_add(&controller->repaint, rect);
 }
 
-/**
- * @brief Maps a stroke width preset to a font size.
- * @param width Stroke width.
- * @return Font height in pixels.
- */
-static int font_size_for_width(float width)
-{
-    if (width <= WIDTH_PRESETS[0] + 0.01f) {
-        return 16;
-    }
-    if (width >= WIDTH_PRESETS[2] - 0.01f) {
-        return 28;
-    }
-    return 20;
-}
-
 void controller_init(Controller *controller)
 {
     memset(controller, 0, sizeof *controller);
@@ -528,7 +512,7 @@ void controller_pointer_down(Controller *controller, const PointerSample *sample
     case TOOL_TEXT:
         controller->draft = element_make(ELEMENT_TEXT, &controller->style);
         controller->draft.from = sample->position;
-        controller->draft.fontSize = font_size_for_width(controller->style.width);
+        controller->draft.fontSize = controller->style.fontSize;
         if (!element_set_text(&controller->draft, L"")) {
             element_free(&controller->draft);
             break;
@@ -652,7 +636,7 @@ void controller_style_preview(Controller *controller, const Style *style)
     repaint_add(controller, element_bounds(item));
     item->style = *style;
     if (item->type == ELEMENT_TEXT) {
-        item->fontSize = font_size_for_width(style->width);
+        item->fontSize = style->fontSize;
     }
     repaint_add(controller, element_bounds(item));
     repaint_add(controller, render_selection_bounds(item));
@@ -698,7 +682,7 @@ void controller_apply_style_to_selection(Controller *controller, const Style *st
     repaint_add(controller, element_bounds(item));
     item->style = *style;
     if (item->type == ELEMENT_TEXT) {
-        item->fontSize = font_size_for_width(style->width);
+        item->fontSize = style->fontSize;
     }
     repaint_add(controller, element_bounds(item));
     repaint_add(controller, render_selection_bounds(item));

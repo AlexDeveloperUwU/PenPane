@@ -376,7 +376,7 @@ static unsigned sections_for_state(void)
         }
         return UI_SECTION_STROKE | UI_SECTION_WIDTH | UI_SECTION_PRESSURE | UI_SECTION_OPACITY;
     case ELEMENT_TEXT:
-        return UI_SECTION_STROKE | UI_SECTION_FONT | UI_SECTION_WIDTH | UI_SECTION_OPACITY;
+        return UI_SECTION_STROKE | UI_SECTION_FONT | UI_SECTION_FONT_SIZE | UI_SECTION_OPACITY;
     }
     return 0;
 }
@@ -1489,6 +1489,10 @@ static void on_ui_event(void *user, const UiEvent *event)
         break;
     case UI_EVENT_SET_FONT:
         style.face = (TextFace)event->index;
+        change_style(style);
+        break;
+    case UI_EVENT_SET_FONT_SIZE:
+        style.fontSize = FONT_SIZES[event->index];
         change_style(style);
         break;
     case UI_EVENT_SET_LASER_MODE:

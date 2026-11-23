@@ -664,8 +664,8 @@ static void choices_add(UiLayout *layout, float scale, int y, const Icon *icons,
 static void build_properties(UiLayout *layout, const UiModel *model, bool pinned, float scale)
 {
     static const Icon widthIcons[4] = {ICON_WIDTH_THIN, ICON_WIDTH_MEDIUM, ICON_WIDTH_BOLD, ICON_PRESSURE};
-    static const Icon styleIcons[3] = {ICON_STYLE_SOLID, ICON_STYLE_DASHED, ICON_STYLE_DOTTED};
-    static const Icon fontIcons[3] = {ICON_FONT_HAND, ICON_FONT_NORMAL, ICON_FONT_LEGIBLE};
+    static const Icon fontIcons[TEXT_FACE_COUNT] = {ICON_FONT_HAND, ICON_FONT_NORMAL, ICON_FONT_LEGIBLE};
+    static const Icon styleIcons[3] ={ICON_STYLE_SOLID, ICON_STYLE_DASHED, ICON_STYLE_DOTTED};
     static const Icon laserIcons[2] = {ICON_LASER_TRAIL, ICON_LASER_POINTER};
     static const Icon arrowIcons[ARROW_HEAD_COUNT] = {ICON_ARROW_END, ICON_ARROW_BOTH};
     int pad = ui_px(scale, SECTION_PAD);
@@ -715,9 +715,26 @@ static void build_properties(UiLayout *layout, const UiModel *model, bool pinned
         y += ui_px(scale, SMALL_BUTTON) + gap;
     }
     if (model->sections & UI_SECTION_FONT) {
-        y = title_add(layout, scale, y, L"Font");
-        choices_add(layout, scale, y, fontIcons, 3, (int)style->face, UI_EVENT_SET_FONT);
+        static const wchar_t *const FONT_NAMES[TEXT_FACE_COUNT] = {L"Handwritten", L"Normal", L"Mono"};
+        wchar_t title[UI_ITEM_TEXT_CHARS];
+        swprintf(title, UI_ITEM_TEXT_CHARS, L"Font - %ls", FONT_NAMES[style->face]);
+        y = title_add(layout, scale, y, title);
+        choices_add(layout, scale, y, fontIcons, TEXT_FACE_COUNT, (int)style->face, UI_EVENT_SET_FONT);
         y += ui_px(scale, SMALL_BUTTON) + gap;
+    }
+    if (model->sections & UI_SECTION_FONT_SIZE) {
+        static const wchar_t *const SIZE_LABELS[FONT_SIZE_COUNT] = {L"S", L"M", L"L", L"XL"};
+        y = title_add(layout, scale, y, L"Font size");
+        int size = ui_px(scale, SMALL_BUTTON);
+        for (int i = 0; i < FONT_SIZE_COUNT; i++) {
+            UiItem *item = item_add(layout, ITEM_TEXT_BUTTON,
+                                    pad + i * (size + ui_px(scale, SMALL_BUTTON_GAP)), y, size, size);
+            wcscpy(item->text, SIZE_LABELS[i]);
+            item->selected = i == style_font_size_index(style);
+            item->event.kind = UI_EVENT_SET_FONT_SIZE;
+            item->event.index = i;
+        }
+        y += size + gap;
     }
     if (model->sections & UI_SECTION_LASER) {
         y = title_add(layout, scale, y, L"Laser");

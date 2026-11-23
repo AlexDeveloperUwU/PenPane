@@ -111,6 +111,7 @@ static void on_event(void *user, const UiEvent *event)
         fflush(stdout);
         break;
     case UI_EVENT_SET_FONT: model->style.face = (TextFace)event->index; break;
+    case UI_EVENT_SET_FONT_SIZE: model->style.fontSize = FONT_SIZES[event->index]; break;
     case UI_EVENT_SET_LASER_MODE: model->laserPointer = event->index != 0; break;
     case UI_EVENT_CLOSE_DIALOG: model->dialogs &= ~UI_DIALOG_BIT(event->panel); break;
     case UI_EVENT_SET_ARROWHEADS: model->style.arrowHeads = (ArrowHeads)event->index; break;

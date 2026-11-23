@@ -2,6 +2,7 @@
 #include "style.h"
 
 #include <math.h>
+#include <stdlib.h>
 
 const Color STROKE_PALETTE[STROKE_PALETTE_SIZE] = {
     COLOR_STROKE_DEFAULT, COLOR_STROKE_RED, COLOR_STROKE_GREEN, COLOR_STROKE_BLUE,
@@ -22,11 +23,24 @@ const float WIDTH_PRESETS[WIDTH_PRESET_COUNT] = {STROKE_WIDTH_THIN, STROKE_WIDTH
 const float HIGHLIGHTER_WIDTHS[WIDTH_PRESET_COUNT] = {HIGHLIGHTER_WIDTH_THIN, HIGHLIGHTER_WIDTH_MEDIUM,
                                                       HIGHLIGHTER_WIDTH_BOLD};
 
+const int FONT_SIZES[FONT_SIZE_COUNT] = {16, 20, 28, 36};
+
 Style style_default(void)
 {
     Style style = {STROKE_PALETTE[0], 0, WIDTH_PRESETS[1], 1.0f, STROKE_SOLID, true, TEXT_FACE_HANDWRITTEN,
-                   ARROW_HEAD_END, false};
+                   ARROW_HEAD_END, false, FONT_SIZES[1]};
     return style;
+}
+
+int style_font_size_index(const Style *style)
+{
+    int best = 0;
+    for (int i = 1; i < FONT_SIZE_COUNT; i++) {
+        if (abs(FONT_SIZES[i] - style->fontSize) < abs(FONT_SIZES[best] - style->fontSize)) {
+            best = i;
+        }
+    }
+    return best;
 }
 
 float style_width_preset(const Style *style, int index)

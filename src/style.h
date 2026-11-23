@@ -13,6 +13,7 @@
 #define STROKE_PALETTE_SIZE 5
 #define FILL_PALETTE_SIZE 5
 #define WIDTH_PRESET_COUNT 3
+#define FONT_SIZE_COUNT 4
 #define PASTEL_PALETTE_SIZE 6
 #define CUSTOM_COLOR_MAX 18
 
@@ -49,6 +50,7 @@ typedef struct Style {
     TextFace face;
     ArrowHeads arrowHeads;
     bool highlighter;
+    int fontSize;
 } Style;
 
 /** @brief The five stroke preset colors in dark theme. */
@@ -65,6 +67,16 @@ extern const float WIDTH_PRESETS[WIDTH_PRESET_COUNT];
 
 /** @brief Highlighter widths: thin, medium, bold. Wider than WIDTH_PRESETS and always drawn translucent. */
 extern const float HIGHLIGHTER_WIDTHS[WIDTH_PRESET_COUNT];
+
+/** @brief Text heights in pixels: S, M, L, XL. */
+extern const int FONT_SIZES[FONT_SIZE_COUNT];
+
+/**
+ * @brief Finds the preset index of a style's text size.
+ * @param style Style to look up.
+ * @return Index into FONT_SIZES of the nearest size.
+ */
+int style_font_size_index(const Style *style);
 
 /**
  * @brief Returns the Excalidraw default style: first stroke preset, transparent fill, medium width.

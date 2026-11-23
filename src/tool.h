@@ -48,7 +48,8 @@ void tool_order_default(Tool order[TOOL_COUNT]);
 /**
  * @brief Parses a comma separated list of tool names into a toolbar order.
  *
- * Tools missing from the list follow the listed ones in the default order.
+ * Tools missing from the list are placed right after the tool that precedes them in the default order, or at
+ * the end when that tool is not listed either.
  * @param text List such as "select, pen, eraser".
  * @param order Receives every tool once on success.
  * @return false when a name is unknown, repeated or the list is empty.

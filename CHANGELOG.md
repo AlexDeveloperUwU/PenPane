@@ -4,6 +4,20 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [0.7.0] - 2026-11-24
+
+### Added
+
+- Font size for text: S, M, L and XL (16, 20, 28 and 36 px), with M as the default. It replaces the Stroke width row for text, which used to drive the size indirectly.
+
+### Changed
+
+- The Font row in the properties panel is three icon boxes under a title that names the selected font, for example "Font - Handwritten".
+
+### Fixed
+
+- A tool missing from a saved `tool_order` is now placed after the tool that precedes it in the default order, not at the end. Existing configs now show the highlighter right after Pen.
+
 ## [0.6.0] - 2026-11-23
 
 ### Added
