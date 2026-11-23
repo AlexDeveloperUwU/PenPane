@@ -76,7 +76,7 @@ jobs:
           if (-not $start) { throw "CHANGELOG.md has no entry for $version." }
           $notes = @()
           foreach ($line in $lines[$start..($lines.Count - 1)]) {
-            if ($line -like "## [*") { break }
+            if ($line.StartsWith("## [")) { break }
             $notes += $line
           }
           Set-Content -Path build\notes.md -Value $notes -Encoding utf8
