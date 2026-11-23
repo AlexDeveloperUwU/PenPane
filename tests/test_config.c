@@ -176,6 +176,8 @@ static void test_tool_order(void)
     write_text(path, "tool_order = pen, pen\n");
     assert(config_load(&config, path, errors, 256) == CONFIG_LOADED);
     assert(errors[0] != L'\0');
+    config_defaults(&config);
+    assert(config.hiddenTools == (1u << TOOL_DIAMOND));
     Tool defaults[TOOL_COUNT];
     tool_order_default(defaults);
     assert(memcmp(config.toolOrder, defaults, sizeof defaults) == 0);
@@ -185,9 +187,9 @@ static void test_tool_order(void)
     write_text(path, "hidden_tools = laser, Text\n");
     assert(config_load(&config, path, errors, 256) == CONFIG_LOADED);
     assert(config.hiddenTools == ((1u << TOOL_LASER) | (1u << TOOL_TEXT)));
-    write_text(path, "hidden_tools = select, rectangle, ellipse, arrow, line, pen, laser, text, eraser, diamond\n");
+    write_text(path, "hidden_tools = select, rectangle, ellipse, arrow, line, pen, laser, text, eraser, diamond, highlighter\n");
     assert(config_load(&config, path, errors, 256) == CONFIG_LOADED);
-    assert(config.hiddenTools == 0 && errors[0] != L'\0');
+    assert(config.hiddenTools == (1u << TOOL_DIAMOND) && errors[0] != L'\0');
     write_text(path, "hidden_tools =\n");
     assert(config_load(&config, path, errors, 256) == CONFIG_LOADED);
     assert(config.hiddenTools == 0);
@@ -195,9 +197,9 @@ static void test_tool_order(void)
     Tool order[TOOL_COUNT];
     tool_order_default(order);
     assert(tool_at_slot(order, 0, 0, &slot) && slot == TOOL_SELECT);
-    assert(tool_at_slot(order, 0, 9, &slot) && slot == TOOL_LASER);
-    assert(tool_at_slot(order, 1u << TOOL_PEN, 1, &slot) && slot == TOOL_ERASER);
-    assert(!tool_at_slot(order, 1u << TOOL_PEN, 9, &slot));
+    assert(tool_at_slot(order, 0, 10, &slot) && slot == TOOL_LASER);
+    assert(tool_at_slot(order, 1u << TOOL_PEN, 1, &slot) && slot == TOOL_HIGHLIGHTER);
+    assert(!tool_at_slot(order, 1u << TOOL_PEN, 10, &slot));
     DeleteFileW(path);
 }
 

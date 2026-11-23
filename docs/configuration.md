@@ -18,7 +18,7 @@ The application reads one plain-text file. Every key is optional: a missing key 
 | `double_press_ms` | `300` | 50 to 2000 | Maximum gap between the two presses of a double gesture. Also the delay added to a single gesture on keys that have a double binding. |
 | `long_press_ms` | `600` | 200 to 5000 | How long a key or button must stay down for a long gesture. |
 | `default_tool` | `select` | `select`, `rectangle`, `ellipse`, `diamond`, `arrow`, `line`, `pen`, `laser`, `text`, `eraser` | Tool active when the application starts. The default is the select tool, so nothing is drawn by accident. |
-| `hidden_tools` | empty | comma separated tool names | Tools left out of the toolbar. Their shortcuts still work. At least one tool must stay visible. The settings window writes this line for you. |
+| `hidden_tools` | `diamond` | comma separated tool names | Tools left out of the toolbar. Their shortcuts still work. At least one tool must stay visible. The settings window writes this line for you. |
 | `tool_order` | `select, pen, eraser, text, rectangle, ellipse, diamond, arrow, line, laser` | comma separated tool names | Order of the tool buttons in the toolbar. Tools you leave out follow the listed ones in the default order; unknown or repeated names reject the whole line. The number keys follow this order: `1` is the first visible tool, `2` the second, and so on up to `0` for the tenth. The letter shortcuts do not change. |
 | `default_stroke_index` | `0` | 0 to 4 | Index of the stroke color preset used at start. |
 | `palette_pastel` | `false` | boolean | Show a second row of pastel stroke colors in the properties panel. The settings window has the same switch. |
@@ -107,7 +107,7 @@ Because a `double` binding makes the single action wait for the window to expire
 
 ### Actions
 
-`toggle_overlay`, `toggle_mode`, `tool_select`, `tool_rectangle`, `tool_ellipse`, `tool_arrow`, `tool_line`, `tool_pen`, `tool_laser`, `tool_text`, `tool_eraser`, `tool_diamond`, `next_tool`, `previous_tool`, `cycle_color`, `cycle_width`, `undo`, `redo`, `clear`, `toggle_laser`, `toggle_tool_lock`, `copy_png`, `save_png`, `toggle_drawings`, `ask_clear`, `open_settings`, `emergency_exit`.
+`toggle_overlay`, `toggle_mode`, `tool_select`, `tool_rectangle`, `tool_ellipse`, `tool_arrow`, `tool_line`, `tool_pen`, `tool_laser`, `tool_text`, `tool_eraser`, `tool_diamond`, `tool_highlighter`, `next_tool`, `previous_tool`, `cycle_color`, `cycle_width`, `undo`, `redo`, `clear`, `toggle_laser`, `toggle_tool_lock`, `copy_png`, `save_png`, `toggle_drawings`, `ask_clear`, `open_settings`, `emergency_exit`.
 
 Names are case-insensitive.
 

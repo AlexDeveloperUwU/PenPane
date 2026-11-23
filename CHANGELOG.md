@@ -4,6 +4,17 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [0.6.0] - 2026-11-23
+
+### Added
+
+- Highlighter tool (key `H`, action `tool_highlighter`), placed after Pen in the default toolbar. It draws constant-width strokes at three wide presets and is always translucent, so text underneath stays readable even at 100% opacity. Stroke color and the opacity slider still apply; there is no pressure or variable-width option.
+
+### Changed
+
+- The Diamond tool is hidden from the toolbar by default, which frees a number-key slot. Its `D` shortcut and `tool_diamond` still work, and saved `hidden_tools` settings are kept.
+- The Normal text face is now Bahnschrift (falls back to Segoe UI) and the Legible face is Cascadia Mono (falls back to Consolas, then Segoe UI).
+
 ## [0.5.0] - 2026-11-23
 
 ### Added

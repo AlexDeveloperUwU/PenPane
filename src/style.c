@@ -19,11 +19,19 @@ const Color FILL_PALETTE[FILL_PALETTE_SIZE] = {
 const float WIDTH_PRESETS[WIDTH_PRESET_COUNT] = {STROKE_WIDTH_THIN, STROKE_WIDTH_MEDIUM,
                                                  STROKE_WIDTH_BOLD};
 
+const float HIGHLIGHTER_WIDTHS[WIDTH_PRESET_COUNT] = {HIGHLIGHTER_WIDTH_THIN, HIGHLIGHTER_WIDTH_MEDIUM,
+                                                      HIGHLIGHTER_WIDTH_BOLD};
+
 Style style_default(void)
 {
     Style style = {STROKE_PALETTE[0], 0, WIDTH_PRESETS[1], 1.0f, STROKE_SOLID, true, TEXT_FACE_HANDWRITTEN,
-                   ARROW_HEAD_END};
+                   ARROW_HEAD_END, false};
     return style;
+}
+
+float style_width_preset(const Style *style, int index)
+{
+    return style->highlighter ? HIGHLIGHTER_WIDTHS[index] : WIDTH_PRESETS[index];
 }
 
 int style_stroke_index(Color color)
@@ -121,11 +129,12 @@ bool color_parse_hex(const char *text, Color *color)
     return true;
 }
 
-int style_width_index(float width)
+int style_width_index(const Style *style)
 {
     int best = 0;
     for (int i = 1; i < WIDTH_PRESET_COUNT; i++) {
-        if (fabsf(WIDTH_PRESETS[i] - width) < fabsf(WIDTH_PRESETS[best] - width)) {
+        if (fabsf(style_width_preset(style, i) - style->width) <
+            fabsf(style_width_preset(style, best) - style->width)) {
             best = i;
         }
     }

@@ -202,6 +202,10 @@ void controller_set_tool(Controller *controller, Tool tool)
         clear_selection(controller);
     }
     controller->tool = tool;
+    Style *style = &controller->style;
+    int widthIndex = style_width_index(style);
+    style->highlighter = tool == TOOL_HIGHLIGHTER;
+    style->width = style_width_preset(style, widthIndex);
 }
 
 /**
@@ -233,6 +237,18 @@ static void update_shape_draft(Controller *controller, Point position, bool shif
 }
 
 /**
+ * @brief Chooses the pressure fed to the pen builder; highlighter strokes always have a constant width.
+ * @param style Style of the stroke being drawn.
+ * @param sample Pointer data.
+ * @return Pressure 0..1 or PEN_PRESSURE_CONSTANT.
+ */
+static float pen_pressure(const Style *style, const PointerSample *sample)
+{
+    return style->pressure && !style->highlighter && sample->pressure >= 0.0f ? sample->pressure
+                                                                              : PEN_PRESSURE_CONSTANT;
+}
+
+/**
  * @brief Builds the draft element for the active drawing tool.
  * @param controller Controller to update.
  * @param sample Pointer data.
@@ -243,14 +259,14 @@ static bool begin_draft(Controller *controller, const PointerSample *sample)
     static const ElementType TYPES[TOOL_COUNT] = {ELEMENT_PEN,   ELEMENT_RECTANGLE, ELEMENT_ELLIPSE,
                                                   ELEMENT_ARROW, ELEMENT_LINE,      ELEMENT_PEN,
                                                   ELEMENT_PEN,   ELEMENT_TEXT,      ELEMENT_PEN,
-                                                  ELEMENT_DIAMOND};
+                                                  ELEMENT_DIAMOND, ELEMENT_PEN};
     controller->draft = element_make(TYPES[controller->tool], &controller->style);
     controller->hasDraft = true;
     controller->draft.from = sample->position;
     controller->draft.to = sample->position;
     controller->penGroup = 0;
     if (controller->draft.type == ELEMENT_PEN) {
-        float pressure = controller->style.pressure && sample->pressure >= 0.0f ? sample->pressure : PEN_PRESSURE_CONSTANT;
+        float pressure = pen_pressure(&controller->style, sample);
         if (!pen_begin(&controller->pen, &controller->draft, sample->position, pressure)) {
             element_free(&controller->draft);
             controller->hasDraft = false;
@@ -269,7 +285,7 @@ static void flush_pen_draft(Controller *controller)
 {
     Element *draft = &controller->draft;
     RECT everything = canvas_area(controller->canvas);
-    bool opaque = draft->style.opacity >= 0.999f && (draft->style.stroke >> 24) == 0xFF;
+    bool opaque = draft->style.opacity >= 0.999f && (draft->style.stroke >> 24) == 0xFF && !draft->style.highlighter;
     if (opaque) {
         int firstGroup = controller->penGroup > 0 ? controller->penGroup - 1 : 0;
         RECT touched = render_pen_tail(controller->canvas, draft, firstGroup, &everything);
@@ -545,7 +561,7 @@ void controller_pointer_move(Controller *controller, const PointerSample *sample
     switch (controller->interaction) {
     case INTERACTION_DRAW:
         if (controller->draft.type == ELEMENT_PEN) {
-            float pressure = controller->style.pressure && sample->pressure >= 0.0f ? sample->pressure : PEN_PRESSURE_CONSTANT;
+            float pressure = pen_pressure(&controller->style, sample);
             if (pen_add(&controller->pen, &controller->draft, sample->position, pressure)) {
                 flush_pen_draft(controller);
             }

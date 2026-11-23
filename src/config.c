@@ -706,7 +706,7 @@ void config_defaults(Config *config)
     config->longPressMs = 600;
     config->defaultTool = TOOL_SELECT;
     tool_order_default(config->toolOrder);
-    config->hiddenTools = 0;
+    config->hiddenTools = 1u << TOOL_DIAMOND;
     config->defaultWidthIndex = 1;
     config->toolLock = true;
     config->laserPointer = false;

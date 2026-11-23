@@ -56,6 +56,7 @@ typedef enum Icon {
     ICON_DIAMOND,
     ICON_ARROW_END,
     ICON_ARROW_BOTH,
+    ICON_HIGHLIGHTER,
     ICON_COUNT
 } Icon;
 

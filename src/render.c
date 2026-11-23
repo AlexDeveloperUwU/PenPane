@@ -57,7 +57,8 @@ static void sink_capsule(void *user, Point from, Point to, float radiusFrom, flo
  */
 static Color with_opacity(Color color, const Element *element)
 {
-    float factor = element->style.opacity * (element->erasing ? ERASING_OPACITY : 1.0f);
+    float factor = element->style.opacity * (element->erasing ? ERASING_OPACITY : 1.0f) *
+                   (element->style.highlighter ? HIGHLIGHTER_ALPHA : 1.0f);
     uint32_t alpha = (uint32_t)((float)(color >> 24) * factor + 0.5f);
     return (color & 0x00FFFFFFu) | (alpha << 24);
 }

@@ -331,6 +331,8 @@ static unsigned sections_for_state(void)
         }
         type = selection->type;
         break;
+    case TOOL_HIGHLIGHTER:
+        return UI_SECTION_STROKE | UI_SECTION_WIDTH | UI_SECTION_OPACITY;
     case TOOL_RECTANGLE:
         type = ELEMENT_RECTANGLE;
         break;
@@ -369,6 +371,9 @@ static unsigned sections_for_state(void)
     case ELEMENT_LINE:
         return UI_SECTION_STROKE | UI_SECTION_WIDTH | UI_SECTION_STROKE_STYLE | UI_SECTION_OPACITY;
     case ELEMENT_PEN:
+        if (selection && app.controller.tool == TOOL_SELECT && selection->style.highlighter) {
+            return UI_SECTION_STROKE | UI_SECTION_WIDTH | UI_SECTION_OPACITY;
+        }
         return UI_SECTION_STROKE | UI_SECTION_WIDTH | UI_SECTION_PRESSURE | UI_SECTION_OPACITY;
     case ELEMENT_TEXT:
         return UI_SECTION_STROKE | UI_SECTION_FONT | UI_SECTION_WIDTH | UI_SECTION_OPACITY;
@@ -1014,9 +1019,11 @@ static void perform_action(Action action)
     case ACTION_TOOL_LASER:
     case ACTION_TOOL_TEXT:
     case ACTION_TOOL_ERASER:
-    case ACTION_TOOL_DIAMOND: {
-        static const Tool MAP[] = {TOOL_SELECT, TOOL_RECTANGLE, TOOL_ELLIPSE, TOOL_ARROW, TOOL_LINE,
-                                   TOOL_PEN,    TOOL_LASER,     TOOL_TEXT,    TOOL_ERASER, TOOL_DIAMOND};
+    case ACTION_TOOL_DIAMOND:
+    case ACTION_TOOL_HIGHLIGHTER: {
+        static const Tool MAP[] = {TOOL_SELECT, TOOL_RECTANGLE, TOOL_ELLIPSE, TOOL_ARROW,
+                                   TOOL_LINE,   TOOL_PEN,       TOOL_LASER,   TOOL_TEXT,
+                                   TOOL_ERASER, TOOL_DIAMOND,   TOOL_HIGHLIGHTER};
         select_tool(MAP[action - ACTION_TOOL_SELECT]);
         break;
     }
@@ -1033,8 +1040,8 @@ static void perform_action(Action action)
         break;
     }
     case ACTION_CYCLE_WIDTH: {
-        int index = style_width_index(style.width);
-        style.width = WIDTH_PRESETS[(index + 1) % WIDTH_PRESET_COUNT];
+        int index = style_width_index(&style);
+        style.width = style_width_preset(&style, (index + 1) % WIDTH_PRESET_COUNT);
         change_style(style);
         break;
     }
@@ -1472,7 +1479,7 @@ static void on_ui_event(void *user, const UiEvent *event)
     case UI_EVENT_SET_WIDTH:
         style.pressure = event->index >= WIDTH_PRESET_COUNT;
         if (!style.pressure) {
-            style.width = WIDTH_PRESETS[event->index];
+            style.width = style_width_preset(&style, event->index);
         }
         change_style(style);
         break;

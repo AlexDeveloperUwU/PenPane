@@ -20,6 +20,7 @@ typedef enum Tool {
     TOOL_TEXT,
     TOOL_ERASER,
     TOOL_DIAMOND,
+    TOOL_HIGHLIGHTER,
     TOOL_COUNT
 } Tool;
 
@@ -72,12 +73,12 @@ bool tool_order_valid(const Tool order[TOOL_COUNT]);
 /**
  * @brief Returns the single-letter keyboard shortcut of a tool.
  * @param tool Tool to query.
- * @return Uppercase letter: V R O D A L P K T E.
+ * @return Uppercase letter: V R O D A L P K T E H.
  */
 char tool_shortcut(Tool tool);
 
 /**
- * @brief Finds the tool bound to a shortcut letter (V R O D A L P K T E, and X for the pen).
+ * @brief Finds the tool bound to a shortcut letter (V R O D A L P K T E H, and X for the pen).
  * @param letter Uppercase letter.
  * @param tool Receives the tool on success.
  * @return true when a tool uses that letter.

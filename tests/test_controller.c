@@ -126,6 +126,32 @@ static void test_pen_tap_makes_dot(void)
 }
 
 /**
+ * @brief The highlighter draws a wide, constant-width pen stroke from its own width table, and switching tools
+ * restores the pen widths.
+ */
+static void test_highlighter_uses_own_widths(void)
+{
+    Fixture fixture;
+    fixture_init(&fixture);
+    controller_set_tool(&fixture.controller, TOOL_HIGHLIGHTER);
+    assert(fixture.controller.style.highlighter);
+    assert(fixture.controller.style.width == HIGHLIGHTER_WIDTHS[1]);
+    PointerSample down = {{100, 100}, 0.9f, fixture.clock, false};
+    controller_pointer_down(&fixture.controller, &down);
+    PointerSample move = {{300, 140}, 0.9f, fixture.clock + 8, false};
+    controller_pointer_move(&fixture.controller, &move, true);
+    controller_pointer_up(&fixture.controller, &move);
+    assert(fixture.scene.count == 1);
+    const Element *stroke = &fixture.scene.items[0];
+    assert(stroke->type == ELEMENT_PEN && stroke->style.highlighter);
+    assert(stroke->style.width == HIGHLIGHTER_WIDTHS[1]);
+    assert(stroke->points[0].pressure < 0.05f);
+    controller_set_tool(&fixture.controller, TOOL_PEN);
+    assert(!fixture.controller.style.highlighter && fixture.controller.style.width == WIDTH_PRESETS[1]);
+    fixture_destroy(&fixture);
+}
+
+/**
  * @brief Deselecting schedules a repaint of the selection decoration so no ghost is left.
  */
 static void test_deselect_repaints_decoration(void)
@@ -431,6 +457,7 @@ int main(void)
     test_style_drag_is_one_undo_step();
     test_pen_reaches_release_position();
     test_pen_tap_makes_dot();
+    test_highlighter_uses_own_widths();
     test_deselect_repaints_decoration();
     test_move_undo_and_cancel();
     test_resize_handle();

@@ -323,7 +323,7 @@ static void build_settings(UiLayout *layout, const UiModel *model, float scale)
 {
     static const wchar_t *const TOOL_LABELS[TOOL_COUNT] = {L"Select", L"Rectangle", L"Ellipse", L"Arrow",
                                                            L"Line",   L"Pen",       L"Laser",   L"Text",
-                                                           L"Eraser", L"Diamond"};
+                                                           L"Eraser", L"Diamond", L"Highlighter"};
     int width = ui_px(scale, SETTINGS_WIDTH);
     int pad = ui_px(scale, DIALOG_PAD);
     int row = ui_px(scale, SETTINGS_ROW);
@@ -709,7 +709,7 @@ static void build_properties(UiLayout *layout, const UiModel *model, bool pinned
     if (model->sections & UI_SECTION_WIDTH) {
         y = title_add(layout, scale, y, L"Stroke width");
         bool variable = (model->sections & UI_SECTION_PRESSURE) != 0;
-        int selected = variable && style->pressure ? WIDTH_PRESET_COUNT : style_width_index(style->width);
+        int selected = variable && style->pressure ? WIDTH_PRESET_COUNT : style_width_index(style);
         choices_add(layout, scale, y, widthIcons, variable ? WIDTH_PRESET_COUNT + 1 : WIDTH_PRESET_COUNT,
                     selected, UI_EVENT_SET_WIDTH);
         y += ui_px(scale, SMALL_BUTTON) + gap;

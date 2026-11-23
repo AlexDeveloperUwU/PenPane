@@ -21,6 +21,7 @@
     X(ACTION_TOOL_TEXT, "tool_text")                        \
     X(ACTION_TOOL_ERASER, "tool_eraser")                    \
     X(ACTION_TOOL_DIAMOND, "tool_diamond")                  \
+    X(ACTION_TOOL_HIGHLIGHTER, "tool_highlighter")          \
     X(ACTION_NEXT_TOOL, "next_tool")                        \
     X(ACTION_PREVIOUS_TOOL, "previous_tool")                \
     X(ACTION_CYCLE_COLOR, "cycle_color")                    \

@@ -34,6 +34,7 @@ static int g_fontNext;
 static Surface g_surface;
 static int g_canvasFaceKnown;
 static const wchar_t *g_canvasFace = L"Segoe UI";
+static const wchar_t *g_normalFace = L"Segoe UI";
 static const wchar_t *g_legibleFace = L"Segoe UI";
 
 /**
@@ -98,10 +99,13 @@ static void resolve_canvas_face(void)
     if (font_exists(g_surface.dc, L"Segoe Print")) {
         g_canvasFace = L"Segoe Print";
     }
-    if (font_exists(g_surface.dc, L"Atkinson Hyperlegible")) {
-        g_legibleFace = L"Atkinson Hyperlegible";
-    } else if (font_exists(g_surface.dc, L"Verdana")) {
-        g_legibleFace = L"Verdana";
+    if (font_exists(g_surface.dc, L"Bahnschrift")) {
+        g_normalFace = L"Bahnschrift";
+    }
+    if (font_exists(g_surface.dc, L"Cascadia Mono")) {
+        g_legibleFace = L"Cascadia Mono";
+    } else if (font_exists(g_surface.dc, L"Consolas")) {
+        g_legibleFace = L"Consolas";
     }
 }
 
@@ -120,6 +124,7 @@ static HFONT font_get(TextFont role, int size)
     }
     resolve_canvas_face();
     const wchar_t *face = role == TEXT_FONT_CANVAS ? g_canvasFace
+                          : role == TEXT_FONT_CANVAS_NORMAL ? g_normalFace
                           : role == TEXT_FONT_CANVAS_LEGIBLE ? g_legibleFace
                                                              : L"Segoe UI";
     HFONT font = CreateFontW(-size, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET,
@@ -332,5 +337,6 @@ void text_shutdown(void)
     g_fontNext = 0;
     g_canvasFaceKnown = 0;
     g_canvasFace = L"Segoe UI";
+    g_normalFace = L"Segoe UI";
     g_legibleFace = L"Segoe UI";
 }

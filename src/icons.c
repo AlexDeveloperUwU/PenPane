@@ -198,6 +198,17 @@ static void draw_pencil(const Pen *pen)
 }
 
 /**
+ * @brief Draws a marker with the swipe it leaves.
+ * @param pen Drawing context.
+ */
+static void draw_highlighter(const Pen *pen)
+{
+    static const float body[] = {5.2f, 9.6f, 10.4f, 4.4f, 12.8f, 6.8f, 7.6f, 12.0f};
+    poly(pen, body, 4, true);
+    line(pen, 2.4f, 14.0f, 9.0f, 14.0f);
+}
+
+/**
  * @brief Draws the laser pointer as a dot with rays.
  * @param pen Drawing context.
  */
@@ -479,6 +490,7 @@ static bool draw_icon(Pen *pen, Icon icon)
         dot(pen, 12.6f, 3.4f, 1.5f);
         break;
     case ICON_PEN: draw_pencil(pen); break;
+    case ICON_HIGHLIGHTER: draw_highlighter(pen); break;
     case ICON_LASER: draw_laser(pen); break;
     case ICON_TEXT: draw_text(pen); break;
     case ICON_ERASER: draw_eraser(pen); break;
@@ -580,6 +592,6 @@ Icon icon_for_tool(int tool)
     static const Icon icons[TOOL_COUNT] = {ICON_SELECT, ICON_RECTANGLE, ICON_ELLIPSE,
                                            ICON_ARROW,  ICON_LINE,      ICON_PEN,
                                            ICON_LASER,  ICON_TEXT,      ICON_ERASER,
-                                           ICON_DIAMOND};
+                                           ICON_DIAMOND, ICON_HIGHLIGHTER};
     return (unsigned)tool < TOOL_COUNT ? icons[tool] : ICON_NONE;
 }

@@ -12,6 +12,7 @@ typedef struct ToolInfo {
 static const ToolInfo TOOL_INFO[TOOL_COUNT] = {
     {"select", 'V'}, {"rectangle", 'R'}, {"ellipse", 'O'}, {"arrow", 'A'}, {"line", 'L'},
     {"pen", 'P'},    {"laser", 'K'},     {"text", 'T'},    {"eraser", 'E'}, {"diamond", 'D'},
+    {"highlighter", 'H'},
 };
 
 const char *tool_name(Tool tool)
@@ -30,8 +31,9 @@ bool tool_from_name(const char *name, Tool *tool)
     return false;
 }
 
-static const Tool DEFAULT_ORDER[TOOL_COUNT] = {TOOL_SELECT, TOOL_PEN,     TOOL_ERASER, TOOL_TEXT,  TOOL_RECTANGLE,
-                                               TOOL_ELLIPSE, TOOL_DIAMOND, TOOL_ARROW, TOOL_LINE, TOOL_LASER};
+static const Tool DEFAULT_ORDER[TOOL_COUNT] = {TOOL_SELECT, TOOL_PEN,     TOOL_HIGHLIGHTER, TOOL_ERASER,
+                                               TOOL_TEXT,   TOOL_RECTANGLE, TOOL_ELLIPSE,   TOOL_DIAMOND,
+                                               TOOL_ARROW,  TOOL_LINE,      TOOL_LASER};
 
 void tool_order_default(Tool order[TOOL_COUNT])
 {

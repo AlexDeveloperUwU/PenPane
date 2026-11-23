@@ -29,7 +29,7 @@ TextFont text_font_for_face(int face);
 /**
  * @brief Measures text, supporting multiple lines separated by '\n'.
  * @param font Font role: UI uses Segoe UI; canvas uses a handwriting font when installed, the normal role
- *        Segoe UI and the legible role Atkinson Hyperlegible or Verdana when installed.
+ *        Bahnschrift (else Segoe UI) and the legible role Cascadia Mono (else Consolas, then Segoe UI).
  * @param text Text to measure.
  * @param pixelSize Font height in pixels.
  * @param width Receives the width in pixels.

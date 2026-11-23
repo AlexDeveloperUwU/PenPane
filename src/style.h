@@ -48,6 +48,7 @@ typedef struct Style {
     bool pressure;
     TextFace face;
     ArrowHeads arrowHeads;
+    bool highlighter;
 } Style;
 
 /** @brief The five stroke preset colors in dark theme. */
@@ -62,11 +63,22 @@ extern const Color FILL_PALETTE[FILL_PALETTE_SIZE];
 /** @brief Stroke widths: thin, medium, bold. */
 extern const float WIDTH_PRESETS[WIDTH_PRESET_COUNT];
 
+/** @brief Highlighter widths: thin, medium, bold. Wider than WIDTH_PRESETS and always drawn translucent. */
+extern const float HIGHLIGHTER_WIDTHS[WIDTH_PRESET_COUNT];
+
 /**
  * @brief Returns the Excalidraw default style: first stroke preset, transparent fill, medium width.
  * @return Default style value.
  */
 Style style_default(void);
+
+/**
+ * @brief Returns the width of a preset button.
+ * @param style Style deciding between the pen and the highlighter table.
+ * @param index Preset index, 0 to WIDTH_PRESET_COUNT - 1.
+ * @return Width in pixels.
+ */
+float style_width_preset(const Style *style, int index);
 
 /**
  * @brief Finds the preset index of a stroke color.
@@ -83,11 +95,11 @@ int style_stroke_index(Color color);
 int style_fill_index(Color color);
 
 /**
- * @brief Finds the preset index of a stroke width.
- * @param width Width in pixels.
- * @return Index into WIDTH_PRESETS of the nearest preset.
+ * @brief Finds the preset index of a style's stroke width.
+ * @param style Style whose width is looked up in the pen or highlighter table.
+ * @return Index of the nearest preset.
  */
-int style_width_index(float width);
+int style_width_index(const Style *style);
 
 /**
  * @brief Converts hue, saturation and value to an opaque color.
