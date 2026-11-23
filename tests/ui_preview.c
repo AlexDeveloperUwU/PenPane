@@ -115,6 +115,8 @@ static void on_event(void *user, const UiEvent *event)
     case UI_EVENT_CLOSE_DIALOG: model->dialogs &= ~UI_DIALOG_BIT(event->panel); break;
     case UI_EVENT_SET_ARROWHEADS: model->style.arrowHeads = (ArrowHeads)event->index; break;
     case UI_EVENT_SET_DEBUG_LOG: model->debugLog = event->index != 0; break;
+    case UI_EVENT_SET_EXPORT_BACKGROUND: model->exportBackground = event->index != 0; break;
+    case UI_EVENT_SET_EXPORT_FULL_SCREEN: model->exportFullScreen = event->index != 0; break;
     case UI_EVENT_RESET_OPTIONS:
     case UI_EVENT_RESET_POSITIONS:
     case UI_EVENT_SEND_KEY:

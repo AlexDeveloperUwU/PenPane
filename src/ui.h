@@ -96,6 +96,8 @@ typedef struct UiModel {
     unsigned dialogs;
     bool pastel;
     bool debugLog;
+    bool exportBackground;
+    bool exportFullScreen;
     wchar_t toolShortcut[TOOL_COUNT][UI_SHORTCUT_CHARS];
     int learningTool;
     int settingsTab;
@@ -140,7 +142,9 @@ typedef enum UiEventKind {
     UI_EVENT_SETTINGS_TAB,
     UI_EVENT_PANEL_MOVED,
     UI_EVENT_SLIDER_END,
-    UI_EVENT_PANEL_PINNED
+    UI_EVENT_PANEL_PINNED,
+    UI_EVENT_SET_EXPORT_BACKGROUND,
+    UI_EVENT_SET_EXPORT_FULL_SCREEN
 } UiEventKind;
 
 /**
@@ -160,7 +164,7 @@ typedef enum UiEventKind {
  *  - UI_EVENT_SET_AUTO_HIDE / SET_EXCLUDE_CAPTURE: index is 0 or 1.
  *  - UI_EVENT_CLOSE_DIALOG: the dialog island in panel was dismissed.
  *  - UI_EVENT_SET_STROKE_COLOR: color is the chosen stroke color (pastel or custom swatch).
- *  - UI_EVENT_SET_PASTEL / SET_DEBUG_LOG: index is 0 or 1.
+ *  - UI_EVENT_SET_PASTEL / SET_DEBUG_LOG / SET_EXPORT_BACKGROUND / SET_EXPORT_FULL_SCREEN: index is 0 or 1.
  *  - UI_EVENT_OPEN_PICKER: the color picker button was pressed.
  *  - UI_EVENT_PICK_HUE: value is the hue, 0 to 1. Sent while dragging, followed by UI_EVENT_SLIDER_END.
  *  - UI_EVENT_PICK_SV: value is the saturation and extra the brightness, both 0 to 1. Same drag rules.

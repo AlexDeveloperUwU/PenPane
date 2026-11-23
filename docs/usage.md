@@ -60,3 +60,5 @@ Configure the pen buttons in the tablet driver to send rarely used keys, for exa
 ## Copy and save as PNG
 
 Use the copy and save buttons in the undo and redo panel, bind `copy_png` or `save_png`, or use the tray menu. The desktop drawing is exported with transparency, the whiteboard with its background. Save opens the system save dialog and writes the file in the background.
+
+Two switches in Settings, General tab, change what is exported; both are on by default. **Export the full screen** exports the whole draw screen in either mode instead of only the painted area. **Add desktop to exports** (desktop mode only) puts the drawing over a screenshot of what is behind it, without the overlay or the tool panels, so the PNG is opaque. The matching config keys are `export_full_screen` and `export_background`.

@@ -361,12 +361,15 @@ static void build_settings(UiLayout *layout, const UiModel *model, float scale)
     int hintHeight = ui_px(scale, 34);
     int bodyHeight = y + hintHeight + TOOL_COUNT * row + pad;
     if (tab == 0) {
-        static const wchar_t *const GENERAL_LABELS[4] = {L"Auto-hide panels", L"Hide panels from screenshots",
-                                                         L"Pastel color row", L"Write a debug log"};
-        const bool generalValues[4] = {model->autoHide, model->excludeCapture, model->pastel, model->debugLog};
-        const UiEventKind generalKinds[4] = {UI_EVENT_SET_AUTO_HIDE, UI_EVENT_SET_EXCLUDE_CAPTURE,
-                                             UI_EVENT_SET_PASTEL, UI_EVENT_SET_DEBUG_LOG};
-        for (int i = 0; i < 4; i++) {
+        static const wchar_t *const GENERAL_LABELS[6] = {
+            L"Auto-hide panels",        L"Hide panels from screenshots", L"Pastel color row",
+            L"Write a debug log",       L"Add desktop to exports",       L"Export the full screen"};
+        const bool generalValues[6] = {model->autoHide,  model->excludeCapture,    model->pastel,
+                                       model->debugLog,  model->exportBackground, model->exportFullScreen};
+        const UiEventKind generalKinds[6] = {UI_EVENT_SET_AUTO_HIDE,          UI_EVENT_SET_EXCLUDE_CAPTURE,
+                                             UI_EVENT_SET_PASTEL,             UI_EVENT_SET_DEBUG_LOG,
+                                             UI_EVENT_SET_EXPORT_BACKGROUND,  UI_EVENT_SET_EXPORT_FULL_SCREEN};
+        for (int i = 0; i < 6; i++) {
             label_add(layout, pad, y, switchX - gap - pad, row, GENERAL_LABELS[i], 13, COLOR_ICON);
             UiItem *toggle = item_add(layout, ITEM_SWITCH, switchX, y + (row - switchHeight) / 2, switchWidth,
                                       switchHeight);

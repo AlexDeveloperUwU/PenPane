@@ -4,6 +4,16 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [0.5.0] - 2026-11-23
+
+### Added
+
+- Settings > General has two export switches, both on by default. "Export the full screen" exports the whole draw screen instead of only the painted area, in both modes. "Add desktop to exports" (desktop mode) puts the drawing over a screenshot of the desktop behind it, without the overlay or the tool panels. Config keys `export_full_screen` and `export_background`.
+
+### Fixed
+
+- Copying a drawing with the desktop background on no longer leaves keyboard focus on the window underneath, which sent the next paste to that window.
+
 ## [0.4.0] - 2026-11-23
 
 ### Added

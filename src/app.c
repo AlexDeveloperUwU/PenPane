@@ -101,6 +101,9 @@ static void app_apply_state(void);
 /** @brief Repaints the dirty regions of the overlay and presents them. */
 static void app_flush(void);
 
+/** @brief Shows a notification, or queues it until the tray icon exists. */
+static void notify(const wchar_t *title, const wchar_t *text);
+
 /** @brief Puts every option back to its default. */
 static void reset_options(void);
 
@@ -420,6 +423,8 @@ static void app_sync_ui(void)
     model.dialogs = app.dialogs;
     model.pastel = app.config.palettePastel;
     model.debugLog = app.config.debugLog;
+    model.exportBackground = app.config.exportBackground;
+    model.exportFullScreen = app.config.exportFullScreen;
     model.learningTool = (int)app.learnTool - 1;
     model.settingsTab = app.settingsTab;
     for (int t = 0; t < TOOL_COUNT; t++) {
@@ -716,19 +721,95 @@ static void select_tool(Tool tool)
 }
 
 /**
+ * @brief Draws the export canvas over a screenshot of the desktop below it, leaving it fully opaque.
+ *
+ * The overlay windows and tool panels are left out of the screenshot while it is taken.
+ * @param export Rendered drawing with premultiplied pixels; replaced by the combined image.
+ * @param screen Area of the export canvas in virtual-desktop coordinates.
+ * @return false when the screenshot failed; the canvas is untouched then.
+ */
+static bool composite_over_desktop(Canvas *export, RECT screen)
+{
+    int width = export->width;
+    int height = export->height;
+    BITMAPINFO info = {0};
+    info.bmiHeader.biSize = sizeof info.bmiHeader;
+    info.bmiHeader.biWidth = width;
+    info.bmiHeader.biHeight = -height;
+    info.bmiHeader.biPlanes = 1;
+    info.bmiHeader.biBitCount = 32;
+    info.bmiHeader.biCompression = BI_RGB;
+    HDC screenDc = GetDC(NULL);
+    HDC memoryDc = screenDc ? CreateCompatibleDC(screenDc) : NULL;
+    uint32_t *bits = NULL;
+    HBITMAP bitmap = memoryDc ? CreateDIBSection(screenDc, &info, DIB_RGB_COLORS, (void **)&bits, NULL, 0) : NULL;
+    bool ok = false;
+    if (bitmap && bits) {
+        HGDIOBJ previous = SelectObject(memoryDc, bitmap);
+        if (app.overlayReady) {
+            overlay_set_visible(&app.overlay, false);
+        }
+        if (app.ui) {
+            ui_set_visible(app.ui, false, false);
+        }
+        Sleep(150);
+        ok = BitBlt(memoryDc, 0, 0, width, height, screenDc, screen.left, screen.top, SRCCOPY) != 0;
+        if (app.overlayReady) {
+            overlay_set_visible(&app.overlay, true);
+            overlay_raise(&app.overlay);
+        }
+        if (app.ui) {
+            ui_set_visible(app.ui, true, app.drawing || app.drawingsHidden);
+            ui_raise(app.ui);
+        }
+        if (app.overlayReady && app.drawing) {
+            focus_overlay();
+        }
+        SelectObject(memoryDc, previous);
+        GdiFlush();
+    }
+    if (ok) {
+        for (size_t i = 0; i < (size_t)width * (size_t)height; i++) {
+            uint32_t top = export->pixels[i];
+            uint32_t rest = 255 - (top >> 24);
+            uint32_t below = bits[i];
+            uint32_t red = ((top >> 16) & 0xFF) + (((below >> 16) & 0xFF) * rest + 127) / 255;
+            uint32_t green = ((top >> 8) & 0xFF) + (((below >> 8) & 0xFF) * rest + 127) / 255;
+            uint32_t blue = (top & 0xFF) + ((below & 0xFF) * rest + 127) / 255;
+            export->pixels[i] = 0xFF000000u | (red > 255 ? 255 : red) << 16 | (green > 255 ? 255 : green) << 8 |
+                                (blue > 255 ? 255 : blue);
+        }
+    }
+    if (bitmap) {
+        DeleteObject(bitmap);
+    }
+    if (memoryDc) {
+        DeleteDC(memoryDc);
+    }
+    if (screenDc) {
+        ReleaseDC(NULL, screenDc);
+    }
+    return ok;
+}
+
+/**
  * @brief Renders the active drawing into a canvas that covers only the exported area.
+ *
+ * The area is the painted extent, or the whole draw screen when "export the full screen" is on. On the
+ * desktop, "add desktop to exports" puts the drawing over a screenshot of what is behind it.
  * @param export Receives the canvas; the caller owns it on success.
  * @param local Receives the exported rectangle in the canvas' own pixels.
+ * @param opaque Receives whether every exported pixel is opaque.
  * @return false when there is nothing to export or memory ran out.
  */
-static bool render_export(Canvas *export, RECT *local)
+static bool render_export(Canvas *export, RECT *local, bool *opaque)
 {
     Scene *scene = active_scene();
     RECT region = {0, 0, 0, 0};
     const Monitor *monitor = &app.monitors[draw_monitor()];
     int width = monitor->bounds.right - monitor->bounds.left;
     int height = monitor->bounds.bottom - monitor->bounds.top;
-    if (app.whiteboard) {
+    if (app.config.exportFullScreen) {
         region.right = width;
         region.bottom = height;
     } else {
@@ -751,7 +832,17 @@ static bool render_export(Canvas *export, RECT *local)
     }
     export->originX = region.left;
     export->originY = region.top;
-    render_scene(export, scene, &region, app.whiteboard ? COLOR_CANVAS_DARK : 0);
+    render_scene(export, scene, &region, backdrop_color());
+    *opaque = app.whiteboard;
+    if (!app.whiteboard && app.config.exportBackground) {
+        RECT screen = {monitor->bounds.left + region.left, monitor->bounds.top + region.top,
+                       monitor->bounds.left + region.right, monitor->bounds.top + region.bottom};
+        if (composite_over_desktop(export, screen)) {
+            *opaque = true;
+        } else {
+            notify(L"Export", L"The desktop could not be captured; exported the drawing alone.");
+        }
+    }
     SetRect(local, 0, 0, exportWidth, exportHeight);
     return true;
 }
@@ -763,10 +854,11 @@ static void copy_drawing_png(void)
 {
     Canvas export;
     RECT local;
-    if (!render_export(&export, &local)) {
+    bool opaque;
+    if (!render_export(&export, &local, &opaque)) {
         return;
     }
-    if (!jobs_copy_region(app.messageWindow, &export, local, app.whiteboard)) {
+    if (!jobs_copy_region(app.messageWindow, &export, local, opaque)) {
         canvas_destroy(&export);
     }
 }
@@ -812,7 +904,8 @@ static void save_drawing_png(void)
 {
     Canvas export;
     RECT local;
-    if (!render_export(&export, &local)) {
+    bool opaque;
+    if (!render_export(&export, &local, &opaque)) {
         return;
     }
     wchar_t path[MAX_PATH];
@@ -823,7 +916,7 @@ static void save_drawing_png(void)
     if (app.ui) {
         ui_raise(app.ui);
     }
-    if (!chosen || !jobs_save_region(&export, local, app.whiteboard, path)) {
+    if (!chosen || !jobs_save_region(&export, local, opaque, path)) {
         canvas_destroy(&export);
     }
 }
@@ -1338,6 +1431,16 @@ static void on_ui_event(void *user, const UiEvent *event)
         break;
     case UI_EVENT_SET_PASTEL:
         app.config.palettePastel = event->index != 0;
+        save_config();
+        app_sync_ui();
+        break;
+    case UI_EVENT_SET_EXPORT_BACKGROUND:
+        app.config.exportBackground = event->index != 0;
+        save_config();
+        app_sync_ui();
+        break;
+    case UI_EVENT_SET_EXPORT_FULL_SCREEN:
+        app.config.exportFullScreen = event->index != 0;
         save_config();
         app_sync_ui();
         break;

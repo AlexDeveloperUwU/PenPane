@@ -559,6 +559,16 @@ static bool apply_setting(Config *config, const char *key, char *value, const ch
             return false;
         }
         config->debugLog = flag;
+    } else if (strcasecmp(key, "export_background") == 0) {
+        if (!parse_bool(value, &flag)) {
+            return false;
+        }
+        config->exportBackground = flag;
+    } else if (strcasecmp(key, "export_full_screen") == 0) {
+        if (!parse_bool(value, &flag)) {
+            return false;
+        }
+        config->exportFullScreen = flag;
     } else if (strcasecmp(key, "custom_color") == 0) {
         Color color;
         if (!color_parse_hex(value, &color)) {
@@ -706,6 +716,8 @@ void config_defaults(Config *config)
         config->ui.pinned[i] = true;
     }
     config->ui.excludeFromCapture = true;
+    config->exportBackground = true;
+    config->exportFullScreen = true;
     const Binding defaults[] = {
         {{TRIGGER_KEY, VK_F13, 0}, GESTURE_SINGLE, ACTION_UNDO},
         {{TRIGGER_KEY, VK_F13, 0}, GESTURE_DOUBLE, ACTION_TOGGLE_OVERLAY},
@@ -798,6 +810,8 @@ static void format_config(const Config *config, TextBuffer *out)
     out_setting_bool(out, "laser_pointer", config->laserPointer);
     out_setting_bool(out, "palette_pastel", config->palettePastel);
     out_setting_bool(out, "debug_log", config->debugLog);
+    out_setting_bool(out, "export_background", config->exportBackground);
+    out_setting_bool(out, "export_full_screen", config->exportFullScreen);
     for (int i = 0; i < config->customCount; i++) {
         static const char HEX[] = "0123456789ABCDEF";
         Color color = config->customColors[i];

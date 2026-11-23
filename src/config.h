@@ -56,6 +56,8 @@ typedef struct Config {
     bool laserPointer;
     bool palettePastel;
     bool debugLog;
+    bool exportBackground;
+    bool exportFullScreen;
     Color customColors[CUSTOM_COLOR_MAX];
     int customCount;
     UiSettings ui;
