@@ -1354,24 +1354,45 @@ bool ui_dump(const Ui *ui, const char *path)
             UnionRect(&box, box.left == 0x7FFFFFFF ? &rect : &box, &rect);
         }
     }
+    const char *backdropPath = getenv("PENPANE_DUMP_BG");
+    FILE *backdrop = backdropPath ? fopen(backdropPath, "rb") : NULL;
+    if (backdrop) {
+        SetRect(&box, 0, 0, 1920, 1200);
+    }
     int width = box.right - box.left;
     int height = box.bottom - box.top;
     if (width <= 0 || height <= 0) {
+        if (backdrop) {
+            fclose(backdrop);
+        }
         return false;
     }
     size_t stride = ((size_t)width * 3 + 3) & ~(size_t)3;
     unsigned char *data = malloc(stride * (size_t)height);
     if (!data) {
+        if (backdrop) {
+            fclose(backdrop);
+        }
         return false;
     }
     for (int y = 0; y < height; y++) {
         for (int x = 0; x < width; x++) {
             unsigned char *out = data + (size_t)(height - 1 - y) * stride + (size_t)x * 3;
+            unsigned char bgra[4];
+            if (backdrop && fread(bgra, 1, 4, backdrop) == 4) {
+                out[0] = bgra[0];
+                out[1] = bgra[1];
+                out[2] = bgra[2];
+                continue;
+            }
             float t = (float)y / (float)height;
             out[0] = (unsigned char)(120 + 40 * t);
             out[1] = (unsigned char)(40 + 30 * t);
             out[2] = (unsigned char)(10 + 20 * t);
         }
+    }
+    if (backdrop) {
+        fclose(backdrop);
     }
     for (int i = 0; i < PANEL_ISLAND_COUNT; i++) {
         const Island *island = &ui->islands[i];
@@ -1383,6 +1404,9 @@ bool ui_dump(const Ui *ui, const char *path)
                 uint32_t pixel = island->canvas.pixels[(size_t)y * (size_t)island->canvas.width + (size_t)x];
                 int dx = island->x - island->margin + x - box.left;
                 int dy = island->y - island->margin + y - box.top;
+                if (dx < 0 || dy < 0 || dx >= width || dy >= height) {
+                    continue;
+                }
                 unsigned alpha = pixel >> 24;
                 unsigned char *out = data + (size_t)(height - 1 - dy) * stride + (size_t)dx * 3;
                 out[0] = (unsigned char)((pixel & 0xFFu) + out[0] * (255u - alpha) / 255u);
