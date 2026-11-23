@@ -1,6 +1,6 @@
 # WHEN:   A push to main that changes src/version.h (a new version was committed), or manually.
 # WHAT:   Builds and tests the program, then publishes a GitHub release v<version> with PenPane.exe and
-#         its checksum. The tag is created by the release. Nothing happens when that release already exists.
+#         PenPane-Setup-<version>.exe and their checksums. The tag is created by the release. Nothing happens when that release already exists.
 # WRITES: A tag and a release on this repository.
 #
 name: Release
@@ -56,22 +56,15 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           "path=$($path | Select-Object -Last 1)" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
 
-      - name: Build
+      - name: Build and package
         if: steps.version.outputs.publish == 'true'
         shell: powershell
-        run: powershell -NoProfile -ExecutionPolicy Bypass -File scripts\build.ps1 -Toolchain "${{ steps.toolchain.outputs.path }}"
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File scripts\package.ps1 -Toolchain "${{ steps.toolchain.outputs.path }}"
 
       - name: Test
         if: steps.version.outputs.publish == 'true'
         shell: powershell
         run: powershell -NoProfile -ExecutionPolicy Bypass -File scripts\test.ps1 -Toolchain "${{ steps.toolchain.outputs.path }}"
-
-      - name: Compute checksum
-        if: steps.version.outputs.publish == 'true'
-        shell: powershell
-        run: |
-          $hash = (Get-FileHash build\PenPane.exe -Algorithm SHA256).Hash.ToLower()
-          [System.IO.File]::WriteAllText("$PWD\build\PenPane.exe.sha256", "$hash  PenPane.exe`n")
 
       - name: Take the release notes from the changelog
         if: steps.version.outputs.publish == 'true'
@@ -93,4 +86,4 @@ jobs:
         shell: powershell
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "v${{ steps.version.outputs.version }}" build\PenPane.exe build\PenPane.exe.sha256 --title "PenPane v${{ steps.version.outputs.version }}" --notes-file build\notes.md --target "${{ github.sha }}"
+        run: gh release create "v${{ steps.version.outputs.version }}" build\PenPane.exe build\PenPane.exe.sha256 "build\PenPane-Setup-${{ steps.version.outputs.version }}.exe" "build\PenPane-Setup-${{ steps.version.outputs.version }}.exe.sha256" --title "PenPane v${{ steps.version.outputs.version }}" --notes-file build\notes.md --target "${{ github.sha }}"

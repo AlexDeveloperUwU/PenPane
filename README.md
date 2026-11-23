@@ -2,7 +2,7 @@
 
 PenPane is a small native screen-annotation overlay for Windows 10 and 11. Draw over whatever is on screen for presentations, demos and teaching, or switch to a dark whiteboard. It is built for pen tablets: the buttons of the pen can run every action, and the drawing feel follows Excalidraw.
 
-It is one executable of about 150 KB, written in C11 against the Win32 API. There is no runtime, no installer and no UI toolkit, and when it is idle it uses no CPU.
+It is one executable of about 150 KB, written in C11 against the Win32 API. There is no runtime and no UI toolkit (the installer is optional), and when it is idle it uses no CPU.
 
 ![PenPane over a web page: a designer's notes drawn with the arrow, rectangle, ellipse, diamond, text and pen tools, with the toolbar, properties panel and history panel open](docs/images/overview.png)
 
@@ -13,8 +13,8 @@ It is one executable of about 150 KB, written in C11 against the Win32 API. Ther
 
 ## Quick start
 
-1. Download `PenPane.exe` and `PenPane.exe.sha256` from the Releases page of the repository and check the file: `(Get-FileHash PenPane.exe).Hash` must match the contents of the checksum file.
-2. Run `PenPane.exe`. It lives in the notification area and shows a small toolbar handle. Put it in a folder you can write to, because it keeps `PenPane.ini` next to the executable.
+1. From the Releases page of the repository, download either `PenPane-Setup-<version>.exe` (installer) or `PenPane.exe` (portable), plus its `.sha256` file, and check it: `(Get-FileHash <file>).Hash` must match the contents of the checksum file.
+2. Run the installer (a short wizard; no administrator rights needed; it installs to `%LOCALAPPDATA%\Programs\PenPane` by default, adds a Start menu shortcut and an entry in Settings > Apps, and can add a desktop shortcut and start with Windows; `/S` installs silently and `/D=<folder>` picks the folder), or run the portable `PenPane.exe` from a folder you can write to, because it keeps `PenPane.ini` next to the executable. PenPane lives in the notification area and shows a small toolbar handle.
 3. Click the toolbar handle and then its drawing button to turn drawing on or off. Starting the program a second time does the same. Right-click the tray icon for modes, screens, remapping, copying as PNG, starting with Windows and quitting.
 4. `Ctrl+Alt+Shift+Esc` always quits. If another program owns that combination, PenPane falls back to `Ctrl+Alt+Shift+F12` and tells you.
 

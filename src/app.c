@@ -1919,6 +1919,10 @@ static LRESULT CALLBACK message_procedure(HWND window, UINT message, WPARAM wpar
     case WM_APP_ACTIVATE:
         set_drawing(!app.drawing);
         return 0;
+    case WM_CLOSE:
+        app.quitting = true;
+        PostQuitMessage(0);
+        return 0;
     case WM_DISPLAYCHANGE:
         handle_display_change();
         return 0;

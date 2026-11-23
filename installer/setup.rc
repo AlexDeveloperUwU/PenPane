@@ -1,0 +1,43 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+#include <winver.h>
+#include "version.h"
+
+#define PENPANE_ICON_ID 1
+#define PENPANE_PAYLOAD_ID 100
+#define PENPANE_LICENSE_ID 101
+
+PENPANE_ICON_ID ICON "penpane.ico"
+PENPANE_PAYLOAD_ID RCDATA "PenPane.exe"
+PENPANE_LICENSE_ID RCDATA "LICENSE"
+1 24 "setup.manifest"
+
+#define PENPANE_NUMERIC_VERSION PENPANE_VERSION_MAJOR, PENPANE_VERSION_MINOR, PENPANE_VERSION_PATCH, 0
+
+VS_VERSION_INFO VERSIONINFO
+FILEVERSION PENPANE_NUMERIC_VERSION
+PRODUCTVERSION PENPANE_NUMERIC_VERSION
+FILEFLAGSMASK VS_FFI_FILEFLAGSMASK
+FILEFLAGS 0
+FILEOS VOS_NT_WINDOWS32
+FILETYPE VFT_APP
+FILESUBTYPE VFT2_UNKNOWN
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904B0"
+        BEGIN
+            VALUE "CompanyName", "PenPane contributors"
+            VALUE "FileDescription", "PenPane setup"
+            VALUE "FileVersion", PENPANE_VERSION_STRING
+            VALUE "InternalName", "penpane-setup"
+            VALUE "LegalCopyright", "Copyright (C) 2026 PenPane contributors, GPL-3.0-or-later"
+            VALUE "OriginalFilename", "PenPane-Setup.exe"
+            VALUE "ProductName", PENPANE_PRODUCT_NAME
+            VALUE "ProductVersion", PENPANE_VERSION_STRING
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x0409, 0x04B0
+    END
+END

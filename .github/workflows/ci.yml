@@ -34,15 +34,17 @@ jobs:
 
       - name: Build
         shell: powershell
-        run: powershell -NoProfile -ExecutionPolicy Bypass -File scripts\build.ps1 -Toolchain "${{ steps.toolchain.outputs.path }}"
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File scripts\package.ps1 -Toolchain "${{ steps.toolchain.outputs.path }}"
 
       - name: Test
         shell: powershell
         run: powershell -NoProfile -ExecutionPolicy Bypass -File scripts\test.ps1 -Toolchain "${{ steps.toolchain.outputs.path }}"
 
-      - name: Upload executable
+      - name: Upload executables
         uses: actions/upload-artifact@v7
         with:
           name: penpane
-          path: build/PenPane.exe
+          path: |
+            build/PenPane.exe
+            build/PenPane-Setup-*.exe
           if-no-files-found: error

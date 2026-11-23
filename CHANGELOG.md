@@ -4,6 +4,18 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [0.4.0] - 2026-11-23
+
+### Added
+
+- Installer, `PenPane-Setup-<version>.exe`, written in C: a wizard with welcome, license, folder and options, progress and finish pages. It installs per user to `%LOCALAPPDATA%\Programs\PenPane` without administrator rights, adds a Start menu shortcut and a Settings > Apps entry, and can add a desktop shortcut and start with Windows. `/S` installs silently, `/D=<folder>` picks the folder and `Uninstall.exe` removes everything.
+- `scripts\package.ps1` builds the installer next to the portable `PenPane.exe` and writes a checksum for each.
+- Releases now publish the installer and its checksum beside the portable executable.
+
+### Changed
+
+- PenPane quits when its window receives a close request, so the installer can replace a running copy cleanly.
+
 ## [0.3.0] - 2026-11-23
 
 ### Added

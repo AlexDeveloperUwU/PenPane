@@ -20,6 +20,14 @@ Produces `build\PenPane.exe` (about 150 KB, of which about 17 KB are the icon an
 
 The icon and the version information come from `res\penpane.rc`, compiled with `llvm-windres` and linked into the executable. The version lives in `src\version.h`; change it there only. `res\penpane.ico` is produced by `scripts\make-icon.ps1` (a pen nib on a pane, five sizes stored as PNG), so the icon is reproducible and needs no external tool.
 
+## Installer
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\package.ps1
+```
+
+Runs the build, then compiles `installer\setup.c` (C, per-user, no administrator rights) with `PenPane.exe` and the license embedded as resources. The setup is a wizard (welcome, license, folder and options, progress, finish) with optional desktop shortcut and start with Windows. `-OutDir <folder>` builds somewhere other than `build`. Produces `build\PenPane-Setup-<version>.exe` and the `.sha256` files of the installer and of the portable `build\PenPane.exe`. The installer installs to `%LOCALAPPDATA%\Programs\PenPane` because the settings and log live next to the executable. It also writes `Uninstall.exe` (the same program), a Start menu shortcut and the Settings > Apps entry. Switches: `/S`, `/D=<folder>`, `/uninstall`. The installer is not code-signed, so SmartScreen may warn.
+
 ## Tests
 
 ```powershell
