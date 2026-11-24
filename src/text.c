@@ -123,13 +123,12 @@ static HFONT font_get(TextFont role, int size)
         }
     }
     resolve_canvas_face();
-    const wchar_t *face = role == TEXT_FONT_CANVAS ? g_canvasFace
-                          : role == TEXT_FONT_CANVAS_NORMAL ? g_normalFace
+    const wchar_t *face = role == TEXT_FONT_CANVAS           ? g_canvasFace
+                          : role == TEXT_FONT_CANVAS_NORMAL  ? g_normalFace
                           : role == TEXT_FONT_CANVAS_LEGIBLE ? g_legibleFace
                                                              : L"Segoe UI";
-    HFONT font = CreateFontW(-size, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET,
-                             OUT_TT_PRECIS, CLIP_DEFAULT_PRECIS, ANTIALIASED_QUALITY,
-                             DEFAULT_PITCH | FF_DONTCARE, face);
+    HFONT font = CreateFontW(-size, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_TT_PRECIS,
+                             CLIP_DEFAULT_PRECIS, ANTIALIASED_QUALITY, DEFAULT_PITCH | FF_DONTCARE, face);
     if (!font) {
         return NULL;
     }

@@ -58,9 +58,8 @@ static bool config_equal(const Config *a, const Config *b)
         a->defaultStrokeIndex != b->defaultStrokeIndex || a->defaultFillIndex != b->defaultFillIndex ||
         a->defaultWidthIndex != b->defaultWidthIndex || a->autoFadeSeconds != b->autoFadeSeconds ||
         a->drawMonitor != b->drawMonitor || a->uiMonitor != b->uiMonitor || a->toolLock != b->toolLock ||
-        a->laserPointer != b->laserPointer ||
-        a->ui.autoHide != b->ui.autoHide || a->ui.autoHideMs != b->ui.autoHideMs ||
-        a->ui.excludeFromCapture != b->ui.excludeFromCapture) {
+        a->laserPointer != b->laserPointer || a->ui.autoHide != b->ui.autoHide ||
+        a->ui.autoHideMs != b->ui.autoHideMs || a->ui.excludeFromCapture != b->ui.excludeFromCapture) {
         return false;
     }
     for (int i = 0; i < PANEL_COUNT; i++) {
@@ -75,7 +74,8 @@ static bool config_equal(const Config *a, const Config *b)
     }
     for (int i = 0; i < a->bindingCount; i++) {
         if (!trigger_equals(a->bindings[i].trigger, b->bindings[i].trigger) ||
-            a->bindings[i].gesture != b->bindings[i].gesture || a->bindings[i].action != b->bindings[i].action) {
+            a->bindings[i].gesture != b->bindings[i].gesture ||
+            a->bindings[i].action != b->bindings[i].action) {
             return false;
         }
     }
@@ -191,7 +191,8 @@ static void test_tool_order(void)
     write_text(path, "hidden_tools = laser, Text\n");
     assert(config_load(&config, path, errors, 256) == CONFIG_LOADED);
     assert(config.hiddenTools == ((1u << TOOL_LASER) | (1u << TOOL_TEXT)));
-    write_text(path, "hidden_tools = select, rectangle, ellipse, arrow, line, pen, laser, text, eraser, diamond, highlighter\n");
+    write_text(path, "hidden_tools = select, rectangle, ellipse, arrow, line, pen, laser, text, eraser, "
+                     "diamond, highlighter\n");
     assert(config_load(&config, path, errors, 256) == CONFIG_LOADED);
     assert(config.hiddenTools == (1u << TOOL_DIAMOND) && errors[0] != L'\0');
     write_text(path, "hidden_tools =\n");
@@ -207,7 +208,8 @@ static void test_tool_order(void)
     DeleteFileW(path);
 }
 
-/** @brief Custom colors and the pastel switch load, reject bad values, survive a save, and HSV round-trips. */
+/** @brief Custom colors and the pastel switch load, reject bad values, survive a save, and HSV round-trips.
+ */
 static void test_custom_colors(void)
 {
     wchar_t path[MAX_PATH];
@@ -215,7 +217,8 @@ static void test_custom_colors(void)
     Config config;
     Config loaded;
     scratch_path(L"penpane_test_colors.cfg", path, MAX_PATH);
-    write_text(path, "palette_pastel = on\ncustom_color = #e63946\ncustom_color = 2A9D8F\ncustom_color = #12\ncustom_color = #GG0000\n");
+    write_text(path, "palette_pastel = on\ncustom_color = #e63946\ncustom_color = 2A9D8F\ncustom_color = "
+                     "#12\ncustom_color = #GG0000\n");
     assert(config_load(&config, path, errors, 256) == CONFIG_LOADED);
     assert(config.palettePastel && config.customCount == 2);
     assert(config.customColors[0] == 0xFFE63946u && config.customColors[1] == 0xFF2A9D8Fu);
@@ -306,26 +309,25 @@ static void test_bad_lines_skipped(void)
     Config config;
     Action action;
     scratch_path(L"penpane_test_bad.cfg", path, MAX_PATH);
-    write_text(path,
-               "# comment\r\n"
-               "\r\n"
-               "double_press_ms = 250\r\n"
-               "long_press_ms = banana\r\n"
-               "unknown_key = 1\r\n"
-               "no equals here\r\n"
-               "default_tool = hexagon\r\n"
-               "default_stroke_index = 99\r\n"
-               "auto_fade_seconds = -3\r\n"
-               "bind = F13 triple undo\r\n"
-               "bind = F13 single nothing\r\n"
-               "bind = Ctrl+ single undo\r\n"
-               "bind = F13 single\r\n"
-               "bind = F13 single undo extra\r\n"
-               "toolbar_pos = 10;20\r\n"
-               "tool_lock = maybe\r\n"
-               "default_tool = ellipse\r\n"
-               "bind = F16 double redo\r\n"
-               "properties_pos = 5, 6\r\n");
+    write_text(path, "# comment\r\n"
+                     "\r\n"
+                     "double_press_ms = 250\r\n"
+                     "long_press_ms = banana\r\n"
+                     "unknown_key = 1\r\n"
+                     "no equals here\r\n"
+                     "default_tool = hexagon\r\n"
+                     "default_stroke_index = 99\r\n"
+                     "auto_fade_seconds = -3\r\n"
+                     "bind = F13 triple undo\r\n"
+                     "bind = F13 single nothing\r\n"
+                     "bind = Ctrl+ single undo\r\n"
+                     "bind = F13 single\r\n"
+                     "bind = F13 single undo extra\r\n"
+                     "toolbar_pos = 10;20\r\n"
+                     "tool_lock = maybe\r\n"
+                     "default_tool = ellipse\r\n"
+                     "bind = F16 double redo\r\n"
+                     "properties_pos = 5, 6\r\n");
     assert(config_load(&config, path, errors, 512) == CONFIG_LOADED);
     assert(config.doubleWindowMs == 250);
     assert(config.longPressMs == 600);
@@ -393,7 +395,8 @@ static void test_bom_and_spacing(void)
     DeleteFileW(path);
 }
 
-/** @brief set_binding replaces an existing trigger and gesture, appends otherwise, and reports a full table. */
+/** @brief set_binding replaces an existing trigger and gesture, appends otherwise, and reports a full table.
+ */
 static void test_set_binding(void)
 {
     Config config;
@@ -484,8 +487,9 @@ static void test_trigger_text_round_trip(void)
     }
     check_trigger_round_trip(key(VK_F13, 0), L"F13");
     check_trigger_round_trip(key(VK_F14, TRIGGER_MOD_CONTROL), L"Ctrl+F14");
-    check_trigger_round_trip(key(VK_F14, TRIGGER_MOD_CONTROL | TRIGGER_MOD_ALT | TRIGGER_MOD_SHIFT | TRIGGER_MOD_WIN),
-                             L"Ctrl+Alt+Shift+Win+F14");
+    check_trigger_round_trip(
+        key(VK_F14, TRIGGER_MOD_CONTROL | TRIGGER_MOD_ALT | TRIGGER_MOD_SHIFT | TRIGGER_MOD_WIN),
+        L"Ctrl+Alt+Shift+Win+F14");
     check_trigger_round_trip(key(VK_ESCAPE, 0), L"Esc");
     check_trigger_round_trip(key(VK_NEXT, 0), L"PageDown");
     check_trigger_round_trip(key(VK_PRIOR, 0), L"PageUp");
@@ -512,10 +516,9 @@ static void test_trigger_parsing(void)
     assert(trigger_from_text(L"a", &trigger) && trigger.virtualKey == 'A');
     assert(trigger_from_text(L"Control+Z", &trigger) && trigger.modifiers == TRIGGER_MOD_CONTROL);
 
-    const wchar_t *bad[] = {L"",         L"Ctrl+",     L"+F1",       L"Ctrl++F1",  L"Foo",
-                            L"F0",       L"F25",       L"F-1",       L"VK_0x",     L"VK_0x1FF",
-                            L"VK_0x00",  L"VK_0xZZ",   L"Hyper+F1",  L"AB",        L"Numpad10",
-                            L"Ctrl+Foo", L"F13 F14",   L"Ctrl Alt+F1"};
+    const wchar_t *bad[] = {L"",         L"Ctrl+", L"+F1",      L"Ctrl++F1", L"Foo",     L"F0",
+                            L"F25",      L"F-1",   L"VK_0x",    L"VK_0x1FF", L"VK_0x00", L"VK_0xZZ",
+                            L"Hyper+F1", L"AB",    L"Numpad10", L"Ctrl+Foo", L"F13 F14", L"Ctrl Alt+F1"};
     for (size_t i = 0; i < sizeof bad / sizeof bad[0]; i++) {
         assert(!trigger_from_text(bad[i], &trigger));
     }
@@ -533,7 +536,8 @@ static void test_trigger_to_text_truncation(void)
     assert(text[0] == L'\0');
 }
 
-/** @brief A file that cannot be opened for a reason other than absence is unreadable and leaves the configuration untouched. */
+/** @brief A file that cannot be opened for a reason other than absence is unreadable and leaves the
+ * configuration untouched. */
 static void test_unreadable_file_is_not_missing(void)
 {
     wchar_t path[MAX_PATH];
@@ -541,7 +545,8 @@ static void test_unreadable_file_is_not_missing(void)
     Config config;
     scratch_path(L"penpane_test_locked.cfg", path, MAX_PATH);
     write_text(path, "double_press_ms = 111\n");
-    HANDLE lock = CreateFileW(path, GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    HANDLE lock =
+        CreateFileW(path, GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
     assert(lock != INVALID_HANDLE_VALUE);
     config_defaults(&config);
     config.doubleWindowMs = 77;
@@ -567,7 +572,8 @@ static void test_unreadable_file_is_not_missing(void)
     assert(config.doubleWindowMs == 79);
 }
 
-/** @brief Plain typing keys need Ctrl, Alt or Win; Shift alone does not count; other keys and mouse buttons are free. */
+/** @brief Plain typing keys need Ctrl, Alt or Win; Shift alone does not count; other keys and mouse buttons
+ * are free. */
 static void test_bindable_triggers(void)
 {
     for (unsigned vk = 'A'; vk <= 'Z'; vk++) {
@@ -596,7 +602,8 @@ static void test_bindable_triggers(void)
     assert(trigger_is_bindable(middle));
 }
 
-/** @brief Plain typing keys are rejected from the file and from set_binding, with a reported line, and never stored. */
+/** @brief Plain typing keys are rejected from the file and from set_binding, with a reported line, and never
+ * stored. */
 static void test_plain_keys_rejected(void)
 {
     wchar_t path[MAX_PATH];
@@ -604,16 +611,15 @@ static void test_plain_keys_rejected(void)
     Config config;
     Action action;
     scratch_path(L"penpane_test_plain.cfg", path, MAX_PATH);
-    write_text(path,
-               "reset_bindings = true\n"
-               "bind = A single undo\n"
-               "bind = Shift+B single redo\n"
-               "bind = Esc double clear\n"
-               "bind = Space long clear\n"
-               "bind = 5 single clear\n"
-               "bind = Ctrl+A single undo\n"
-               "bind = Win+Esc single redo\n"
-               "bind = F15 single next_tool\n");
+    write_text(path, "reset_bindings = true\n"
+                     "bind = A single undo\n"
+                     "bind = Shift+B single redo\n"
+                     "bind = Esc double clear\n"
+                     "bind = Space long clear\n"
+                     "bind = 5 single clear\n"
+                     "bind = Ctrl+A single undo\n"
+                     "bind = Win+Esc single redo\n"
+                     "bind = F15 single next_tool\n");
     assert(config_load(&config, path, errors, 512) == CONFIG_LOADED);
     assert(config.bindingCount == 3);
     assert(!find_binding(&config, key('A', 0), GESTURE_SINGLE, &action));
@@ -652,7 +658,8 @@ static void test_trigger_count(void)
     assert(config_trigger_count(&config) == 0);
 }
 
-/** @brief A legacy file is copied once to the current name; an existing current file or a missing legacy file changes nothing. */
+/** @brief A legacy file is copied once to the current name; an existing current file or a missing legacy file
+ * changes nothing. */
 static void test_legacy_migration(void)
 {
     wchar_t legacy[MAX_PATH];

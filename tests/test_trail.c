@@ -62,7 +62,8 @@ static void test_short_stroke_fades_steadily(void)
     double quarter = ink_at(&trail, &canvas, last + 250);
     double half = ink_at(&trail, &canvas, last + 500);
     double late = ink_at(&trail, &canvas, last + 800);
-    printf("short stroke ink: start %.0f  +250ms %.0f  +500ms %.0f  +800ms %.0f\n", start, quarter, half, late);
+    printf("short stroke ink: start %.0f  +250ms %.0f  +500ms %.0f  +800ms %.0f\n", start, quarter, half,
+           late);
     assert(start > 0.0);
     assert(quarter < start * 0.85);
     assert(half < quarter * 0.85);

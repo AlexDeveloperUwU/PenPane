@@ -467,7 +467,8 @@ static Dirty annotation_extent(void)
 }
 
 /**
- * @brief Surface rectangle the overlay needs: the whole monitor while drawing or on the whiteboard, the annotation extent otherwise.
+ * @brief Surface rectangle the overlay needs: the whole monitor while drawing or on the whiteboard, the
+ * annotation extent otherwise.
  *
  * Drawing keeps a fixed full-monitor surface: growing it during a stroke moved and reallocated the
  * layered window and made pen strokes visibly stutter.
@@ -498,7 +499,8 @@ static void trim_working_set(void)
     SetProcessWorkingSetSize(GetCurrentProcess(), (SIZE_T)-1, (SIZE_T)-1);
 }
 
-/** @brief true while TIMER_ANIMATE runs; it must not be re-armed, or steady pointer input keeps resetting it. */
+/** @brief true while TIMER_ANIMATE runs; it must not be re-armed, or steady pointer input keeps resetting it.
+ */
 static bool animationTimerOn;
 
 /**
@@ -513,7 +515,8 @@ static void update_animation_timer(void)
 }
 
 /**
- * @brief Repaints the dirty regions of the overlay and presents them, resizing the surface outside whiteboard when needed.
+ * @brief Repaints the dirty regions of the overlay and presents them, resizing the surface outside whiteboard
+ * when needed.
  */
 static void app_flush(void)
 {
@@ -747,7 +750,8 @@ static bool composite_over_desktop(Canvas *export, RECT screen)
     HDC screenDc = GetDC(NULL);
     HDC memoryDc = screenDc ? CreateCompatibleDC(screenDc) : NULL;
     uint32_t *bits = NULL;
-    HBITMAP bitmap = memoryDc ? CreateDIBSection(screenDc, &info, DIB_RGB_COLORS, (void **)&bits, NULL, 0) : NULL;
+    HBITMAP bitmap =
+        memoryDc ? CreateDIBSection(screenDc, &info, DIB_RGB_COLORS, (void **)&bits, NULL, 0) : NULL;
     bool ok = false;
     if (bitmap && bits) {
         HGDIOBJ previous = SelectObject(memoryDc, bitmap);
@@ -781,8 +785,8 @@ static bool composite_over_desktop(Canvas *export, RECT screen)
             uint32_t red = ((top >> 16) & 0xFF) + (((below >> 16) & 0xFF) * rest + 127) / 255;
             uint32_t green = ((top >> 8) & 0xFF) + (((below >> 8) & 0xFF) * rest + 127) / 255;
             uint32_t blue = (top & 0xFF) + ((below & 0xFF) * rest + 127) / 255;
-            export->pixels[i] = 0xFF000000u | (red > 255 ? 255 : red) << 16 | (green > 255 ? 255 : green) << 8 |
-                                (blue > 255 ? 255 : blue);
+            export->pixels[i] = 0xFF000000u | (red > 255 ? 255 : red) << 16 |
+                                (green > 255 ? 255 : green) << 8 | (blue > 255 ? 255 : blue);
         }
     }
     if (bitmap) {
@@ -1021,8 +1025,8 @@ static void perform_action(Action action)
     case ACTION_TOOL_ERASER:
     case ACTION_TOOL_DIAMOND:
     case ACTION_TOOL_HIGHLIGHTER: {
-        static const Tool MAP[] = {TOOL_SELECT, TOOL_RECTANGLE, TOOL_ELLIPSE, TOOL_ARROW,
-                                   TOOL_LINE,   TOOL_PEN,       TOOL_LASER,   TOOL_TEXT,
+        static const Tool MAP[] = {TOOL_SELECT, TOOL_RECTANGLE, TOOL_ELLIPSE,    TOOL_ARROW,
+                                   TOOL_LINE,   TOOL_PEN,       TOOL_LASER,      TOOL_TEXT,
                                    TOOL_ERASER, TOOL_DIAMOND,   TOOL_HIGHLIGHTER};
         select_tool(MAP[action - ACTION_TOOL_SELECT]);
         break;
@@ -1186,7 +1190,8 @@ static void restore_tray(bool force)
 }
 
 /**
- * @brief Creates the tray icon, retrying later when the shell is not ready, and delivers queued notifications.
+ * @brief Creates the tray icon, retrying later when the shell is not ready, and delivers queued
+ * notifications.
  */
 static void create_tray(void)
 {
@@ -1235,8 +1240,8 @@ static void register_emergency_hotkey(void)
             return;
         }
     }
-    notify(L"Emergency exit unavailable",
-           L"Ctrl+Alt+Shift+Esc and Ctrl+Alt+Shift+F12 are both taken by other programs. Use the tray menu to quit PenPane.");
+    notify(L"Emergency exit unavailable", L"Ctrl+Alt+Shift+Esc and Ctrl+Alt+Shift+F12 are both taken by "
+                                          L"other programs. Use the tray menu to quit PenPane.");
 }
 
 /**
@@ -1644,8 +1649,8 @@ static void handle_key(WPARAM key)
         Tool tool;
         bool found = false;
         if (key >= '0' && key <= '9') {
-            found = tool_at_slot(app.config.toolOrder, app.config.hiddenTools, key == '0' ? 9 : (int)key - '1',
-                                 &tool);
+            found = tool_at_slot(app.config.toolOrder, app.config.hiddenTools,
+                                 key == '0' ? 9 : (int)key - '1', &tool);
         } else {
             found = tool_from_shortcut((int)key, &tool);
         }
@@ -1670,7 +1675,8 @@ static LRESULT CALLBACK overlay_procedure(HWND window, UINT message, WPARAM wpar
     case WM_POINTERUPDATE:
     case WM_POINTERUP: {
         UINT32 id = GET_POINTERID_WPARAM(wparam);
-        if (app.pointerDown && id != app.activePointer && !supersede_stale_pointer(message == WM_POINTERDOWN)) {
+        if (app.pointerDown && id != app.activePointer &&
+            !supersede_stale_pointer(message == WM_POINTERDOWN)) {
             return 0;
         }
         POINTER_INPUT_TYPE type = PT_POINTER;
@@ -1768,7 +1774,8 @@ static void handle_display_change(void)
 }
 
 /**
- * @brief Recovers after sleep or a locked session: resets input hooks, re-presents windows, restores the tray icon.
+ * @brief Recovers after sleep or a locked session: resets input hooks, re-presents windows, restores the tray
+ * icon.
  *
  * Input that happened while the machine slept or the session was locked is lost, and the system may
  * have dropped the low-level hooks, so held buttons are released and the hooks are installed again.
@@ -1840,13 +1847,14 @@ static void reload_config(void)
     ConfigStatus status = config_load(&app.config, app.configPath, errors, 256);
     app.configProtected = status == CONFIG_UNREADABLE;
     log_set(app.config.debugLog, app.logPath);
-    LOG("config %s: %ls", status == CONFIG_LOADED ? "loaded" : (status == CONFIG_MISSING ? "missing, defaults" : "unreadable"),
+    LOG("config %s: %ls",
+        status == CONFIG_LOADED ? "loaded" : (status == CONFIG_MISSING ? "missing, defaults" : "unreadable"),
         errors[0] ? errors : L"no warnings");
     if (status == CONFIG_MISSING) {
         save_config();
     } else if (status == CONFIG_UNREADABLE) {
-        notify(L"Configuration not read",
-               L"The settings file could not be read. It was left unchanged and the current settings stay in use.");
+        notify(L"Configuration not read", L"The settings file could not be read. It was left unchanged and "
+                                          L"the current settings stay in use.");
     }
     if (errors[0]) {
         notify(L"Configuration warnings", errors);
@@ -2075,7 +2083,8 @@ static LRESULT CALLBACK message_procedure(HWND window, UINT message, WPARAM wpar
  */
 static LONG WINAPI crash_filter(EXCEPTION_POINTERS *info)
 {
-    LOG("CRASH code=0x%08lX address=%p", info->ExceptionRecord->ExceptionCode, info->ExceptionRecord->ExceptionAddress);
+    LOG("CRASH code=0x%08lX address=%p", info->ExceptionRecord->ExceptionCode,
+        info->ExceptionRecord->ExceptionAddress);
     if (app.overlayReady && app.overlay.window) {
         overlay_set_visible(&app.overlay, false);
     }
@@ -2163,8 +2172,8 @@ static bool create_message_window(void)
     windowClass.hInstance = app.instance;
     windowClass.lpszClassName = MESSAGE_CLASS;
     RegisterClassExW(&windowClass);
-    app.messageWindow = CreateWindowExW(WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE, MESSAGE_CLASS, L"PenPane", WS_POPUP,
-                                        0, 0, 0, 0, NULL, NULL, app.instance, NULL);
+    app.messageWindow = CreateWindowExW(WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE, MESSAGE_CLASS, L"PenPane",
+                                        WS_POPUP, 0, 0, 0, 0, NULL, NULL, app.instance, NULL);
     return app.messageWindow != NULL;
 }
 
@@ -2193,7 +2202,8 @@ int app_run(HINSTANCE instance)
 
     if (!pathFits) {
         notify(L"Settings location unavailable",
-               L"The folder of PenPane is too deeply nested to keep a settings file there. Defaults are used and nothing is saved.");
+               L"The folder of PenPane is too deeply nested to keep a settings file there. Defaults are used "
+               L"and nothing is saved.");
     }
     static const wchar_t LOG_NAME[] = L"PenPane.log";
     build_sibling_path(LOG_NAME, ARRAYSIZE(LOG_NAME), app.logPath, ARRAYSIZE(app.logPath));

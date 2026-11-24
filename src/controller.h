@@ -144,7 +144,8 @@ void controller_delete_selection(Controller *controller);
 void controller_apply_style_to_selection(Controller *controller, const Style *style);
 
 /**
- * @brief Applies a style to the selected element without recording history, remembering its original state once.
+ * @brief Applies a style to the selected element without recording history, remembering its original state
+ * once.
  *
  * Meant for continuous edits such as dragging a slider. Finish with controller_style_commit so the
  * whole edit becomes a single undo step.
@@ -154,7 +155,8 @@ void controller_apply_style_to_selection(Controller *controller, const Style *st
 void controller_style_preview(Controller *controller, const Style *style);
 
 /**
- * @brief Records the edits made by controller_style_preview as one undoable step; does nothing when none are pending.
+ * @brief Records the edits made by controller_style_preview as one undoable step; does nothing when none are
+ * pending.
  * @param controller Controller to drive.
  */
 void controller_style_commit(Controller *controller);
@@ -188,8 +190,7 @@ bool controller_animate(Controller *controller, uint32_t nowMs);
  * @param clip Pixel rectangle to restrict drawing to.
  * @param nowMs Monotonic millisecond clock.
  */
-void controller_draw_overlays(const Controller *controller, Canvas *canvas, const RECT *clip,
-                              uint32_t nowMs);
+void controller_draw_overlays(const Controller *controller, Canvas *canvas, const RECT *clip, uint32_t nowMs);
 
 /**
  * @brief Grows an extent by the bounds of transient drawing: draft, text caret, selection handles and trails.

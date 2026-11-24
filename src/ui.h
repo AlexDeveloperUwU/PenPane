@@ -178,10 +178,13 @@ typedef enum UiEventKind {
  *  - UI_EVENT_RESET_OPTIONS: reset every option to its default.
  *  - UI_EVENT_RESET_POSITIONS: put the toolbar and panels back at their default places.
  *  - UI_EVENT_SEND_KEY: index is a virtual-key code to type into the window that has the keyboard focus.
- *  - UI_EVENT_TOOL_SHORTCUT: tool is the tool whose extra shortcut should be learned (a second click cancels).
+ *  - UI_EVENT_TOOL_SHORTCUT: tool is the tool whose extra shortcut should be learned (a second click
+ * cancels).
  *  - UI_EVENT_TOOL_SHORTCUT_CLEAR: tool is the tool whose extra shortcut should be removed.
- *  - UI_EVENT_TOOL_SHORTCUT_KEY: tool is the tool being learned and index a virtual-key code (F13 to F18) to bind to it as a single press, without pressing it.
- *  - UI_EVENT_SETTINGS_TAB: index is the settings tab to show (0 General, 1 Toolbar, 2 Shortcuts, 3 Pen keys).
+ *  - UI_EVENT_TOOL_SHORTCUT_KEY: tool is the tool being learned and index a virtual-key code (F13 to F18) to
+ * bind to it as a single press, without pressing it.
+ *  - UI_EVENT_SETTINGS_TAB: index is the settings tab to show (0 General, 1 Toolbar, 2 Shortcuts, 3 Pen
+ * keys).
  *  - UI_EVENT_SET_OPACITY: value is 0.0 to 1.0 in steps of 0.1.
  *  - UI_EVENT_PANEL_MOVED: panel, x and y hold the new top-left position.
  *  - UI_EVENT_SLIDER_END: the slider drag that produced the preceding UI_EVENT_SET_OPACITY events is over
@@ -295,7 +298,8 @@ bool ui_contains_point(const Ui *ui, POINT point);
 
 #ifdef PENPANE_UI_DUMP
 /**
- * @brief Test hook: writes every shown island, composited at its screen position over a plain backdrop, as a BMP.
+ * @brief Test hook: writes every shown island, composited at its screen position over a plain backdrop, as a
+ * BMP.
  * @param ui Instance to dump.
  * @param path Destination file, narrow characters.
  * @return true on success.

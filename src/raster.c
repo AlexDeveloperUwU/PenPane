@@ -121,8 +121,7 @@ static inline __attribute__((always_inline)) float rect_distance(const void *con
  * @param first Receives the first certain pixel.
  * @param last Receives one past the last certain pixel; not greater than first when there is none.
  */
-typedef void (*SpanFunction)(const void *context, float yCenter, float threshold, int *first,
-                             int *last);
+typedef void (*SpanFunction)(const void *context, float yCenter, float threshold, int *first, int *last);
 
 /**
  * @brief Interior span of an ellipse row, from the guaranteed bound distance <= -(1 - k0) * min radius.
@@ -133,8 +132,7 @@ typedef void (*SpanFunction)(const void *context, float yCenter, float threshold
  * @param last Receives one past the last certain pixel.
  */
 static inline __attribute__((always_inline)) void ellipse_span(const void *context, float yCenter,
-                                                              float threshold, int *first,
-                                                              int *last)
+                                                               float threshold, int *first, int *last)
 {
     const EllipseShape *shape = context;
     *first = *last = 0;
@@ -162,7 +160,7 @@ static inline __attribute__((always_inline)) void ellipse_span(const void *conte
  * @param last Receives one past the last certain pixel.
  */
 static inline __attribute__((always_inline)) void rect_span(const void *context, float yCenter,
-                                                           float threshold, int *first, int *last)
+                                                            float threshold, int *first, int *last)
 {
     const RectShape *shape = context;
     *first = *last = 0;
@@ -190,10 +188,9 @@ static inline __attribute__((always_inline)) void rect_span(const void *context,
  * @param shadowBlur Blur distance for a shadow falloff, or zero for none.
  */
 static inline __attribute__((always_inline)) void rasterize_run(uint8_t *row, int y, int from, int to,
-                                                               DistanceFunction distance,
-                                                               const void *context,
-                                                               float strokeHalfWidth,
-                                                               float shadowBlur)
+                                                                DistanceFunction distance,
+                                                                const void *context, float strokeHalfWidth,
+                                                                float shadowBlur)
 {
     for (int x = from; x < to; x++) {
         float d = distance(context, (float)x + 0.5f, (float)y + 0.5f);
@@ -226,9 +223,10 @@ static inline __attribute__((always_inline)) void rasterize_run(uint8_t *row, in
  * @param strokeHalfWidth Half stroke width, or a negative value to fill the interior.
  * @param shadowBlur Blur distance for a shadow falloff, or zero for none.
  */
-static inline __attribute__((always_inline)) void rasterize_inline(
-    Mask *mask, int left, int top, int right, int bottom, DistanceFunction distance,
-    SpanFunction span, const void *context, float strokeHalfWidth, float shadowBlur)
+static inline __attribute__((always_inline)) void rasterize_inline(Mask *mask, int left, int top, int right,
+                                                                   int bottom, DistanceFunction distance,
+                                                                   SpanFunction span, const void *context,
+                                                                   float strokeHalfWidth, float shadowBlur)
 {
     if (left < mask->x) {
         left = mask->x;
@@ -274,8 +272,7 @@ static inline __attribute__((always_inline)) void rasterize_inline(
  * @param bottom Window bottom (exclusive) in canvas coordinates.
  * @param context CapsuleShape pointer.
  */
-static void rasterize_capsule(Mask *mask, int left, int top, int right, int bottom,
-                              const void *context)
+static void rasterize_capsule(Mask *mask, int left, int top, int right, int bottom, const void *context)
 {
     rasterize_inline(mask, left, top, right, bottom, capsule_distance, NULL, context, -1.0f, 0.0f);
 }
@@ -290,11 +287,10 @@ static void rasterize_capsule(Mask *mask, int left, int top, int right, int bott
  * @param context EllipseShape pointer.
  * @param strokeHalfWidth Half stroke width, or a negative value to fill the interior.
  */
-static void rasterize_ellipse(Mask *mask, int left, int top, int right, int bottom,
-                              const void *context, float strokeHalfWidth)
+static void rasterize_ellipse(Mask *mask, int left, int top, int right, int bottom, const void *context,
+                              float strokeHalfWidth)
 {
-    rasterize_inline(mask, left, top, right, bottom, ellipse_distance, ellipse_span, context,
-                     strokeHalfWidth,
+    rasterize_inline(mask, left, top, right, bottom, ellipse_distance, ellipse_span, context, strokeHalfWidth,
                      0.0f);
 }
 
@@ -309,11 +305,10 @@ static void rasterize_ellipse(Mask *mask, int left, int top, int right, int bott
  * @param strokeHalfWidth Half stroke width, or a negative value to fill the interior.
  * @param shadowBlur Blur distance for a shadow falloff, or zero for none.
  */
-static void rasterize_rect(Mask *mask, int left, int top, int right, int bottom,
-                           const void *context, float strokeHalfWidth, float shadowBlur)
+static void rasterize_rect(Mask *mask, int left, int top, int right, int bottom, const void *context,
+                           float strokeHalfWidth, float shadowBlur)
 {
-    rasterize_inline(mask, left, top, right, bottom, rect_distance, rect_span, context,
-                     strokeHalfWidth,
+    rasterize_inline(mask, left, top, right, bottom, rect_distance, rect_span, context, strokeHalfWidth,
                      shadowBlur);
 }
 
@@ -463,18 +458,17 @@ void mask_add_ellipse_fill(Mask *mask, Point center, float radiusX, float radius
 {
     EllipseShape shape = {center, radiusX, radiusY};
     rasterize_ellipse(mask, (int)floorf(center.x - radiusX - 1.0f), (int)floorf(center.y - radiusY - 1.0f),
-              (int)ceilf(center.x + radiusX + 1.0f), (int)ceilf(center.y + radiusY + 1.0f),
-              &shape, -1.0f);
+                      (int)ceilf(center.x + radiusX + 1.0f), (int)ceilf(center.y + radiusY + 1.0f), &shape,
+                      -1.0f);
 }
 
-void mask_add_ellipse_stroke(Mask *mask, Point center, float radiusX, float radiusY,
-                             float strokeWidth)
+void mask_add_ellipse_stroke(Mask *mask, Point center, float radiusX, float radiusY, float strokeWidth)
 {
     EllipseShape shape = {center, radiusX, radiusY};
     float reach = strokeWidth * 0.5f + 1.0f;
     rasterize_ellipse(mask, (int)floorf(center.x - radiusX - reach), (int)floorf(center.y - radiusY - reach),
-              (int)ceilf(center.x + radiusX + reach), (int)ceilf(center.y + radiusY + reach),
-              &shape, strokeWidth * 0.5f);
+                      (int)ceilf(center.x + radiusX + reach), (int)ceilf(center.y + radiusY + reach), &shape,
+                      strokeWidth * 0.5f);
 }
 
 /**
@@ -498,33 +492,32 @@ static RectShape make_rect(float left, float top, float width, float height, flo
     return shape;
 }
 
-void mask_add_rect_fill(Mask *mask, float left, float top, float width, float height,
-                        float cornerRadius)
+void mask_add_rect_fill(Mask *mask, float left, float top, float width, float height, float cornerRadius)
 {
     RectShape shape = make_rect(left, top, width, height, cornerRadius);
     rasterize_rect(mask, (int)floorf(left - 1.0f), (int)floorf(top - 1.0f), (int)ceilf(left + width + 1.0f),
-              (int)ceilf(top + height + 1.0f), &shape, -1.0f, 0.0f);
+                   (int)ceilf(top + height + 1.0f), &shape, -1.0f, 0.0f);
 }
 
-void mask_add_rect_stroke(Mask *mask, float left, float top, float width, float height,
-                          float cornerRadius, float strokeWidth)
+void mask_add_rect_stroke(Mask *mask, float left, float top, float width, float height, float cornerRadius,
+                          float strokeWidth)
 {
     RectShape shape = make_rect(left, top, width, height, cornerRadius);
     float reach = strokeWidth * 0.5f + 1.0f;
     rasterize_rect(mask, (int)floorf(left - reach), (int)floorf(top - reach),
-              (int)ceilf(left + width + reach), (int)ceilf(top + height + reach), &shape, strokeWidth * 0.5f, 0.0f);
+                   (int)ceilf(left + width + reach), (int)ceilf(top + height + reach), &shape,
+                   strokeWidth * 0.5f, 0.0f);
 }
 
-void mask_add_rect_shadow(Mask *mask, float left, float top, float width, float height,
-                          float cornerRadius, float blur)
+void mask_add_rect_shadow(Mask *mask, float left, float top, float width, float height, float cornerRadius,
+                          float blur)
 {
     RectShape shape = make_rect(left, top, width, height, cornerRadius);
-    rasterize_rect(mask, (int)floorf(left - blur), (int)floorf(top - blur),
-              (int)ceilf(left + width + blur), (int)ceilf(top + height + blur), &shape, -1.0f, blur);
+    rasterize_rect(mask, (int)floorf(left - blur), (int)floorf(top - blur), (int)ceilf(left + width + blur),
+                   (int)ceilf(top + height + blur), &shape, -1.0f, blur);
 }
 
 void mask_blend(Canvas *canvas, const Mask *mask, Color color)
 {
-    canvas_blend_coverage(canvas, mask->x, mask->y, mask->coverage, mask->width, mask->height,
-                          color);
+    canvas_blend_coverage(canvas, mask->x, mask->y, mask->coverage, mask->width, mask->height, color);
 }

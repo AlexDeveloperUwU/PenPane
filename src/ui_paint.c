@@ -71,8 +71,8 @@ static Color shade(Color color, float factor)
  * @param alignRight true to right-align, otherwise left-align.
  * @param color Text color.
  */
-static void draw_label(Canvas *canvas, const wchar_t *text, int size, const RECT *box,
-                       bool alignRight, Color color)
+static void draw_label(Canvas *canvas, const wchar_t *text, int size, const RECT *box, bool alignRight,
+                       Color color)
 {
     int width;
     int height;
@@ -211,8 +211,7 @@ static void draw_hint(Canvas *canvas, const RECT *rect, wchar_t hint, float scal
  * @param state Interaction state.
  * @param scale Scale factor.
  */
-static void paint_button(Canvas *canvas, const UiItem *item, const RECT *rect, ItemState state,
-                         float scale)
+static void paint_button(Canvas *canvas, const UiItem *item, const RECT *rect, ItemState state, float scale)
 {
     Color background = 0;
     if (item->selected) {
@@ -224,8 +223,7 @@ static void paint_button(Canvas *canvas, const UiItem *item, const RECT *rect, I
     }
     if (background) {
         ui_fill_round_rect(canvas, (float)rect->left, (float)rect->top, (float)(rect->right - rect->left),
-                           (float)(rect->bottom - rect->top), (float)ui_px(scale, BUTTON_RADIUS),
-                           background);
+                           (float)(rect->bottom - rect->top), (float)ui_px(scale, BUTTON_RADIUS), background);
     }
     Color color = item->selected ? COLOR_ICON_SELECTED : COLOR_ICON;
     if (!item->enabled) {
@@ -341,8 +339,8 @@ static void paint_picker(Canvas *canvas, const UiItem *item, const RECT *rect, I
         }
     }
     float inner = half - rim;
-    ui_fill_round_rect(canvas, cx - inner, cy - inner, 2.0f * inner, 2.0f * inner, fmaxf(radius - rim * 0.5f, 1.0f),
-                       item->color);
+    ui_fill_round_rect(canvas, cx - inner, cy - inner, 2.0f * inner, 2.0f * inner,
+                       fmaxf(radius - rim * 0.5f, 1.0f), item->color);
     if (item->selected) {
         draw_ring(canvas, rect, 2.0f * scale, COLOR_ACTIVE_BORDER, scale);
     } else if (state.hover || state.pressed) {
@@ -459,8 +457,7 @@ static void paint_switch(Canvas *canvas, const UiItem *item, const RECT *rect, I
     ui_fill_round_rect(canvas, (float)rect->left, (float)rect->top, width, height, height * 0.5f, track);
     float knob = height * 0.5f - height * 0.15f;
     float cx = on ? (float)rect->right - height * 0.5f : (float)rect->left + height * 0.5f;
-    ui_fill_circle(canvas, cx, (float)rect->top + height * 0.5f, knob,
-                   on ? COLOR_KNOB_ON : COLOR_KNOB_OFF);
+    ui_fill_circle(canvas, cx, (float)rect->top + height * 0.5f, knob, on ? COLOR_KNOB_ON : COLOR_KNOB_OFF);
 }
 
 /**
@@ -471,8 +468,7 @@ static void paint_switch(Canvas *canvas, const UiItem *item, const RECT *rect, I
  * @param state Interaction state.
  * @param scale Scale factor.
  */
-static void paint_slider(Canvas *canvas, const UiItem *item, const RECT *rect, ItemState state,
-                         float scale)
+static void paint_slider(Canvas *canvas, const UiItem *item, const RECT *rect, ItemState state, float scale)
 {
     float thumb = (float)ui_px(scale, SLIDER_THUMB_RADIUS);
     float trackHeight = (float)ui_px(scale, SLIDER_TRACK_HEIGHT);
@@ -506,8 +502,8 @@ void ui_paint_body(Canvas *canvas, int margin, int width, int height, float radi
         if (!mask) {
             break;
         }
-        mask_add_rect_shadow(mask, (float)margin, (float)margin + layers[i].offset * scale,
-                             (float)width, (float)height, radius, layers[i].blur * scale);
+        mask_add_rect_shadow(mask, (float)margin, (float)margin + layers[i].offset * scale, (float)width,
+                             (float)height, radius, layers[i].blur * scale);
         mask_blend(canvas, mask, layers[i].alpha << 24);
     }
     ui_fill_round_rect(canvas, (float)margin, (float)margin, (float)width, (float)height, radius,
@@ -579,8 +575,7 @@ void ui_paint_item(Canvas *canvas, int margin, const UiItem *item, ItemState sta
     }
 }
 
-void ui_paint_handle(Canvas *canvas, int margin, PanelId panel, const UiModel *model, bool hover,
-                     float scale)
+void ui_paint_handle(Canvas *canvas, int margin, PanelId panel, const UiModel *model, bool hover, float scale)
 {
     int size = ui_px(scale, UI_HANDLE_SIZE);
     if (hover) {

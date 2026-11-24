@@ -99,12 +99,10 @@ static void reinstall_mouse_hook(Hotkeys *hotkeys);
 
 /** @brief Modifier virtual keys as reported by the low-level keyboard hook. */
 static const ModifierKey MODIFIER_KEYS[MODIFIER_KEY_COUNT] = {
-    {VK_SHIFT, TRIGGER_MOD_SHIFT},     {VK_LSHIFT, TRIGGER_MOD_SHIFT},
-    {VK_RSHIFT, TRIGGER_MOD_SHIFT},    {VK_CONTROL, TRIGGER_MOD_CONTROL},
-    {VK_LCONTROL, TRIGGER_MOD_CONTROL}, {VK_RCONTROL, TRIGGER_MOD_CONTROL},
-    {VK_MENU, TRIGGER_MOD_ALT},        {VK_LMENU, TRIGGER_MOD_ALT},
-    {VK_RMENU, TRIGGER_MOD_ALT},       {VK_LWIN, TRIGGER_MOD_WIN},
-    {VK_RWIN, TRIGGER_MOD_WIN},
+    {VK_SHIFT, TRIGGER_MOD_SHIFT},     {VK_LSHIFT, TRIGGER_MOD_SHIFT},     {VK_RSHIFT, TRIGGER_MOD_SHIFT},
+    {VK_CONTROL, TRIGGER_MOD_CONTROL}, {VK_LCONTROL, TRIGGER_MOD_CONTROL}, {VK_RCONTROL, TRIGGER_MOD_CONTROL},
+    {VK_MENU, TRIGGER_MOD_ALT},        {VK_LMENU, TRIGGER_MOD_ALT},        {VK_RMENU, TRIGGER_MOD_ALT},
+    {VK_LWIN, TRIGGER_MOD_WIN},        {VK_RWIN, TRIGGER_MOD_WIN},
 };
 
 /**
@@ -144,8 +142,8 @@ static void report_failure(wchar_t *report, int reportSize, Trigger trigger, DWO
     wide_append(line, REPORT_LINE_SIZE, L": ");
     DWORD length = FormatMessageW(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL, error, 0,
                                   message, MESSAGE_TEXT_SIZE, NULL);
-    while (length > 0 && (message[length - 1] == L'\r' || message[length - 1] == L'\n' ||
-                          message[length - 1] == L' ')) {
+    while (length > 0 &&
+           (message[length - 1] == L'\r' || message[length - 1] == L'\n' || message[length - 1] == L' ')) {
         length--;
     }
     if (length == 0) {
@@ -336,13 +334,13 @@ static void poll_mouse(Hotkeys *hotkeys, uint32_t nowMs)
     POINT cursor;
     bool moved = false;
     if (GetCursorPos(&cursor)) {
-        moved = hotkeys->haveCursor &&
-                (cursor.x != hotkeys->lastCursor.x || cursor.y != hotkeys->lastCursor.y);
+        moved =
+            hotkeys->haveCursor && (cursor.x != hotkeys->lastCursor.x || cursor.y != hotkeys->lastCursor.y);
         hotkeys->lastCursor = cursor;
         hotkeys->haveCursor = true;
     }
-    bool stalled = hotkeys->mouseHook == NULL ||
-                   (moved && (int32_t)(nowMs - hotkeys->hookStamp) > MOUSE_STALL_MS);
+    bool stalled =
+        hotkeys->mouseHook == NULL || (moved && (int32_t)(nowMs - hotkeys->hookStamp) > MOUSE_STALL_MS);
     if (stalled || expired) {
         release_mouse_triggers(hotkeys, nowMs);
         hotkeys->haveCursor = false;
@@ -716,7 +714,8 @@ static void update_mouse_hook(Hotkeys *hotkeys)
 }
 
 /**
- * @brief Removes the mouse hook if present, forgets swallowed buttons and installs the hook again when it is still wanted.
+ * @brief Removes the mouse hook if present, forgets swallowed buttons and installs the hook again when it is
+ * still wanted.
  * @param hotkeys Instance.
  */
 static void reinstall_mouse_hook(Hotkeys *hotkeys)
@@ -911,7 +910,8 @@ bool hotkeys_apply(Hotkeys *hotkeys, const Config *config, wchar_t *report, int 
     }
     if (config_trigger_count(config) > GESTURE_MAX_TRACKED) {
         allRegistered = false;
-        report_text(report, reportSize, L"More than 16 different buttons are bound; the extra ones are ignored.");
+        report_text(report, reportSize,
+                    L"More than 16 different buttons are bound; the extra ones are ignored.");
     }
     return allRegistered;
 }

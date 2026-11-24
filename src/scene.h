@@ -15,11 +15,7 @@
 #include "element.h"
 
 /** @brief Kinds of recorded operation. */
-typedef enum OpKind {
-    OP_ADD,
-    OP_REMOVE,
-    OP_REPLACE
-} OpKind;
+typedef enum OpKind { OP_ADD, OP_REMOVE, OP_REPLACE } OpKind;
 
 /** @brief One recorded change at a list index. */
 typedef struct Op {
@@ -66,7 +62,8 @@ void scene_destroy(Scene *scene);
 /**
  * @brief Appends an element and records it in the pending step. Takes ownership of the element's memory.
  * @param scene Target scene.
- * @param element Element to add; zeroed on success and left untouched on failure, so the caller still owns it then.
+ * @param element Element to add; zeroed on success and left untouched on failure, so the caller still owns it
+ * then.
  * @return true on success; on false the scene and its pending step are unchanged.
  */
 bool scene_add(Scene *scene, Element *element);

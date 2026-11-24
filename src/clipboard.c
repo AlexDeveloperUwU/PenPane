@@ -179,10 +179,14 @@ static bool clipboard_put(UINT format, HGLOBAL handle)
 static uint8_t *region_to_rgba(const Canvas *canvas, RECT region, bool opaqueBackdrop, int *outWidth,
                                int *outHeight)
 {
-    if (region.left < 0) region.left = 0;
-    if (region.top < 0) region.top = 0;
-    if (region.right > canvas->width) region.right = canvas->width;
-    if (region.bottom > canvas->height) region.bottom = canvas->height;
+    if (region.left < 0)
+        region.left = 0;
+    if (region.top < 0)
+        region.top = 0;
+    if (region.right > canvas->width)
+        region.right = canvas->width;
+    if (region.bottom > canvas->height)
+        region.bottom = canvas->height;
     int width = region.right - region.left;
     int height = region.bottom - region.top;
     if (width <= 0 || height <= 0) {

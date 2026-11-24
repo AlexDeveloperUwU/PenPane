@@ -29,18 +29,15 @@
 typedef void (*HotkeyActionHandler)(void *user, Action action);
 
 /** @brief How learn mode ended. */
-typedef enum LearnOutcome {
-    LEARN_CAPTURED,
-    LEARN_CANCELLED,
-    LEARN_REJECTED
-} LearnOutcome;
+typedef enum LearnOutcome { LEARN_CAPTURED, LEARN_CANCELLED, LEARN_REJECTED } LearnOutcome;
 
 /**
  * @brief Receives the result of learn mode.
  * @param user Opaque pointer given to hotkeys_create.
  * @param action Action that was being learned.
  * @param binding Captured trigger and gesture; meaningful only when outcome is LEARN_CAPTURED.
- * @param outcome LEARN_CAPTURED, LEARN_CANCELLED (escape, timeout, resume) or LEARN_REJECTED (a plain typing key that needs Ctrl, Alt or Win).
+ * @param outcome LEARN_CAPTURED, LEARN_CANCELLED (escape, timeout, resume) or LEARN_REJECTED (a plain typing
+ * key that needs Ctrl, Alt or Win).
  */
 typedef void (*HotkeyLearnHandler)(void *user, Action action, Binding binding, LearnOutcome outcome);
 
@@ -57,14 +54,14 @@ typedef struct Hotkeys Hotkeys;
 
 /**
  * @brief Creates an instance bound to a message window.
- * @param window Window that receives WM_HOTKEY and WM_TIMER; messages must be forwarded to hotkeys_handle_message.
+ * @param window Window that receives WM_HOTKEY and WM_TIMER; messages must be forwarded to
+ * hotkeys_handle_message.
  * @param onAction Receives resolved actions.
  * @param onLearn Receives learn-mode results.
  * @param user Opaque pointer forwarded to both handlers.
  * @return New instance, or NULL on failure.
  */
-Hotkeys *hotkeys_create(HWND window, HotkeyActionHandler onAction, HotkeyLearnHandler onLearn,
-                        void *user);
+Hotkeys *hotkeys_create(HWND window, HotkeyActionHandler onAction, HotkeyLearnHandler onLearn, void *user);
 
 /**
  * @brief Unregisters everything and frees the instance.
@@ -76,7 +73,8 @@ void hotkeys_destroy(Hotkeys *hotkeys);
  * @brief Replaces the binding table and re-registers hotkeys.
  * @param hotkeys Instance to configure.
  * @param config Source of bindings and timings.
- * @param report Optional buffer receiving one line per trigger that could not be registered (for example because another application owns it), or an empty string.
+ * @param report Optional buffer receiving one line per trigger that could not be registered (for example
+ * because another application owns it), or an empty string.
  * @param reportSize Size of the report buffer in characters.
  * @return true when every trigger registered, false when at least one failed (the rest still work).
  */

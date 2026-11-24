@@ -32,11 +32,11 @@ void log_write(const char *format, ...);
 void log_set(bool enabled, const wchar_t *path);
 
 /** @brief Logs one line when logging is on. */
-#define LOG(...)                    \
-    do {                            \
-        if (g_logEnabled) {         \
-            log_write(__VA_ARGS__); \
-        }                           \
+#define LOG(...)                                                                                             \
+    do {                                                                                                     \
+        if (g_logEnabled) {                                                                                  \
+            log_write(__VA_ARGS__);                                                                          \
+        }                                                                                                    \
     } while (0)
 
 #endif

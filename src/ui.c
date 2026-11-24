@@ -154,8 +154,10 @@ static void island_center_dialog(Island *island)
         return;
     }
     int cascade = ui_px(island->scale, 28) * (int)(island->id - PANEL_SETTINGS);
-    island->x = info.rcWork.left + (info.rcWork.right - info.rcWork.left - island->layout.width) / 2 + cascade;
-    island->y = info.rcWork.top + (info.rcWork.bottom - info.rcWork.top - island->layout.height) / 2 + cascade;
+    island->x =
+        info.rcWork.left + (info.rcWork.right - info.rcWork.left - island->layout.width) / 2 + cascade;
+    island->y =
+        info.rcWork.top + (info.rcWork.bottom - info.rcWork.top - island->layout.height) / 2 + cascade;
     if (island->shown) {
         SetWindowPos(island->window, NULL, island->x - island->margin, island->y - island->margin, 0, 0,
                      SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
@@ -373,18 +375,18 @@ static void island_paint_all(Island *island)
 {
     if (island->collapsed) {
         int size = ui_px(island->scale, UI_HANDLE_SIZE);
-        ui_paint_body(&island->canvas, island->margin, size, size,
-                      (float)ui_px(island->scale, HANDLE_RADIUS), island->scale);
-        ui_paint_handle(&island->canvas, island->margin, island->id, &island->ui->model,
-                        island->handleHover, island->scale);
+        ui_paint_body(&island->canvas, island->margin, size, size, (float)ui_px(island->scale, HANDLE_RADIUS),
+                      island->scale);
+        ui_paint_handle(&island->canvas, island->margin, island->id, &island->ui->model, island->handleHover,
+                        island->scale);
         island->handleSignature = ui_handle_signature(island->id, &island->ui->model);
         return;
     }
     ui_paint_body(&island->canvas, island->margin, island->layout.width, island->layout.height,
                   (float)ui_px(island->scale, (int)ISLAND_RADIUS), island->scale);
     for (int i = 0; i < island->layout.count; i++) {
-        ui_paint_item(&island->canvas, island->margin, &island->layout.items[i],
-                      island_item_state(island, i), island->scale);
+        ui_paint_item(&island->canvas, island->margin, &island->layout.items[i], island_item_state(island, i),
+                      island->scale);
     }
 }
 
@@ -496,8 +498,8 @@ static int island_hover_target(const Island *island, int x, int y)
     }
     for (int i = 0; i < island->layout.count; i++) {
         const UiItem *item = &island->layout.items[i];
-        if (item->kind == ITEM_GRIP && x >= item->rect.left && x < item->rect.right &&
-            y >= item->rect.top && y < item->rect.bottom) {
+        if (item->kind == ITEM_GRIP && x >= item->rect.left && x < item->rect.right && y >= item->rect.top &&
+            y < item->rect.bottom) {
             return i;
         }
     }
@@ -1197,9 +1199,9 @@ Ui *ui_create(HINSTANCE instance, UiEventHandler handler, void *user, const UiSe
         island->hover = -1;
         island->pressed = -1;
         island->awaitFirstHover = i == PANEL_TOOLBAR;
-        island->window = CreateWindowExW(WS_EX_LAYERED | WS_EX_TOPMOST | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE,
-                                         ISLAND_CLASS, L"PenPane island", WS_POPUP, 0, 0, 1, 1, NULL, NULL,
-                                         instance, island);
+        island->window =
+            CreateWindowExW(WS_EX_LAYERED | WS_EX_TOPMOST | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE, ISLAND_CLASS,
+                            L"PenPane island", WS_POPUP, 0, 0, 1, 1, NULL, NULL, instance, island);
         if (!island->window) {
             ui_destroy(ui);
             return NULL;
@@ -1427,7 +1429,8 @@ bool ui_dump(const Ui *ui, const char *path)
     header[26] = 1;
     header[28] = 24;
     FILE *file = fopen(path, "wb");
-    bool ok = file && fwrite(header, 1, 54, file) == 54 && fwrite(data, 1, stride * (size_t)height, file) == stride * (size_t)height;
+    bool ok = file && fwrite(header, 1, 54, file) == 54 &&
+              fwrite(data, 1, stride * (size_t)height, file) == stride * (size_t)height;
     if (file) {
         fclose(file);
     }

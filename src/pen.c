@@ -114,8 +114,8 @@ static PenPoint midpoint(PenPoint a, PenPoint b)
  * @param sink Segment receiver.
  * @param user Receiver context.
  */
-static void emit_curve(PenPoint start, PenPoint control, PenPoint end, float width,
-                       PenSegmentSink sink, void *user)
+static void emit_curve(PenPoint start, PenPoint control, PenPoint end, float width, PenSegmentSink sink,
+                       void *user)
 {
     float chord = hypotf(end.x - start.x, end.y - start.y) + hypotf(control.x - start.x, control.y - start.y);
     int steps = (int)ceilf(chord / PEN_STEP_LENGTH);
@@ -146,7 +146,8 @@ void pen_emit(const Element *element, int firstGroup, PenSegmentSink sink, void 
     if (count == 1) {
         Point at = {p[0].x, p[0].y};
         float stored = p[0].pressure;
-        float radius = pen_radius(width, stored < PEN_CONSTANT_DOT_LIMIT || stored > PEN_DOT_PRESSURE ? stored : PEN_DOT_PRESSURE);
+        float radius = pen_radius(
+            width, stored < PEN_CONSTANT_DOT_LIMIT || stored > PEN_DOT_PRESSURE ? stored : PEN_DOT_PRESSURE);
         sink(user, at, at, radius, radius);
         return;
     }
@@ -158,8 +159,8 @@ void pen_emit(const Element *element, int firstGroup, PenSegmentSink sink, void 
             PenPoint start = midpoint(p[count - 2], p[count - 1]);
             emit_curve(start, midpoint(start, p[count - 1]), p[count - 1], width, sink, user);
         } else {
-            emit_curve(midpoint(p[group - 1], p[group]), p[group], midpoint(p[group], p[group + 1]),
-                       width, sink, user);
+            emit_curve(midpoint(p[group - 1], p[group]), p[group], midpoint(p[group], p[group + 1]), width,
+                       sink, user);
         }
     }
 }

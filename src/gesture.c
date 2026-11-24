@@ -80,8 +80,7 @@ static void advance(GestureEngine *engine, GestureTracked *slot, uint32_t nowMs)
         slot->pendingSingle = false;
         emit(engine, slot->longAction);
     }
-    if (slot->pendingSingle && !slot->down &&
-        elapsed_ms(nowMs, slot->releasedAt) >= engine->doubleWindowMs) {
+    if (slot->pendingSingle && !slot->down && elapsed_ms(nowMs, slot->releasedAt) >= engine->doubleWindowMs) {
         slot->pendingSingle = false;
         slot->pressCount = 0;
         if (slot->hasSingle) {

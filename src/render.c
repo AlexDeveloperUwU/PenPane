@@ -96,20 +96,24 @@ static float corner_radius(float width, float height)
 static int rect_path(Point *points, FloatRect box, float radius)
 {
     int count = 0;
-    Point corners[4] = {{box.right, box.top}, {box.right, box.bottom}, {box.left, box.bottom},
-                        {box.left, box.top}};
-    Point entry[4] = {{box.right - radius, box.top}, {box.right, box.bottom - radius},
-                      {box.left + radius, box.bottom}, {box.left, box.top + radius}};
-    Point exit[4] = {{box.right, box.top + radius}, {box.right - radius, box.bottom},
-                     {box.left, box.bottom - radius}, {box.left + radius, box.top}};
+    Point corners[4] = {
+        {box.right, box.top}, {box.right, box.bottom}, {box.left, box.bottom}, {box.left, box.top}};
+    Point entry[4] = {{box.right - radius, box.top},
+                      {box.right, box.bottom - radius},
+                      {box.left + radius, box.bottom},
+                      {box.left, box.top + radius}};
+    Point exit[4] = {{box.right, box.top + radius},
+                     {box.right - radius, box.bottom},
+                     {box.left, box.bottom - radius},
+                     {box.left + radius, box.top}};
     for (int corner = 0; corner < 4; corner++) {
         for (int step = 0; step <= CORNER_STEPS; step++) {
             float t = (float)step / (float)CORNER_STEPS;
             float u = 1.0f - t;
-            points[count].x = u * u * entry[corner].x + 2.0f * u * t * corners[corner].x +
-                              t * t * exit[corner].x;
-            points[count].y = u * u * entry[corner].y + 2.0f * u * t * corners[corner].y +
-                              t * t * exit[corner].y;
+            points[count].x =
+                u * u * entry[corner].x + 2.0f * u * t * corners[corner].x + t * t * exit[corner].x;
+            points[count].y =
+                u * u * entry[corner].y + 2.0f * u * t * corners[corner].y + t * t * exit[corner].y;
             count++;
         }
     }
@@ -131,7 +135,8 @@ static int ellipse_path(Point *points, FloatRect box)
     float ry = (box.bottom - box.top) * 0.5f;
     float perimeter = PI_FLOAT * (3.0f * (rx + ry) - sqrtf((3.0f * rx + ry) * (rx + 3.0f * ry)));
     int steps = (int)ceilf(perimeter / ELLIPSE_SEGMENT_LENGTH);
-    steps = steps < ELLIPSE_MIN_STEPS ? ELLIPSE_MIN_STEPS : (steps > MAX_PATH_POINTS - 1 ? MAX_PATH_POINTS - 1 : steps);
+    steps = steps < ELLIPSE_MIN_STEPS ? ELLIPSE_MIN_STEPS
+                                      : (steps > MAX_PATH_POINTS - 1 ? MAX_PATH_POINTS - 1 : steps);
     for (int i = 0; i < steps; i++) {
         float angle = (float)i / (float)steps * 2.0f * PI_FLOAT;
         points[i].x = cx + cosf(angle) * rx;
@@ -231,7 +236,8 @@ static void add_arrowhead(Mask *mask, Point from, Point to, float width)
     size = size < limit ? size : limit;
     float shrink = (ARROWHEAD_SIZE - size) / 15.0f;
     shrink = shrink > 1.0f ? 1.0f : shrink;
-    float angle = (ARROWHEAD_MIN_ANGLE + (ARROWHEAD_MAX_ANGLE - ARROWHEAD_MIN_ANGLE) * shrink) * PI_FLOAT / 180.0f;
+    float angle =
+        (ARROWHEAD_MIN_ANGLE + (ARROWHEAD_MAX_ANGLE - ARROWHEAD_MIN_ANGLE) * shrink) * PI_FLOAT / 180.0f;
     float ux = -dx / length;
     float uy = -dy / length;
     float radius = width * 0.5f;

@@ -100,8 +100,7 @@ static bool items_insert(Scene *scene, int index, const Element *element)
     if (index > scene->count) {
         index = scene->count;
     }
-    memmove(scene->items + index + 1, scene->items + index,
-            sizeof(Element) * (size_t)(scene->count - index));
+    memmove(scene->items + index + 1, scene->items + index, sizeof(Element) * (size_t)(scene->count - index));
     scene->items[index] = *element;
     scene->count++;
     return true;

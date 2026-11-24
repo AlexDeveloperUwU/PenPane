@@ -40,8 +40,8 @@ void ui_scratch_release(void)
     g_scratchCapacity = 0;
 }
 
-void ui_fill_round_rect(Canvas *canvas, float left, float top, float width, float height,
-                        float radius, Color color)
+void ui_fill_round_rect(Canvas *canvas, float left, float top, float width, float height, float radius,
+                        Color color)
 {
     int x = (int)floorf(left) - 1;
     int y = (int)floorf(top) - 1;
@@ -53,13 +53,13 @@ void ui_fill_round_rect(Canvas *canvas, float left, float top, float width, floa
     mask_blend(canvas, mask, color);
 }
 
-void ui_stroke_round_rect(Canvas *canvas, float left, float top, float width, float height,
-                          float radius, float stroke, Color color)
+void ui_stroke_round_rect(Canvas *canvas, float left, float top, float width, float height, float radius,
+                          float stroke, Color color)
 {
     int x = (int)floorf(left - stroke) - 1;
     int y = (int)floorf(top - stroke) - 1;
-    Mask *mask = ui_scratch_mask(x, y, (int)ceilf(width + stroke * 2.0f) + 4,
-                                 (int)ceilf(height + stroke * 2.0f) + 4);
+    Mask *mask =
+        ui_scratch_mask(x, y, (int)ceilf(width + stroke * 2.0f) + 4, (int)ceilf(height + stroke * 2.0f) + 4);
     if (!mask) {
         return;
     }

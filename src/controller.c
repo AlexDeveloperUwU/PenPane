@@ -240,10 +240,9 @@ static float pen_pressure(const Style *style, const PointerSample *sample)
  */
 static bool begin_draft(Controller *controller, const PointerSample *sample)
 {
-    static const ElementType TYPES[TOOL_COUNT] = {ELEMENT_PEN,   ELEMENT_RECTANGLE, ELEMENT_ELLIPSE,
-                                                  ELEMENT_ARROW, ELEMENT_LINE,      ELEMENT_PEN,
-                                                  ELEMENT_PEN,   ELEMENT_TEXT,      ELEMENT_PEN,
-                                                  ELEMENT_DIAMOND, ELEMENT_PEN};
+    static const ElementType TYPES[TOOL_COUNT] = {
+        ELEMENT_PEN, ELEMENT_RECTANGLE, ELEMENT_ELLIPSE, ELEMENT_ARROW,   ELEMENT_LINE, ELEMENT_PEN,
+        ELEMENT_PEN, ELEMENT_TEXT,      ELEMENT_PEN,     ELEMENT_DIAMOND, ELEMENT_PEN};
     controller->draft = element_make(TYPES[controller->tool], &controller->style);
     controller->hasDraft = true;
     controller->draft.from = sample->position;
@@ -269,7 +268,8 @@ static void flush_pen_draft(Controller *controller)
 {
     Element *draft = &controller->draft;
     RECT everything = canvas_area(controller->canvas);
-    bool opaque = draft->style.opacity >= 0.999f && (draft->style.stroke >> 24) == 0xFF && !draft->style.highlighter;
+    bool opaque =
+        draft->style.opacity >= 0.999f && (draft->style.stroke >> 24) == 0xFF && !draft->style.highlighter;
     if (opaque) {
         int firstGroup = controller->penGroup > 0 ? controller->penGroup - 1 : 0;
         RECT touched = render_pen_tail(controller->canvas, draft, firstGroup, &everything);
@@ -466,7 +466,8 @@ static void finish_draft(Controller *controller)
     if (draft->type == ELEMENT_PEN) {
         pen_finish(&controller->pen, draft);
     }
-    if (draft->type == ELEMENT_RECTANGLE || draft->type == ELEMENT_ELLIPSE || draft->type == ELEMENT_DIAMOND) {
+    if (draft->type == ELEMENT_RECTANGLE || draft->type == ELEMENT_ELLIPSE ||
+        draft->type == ELEMENT_DIAMOND) {
         keep = fabsf(draft->to.x - draft->from.x) >= MIN_SHAPE_SIZE ||
                fabsf(draft->to.y - draft->from.y) >= MIN_SHAPE_SIZE;
     } else if (draft->type == ELEMENT_LINE || draft->type == ELEMENT_ARROW) {
@@ -658,8 +659,7 @@ void controller_style_commit(Controller *controller)
 
 void controller_delete_selection(Controller *controller)
 {
-    if (!controller->scene || controller->selected < 0 ||
-        controller->selected >= controller->scene->count) {
+    if (!controller->scene || controller->selected < 0 || controller->selected >= controller->scene->count) {
         return;
     }
     repaint_add(controller, render_selection_bounds(&controller->scene->items[controller->selected]));
@@ -670,8 +670,7 @@ void controller_delete_selection(Controller *controller)
 
 void controller_apply_style_to_selection(Controller *controller, const Style *style)
 {
-    if (!controller->scene || controller->selected < 0 ||
-        controller->selected >= controller->scene->count) {
+    if (!controller->scene || controller->selected < 0 || controller->selected >= controller->scene->count) {
         return;
     }
     Element *item = &controller->scene->items[controller->selected];
@@ -767,8 +766,7 @@ bool controller_animate(Controller *controller, uint32_t nowMs)
     return alive;
 }
 
-void controller_draw_overlays(const Controller *controller, Canvas *canvas, const RECT *clip,
-                              uint32_t nowMs)
+void controller_draw_overlays(const Controller *controller, Canvas *canvas, const RECT *clip, uint32_t nowMs)
 {
     if (controller->hasDraft) {
         render_element(canvas, &controller->draft, clip);
@@ -777,8 +775,7 @@ void controller_draw_overlays(const Controller *controller, Canvas *canvas, cons
         }
     }
     if (controller->tool == TOOL_SELECT && controller->scene && controller->selected >= 0 &&
-        controller->selected < controller->scene->count &&
-        controller->interaction != INTERACTION_ERASE) {
+        controller->selected < controller->scene->count && controller->interaction != INTERACTION_ERASE) {
         render_selection(canvas, &controller->scene->items[controller->selected], clip);
     }
     trail_render(&controller->eraser, canvas, clip, nowMs);

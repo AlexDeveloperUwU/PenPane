@@ -12,7 +12,8 @@
 
 #include "theme.h"
 
-/** @brief Pixel surface that can be handed directly to UpdateLayeredWindow; drawing coordinates are offset by the origin. */
+/** @brief Pixel surface that can be handed directly to UpdateLayeredWindow; drawing coordinates are offset by
+ * the origin. */
 typedef struct Canvas {
     int originX;
     int originY;
@@ -57,8 +58,8 @@ void canvas_fill(Canvas *canvas, const RECT *area, Color color);
  * @param maskHeight Mask height in pixels.
  * @param color Straight-alpha color.
  */
-void canvas_blend_coverage(Canvas *canvas, int originX, int originY, const uint8_t *coverage,
-                           int maskWidth, int maskHeight, Color color);
+void canvas_blend_coverage(Canvas *canvas, int originX, int originY, const uint8_t *coverage, int maskWidth,
+                           int maskHeight, Color color);
 
 /**
  * @brief Rectangle of drawing coordinates the canvas covers.

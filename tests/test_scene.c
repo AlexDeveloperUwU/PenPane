@@ -223,7 +223,8 @@ static Element make_stroke(void)
     return stroke;
 }
 
-/** @brief scene_add that cannot grow the step list leaves the scene, the pending step and the element untouched. */
+/** @brief scene_add that cannot grow the step list leaves the scene, the pending step and the element
+ * untouched. */
 static void test_add_fails_when_step_cannot_grow(void)
 {
     Scene scene;
@@ -239,7 +240,8 @@ static void test_add_fails_when_step_cannot_grow(void)
     scene_destroy(&scene);
 }
 
-/** @brief scene_add that cannot grow the item list rolls back the recorded operation and leaves no dangling element. */
+/** @brief scene_add that cannot grow the item list rolls back the recorded operation and leaves no dangling
+ * element. */
 static void test_add_fails_when_items_cannot_grow(void)
 {
     Scene scene;

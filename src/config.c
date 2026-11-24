@@ -39,13 +39,20 @@ typedef struct ErrorOut {
 
 /** @brief Keys and mouse buttons that have a fixed name. */
 static const NamedTrigger NAMED_TRIGGERS[] = {
-    {"Esc", TRIGGER_KEY, VK_ESCAPE},       {"Space", TRIGGER_KEY, VK_SPACE},
-    {"Enter", TRIGGER_KEY, VK_RETURN},     {"Tab", TRIGGER_KEY, VK_TAB},
-    {"Home", TRIGGER_KEY, VK_HOME},        {"End", TRIGGER_KEY, VK_END},
-    {"PageUp", TRIGGER_KEY, VK_PRIOR},     {"PageDown", TRIGGER_KEY, VK_NEXT},
-    {"Insert", TRIGGER_KEY, VK_INSERT},    {"Delete", TRIGGER_KEY, VK_DELETE},
-    {"Left", TRIGGER_KEY, VK_LEFT},        {"Right", TRIGGER_KEY, VK_RIGHT},
-    {"Up", TRIGGER_KEY, VK_UP},            {"Down", TRIGGER_KEY, VK_DOWN},
+    {"Esc", TRIGGER_KEY, VK_ESCAPE},
+    {"Space", TRIGGER_KEY, VK_SPACE},
+    {"Enter", TRIGGER_KEY, VK_RETURN},
+    {"Tab", TRIGGER_KEY, VK_TAB},
+    {"Home", TRIGGER_KEY, VK_HOME},
+    {"End", TRIGGER_KEY, VK_END},
+    {"PageUp", TRIGGER_KEY, VK_PRIOR},
+    {"PageDown", TRIGGER_KEY, VK_NEXT},
+    {"Insert", TRIGGER_KEY, VK_INSERT},
+    {"Delete", TRIGGER_KEY, VK_DELETE},
+    {"Left", TRIGGER_KEY, VK_LEFT},
+    {"Right", TRIGGER_KEY, VK_RIGHT},
+    {"Up", TRIGGER_KEY, VK_UP},
+    {"Down", TRIGGER_KEY, VK_DOWN},
     {"MButton", TRIGGER_MOUSE_BUTTON, VK_MBUTTON},
     {"XButton1", TRIGGER_MOUSE_BUTTON, VK_XBUTTON1},
     {"XButton2", TRIGGER_MOUSE_BUTTON, VK_XBUTTON2},
@@ -292,8 +299,7 @@ static bool parse_placement(char *text, PanelPlacement *placement)
     *comma = '\0';
     int x;
     int y;
-    if (!parse_int(trim(text), -100000, 100000, &x) ||
-        !parse_int(trim(comma + 1), -100000, 100000, &y)) {
+    if (!parse_int(trim(text), -100000, 100000, &x) || !parse_int(trim(comma + 1), -100000, 100000, &y)) {
         return false;
     }
     placement->set = true;
@@ -482,8 +488,7 @@ static bool parse_binding(char *value, Binding *binding)
  */
 static bool apply_setting(Config *config, const char *key, char *value, const char **reason)
 {
-    static const char *const PLACEMENT_KEYS[PANEL_COUNT] = {"toolbar_pos", "properties_pos",
-                                                            "history_pos"};
+    static const char *const PLACEMENT_KEYS[PANEL_COUNT] = {"toolbar_pos", "properties_pos", "history_pos"};
     static const char *const PINNED_KEYS[PANEL_COUNT] = {"toolbar_pinned", "properties_pinned",
                                                          "history_pinned"};
     int number;
@@ -670,8 +675,8 @@ static void parse_line(Config *config, char *line, int lineNumber, ErrorOut *err
 static char *read_file(const wchar_t *path, DWORD *length, DWORD *error)
 {
     *error = ERROR_SUCCESS;
-    HANDLE file = CreateFileW(path, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL,
-                              OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    HANDLE file = CreateFileW(path, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING,
+                              FILE_ATTRIBUTE_NORMAL, NULL);
     if (file == INVALID_HANDLE_VALUE) {
         *error = GetLastError();
         return NULL;
@@ -774,8 +779,7 @@ ConfigStatus config_load(Config *config, const wchar_t *path, wchar_t *errors, i
  */
 static void format_config(const Config *config, TextBuffer *out)
 {
-    static const char *const PLACEMENT_KEYS[PANEL_COUNT] = {"toolbar_pos", "properties_pos",
-                                                            "history_pos"};
+    static const char *const PLACEMENT_KEYS[PANEL_COUNT] = {"toolbar_pos", "properties_pos", "history_pos"};
     static const char *const PINNED_KEYS[PANEL_COUNT] = {"toolbar_pinned", "properties_pinned",
                                                          "history_pinned"};
     out_text(out, "# Configuration. Unknown or malformed lines are ignored.\n");
@@ -870,8 +874,7 @@ bool config_save(const Config *config, const wchar_t *path)
     }
     memcpy(temporary, path, pathLength * sizeof(wchar_t));
     memcpy(temporary + pathLength, L".tmp", 5 * sizeof(wchar_t));
-    HANDLE file = CreateFileW(temporary, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL,
-                              NULL);
+    HANDLE file = CreateFileW(temporary, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
     if (file == INVALID_HANDLE_VALUE) {
         return false;
     }

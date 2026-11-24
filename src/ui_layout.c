@@ -145,8 +145,7 @@ static void build_toolbar(UiLayout *layout, const UiModel *model, bool pinned, f
 
     x = divider_add(layout, scale, x, y, button);
 
-    UiItem *drawing = button_action(layout, x, y, button,
-                                    model->drawing ? ICON_DRAWING_ON : ICON_DRAWING_OFF,
+    UiItem *drawing = button_action(layout, x, y, button, model->drawing ? ICON_DRAWING_ON : ICON_DRAWING_OFF,
                                     ACTION_TOGGLE_OVERLAY);
     drawing->selected = model->drawing;
     x += button + gap;
@@ -231,9 +230,9 @@ static void build_history(UiLayout *layout, const UiModel *model, bool pinned, f
     x += button + gap;
 
     x = divider_add(layout, scale, x, y, button);
-    UiItem *mode = button_action(layout, x, y, button,
-                                 model->whiteboard ? ICON_MODE_WHITEBOARD : ICON_MODE_DESKTOP,
-                                 ACTION_TOGGLE_MODE);
+    UiItem *mode =
+        button_action(layout, x, y, button, model->whiteboard ? ICON_MODE_WHITEBOARD : ICON_MODE_DESKTOP,
+                      ACTION_TOGGLE_MODE);
     mode->selected = model->whiteboard;
     x += button + gap;
     if (!model->whiteboard) {
@@ -321,9 +320,9 @@ static int dialog_header_add(UiLayout *layout, float scale, int width, PanelId p
  */
 static void build_settings(UiLayout *layout, const UiModel *model, float scale)
 {
-    static const wchar_t *const TOOL_LABELS[TOOL_COUNT] = {L"Select", L"Rectangle", L"Ellipse", L"Arrow",
-                                                           L"Line",   L"Pen",       L"Laser",   L"Text",
-                                                           L"Eraser", L"Diamond", L"Highlighter"};
+    static const wchar_t *const TOOL_LABELS[TOOL_COUNT] = {L"Select", L"Rectangle", L"Ellipse",    L"Arrow",
+                                                           L"Line",   L"Pen",       L"Laser",      L"Text",
+                                                           L"Eraser", L"Diamond",   L"Highlighter"};
     int width = ui_px(scale, SETTINGS_WIDTH);
     int pad = ui_px(scale, DIALOG_PAD);
     int row = ui_px(scale, SETTINGS_ROW);
@@ -350,8 +349,7 @@ static void build_settings(UiLayout *layout, const UiModel *model, float scale)
     int tabWidth = (width - 2 * pad - (SETTINGS_TABS - 1) * gap) / SETTINGS_TABS;
     int tabHeight = ui_px(scale, 34);
     for (int i = 0; i < SETTINGS_TABS; i++) {
-        UiItem *item = item_add(layout, ITEM_TEXT_BUTTON, pad + i * (tabWidth + gap), y, tabWidth,
-                                tabHeight);
+        UiItem *item = item_add(layout, ITEM_TEXT_BUTTON, pad + i * (tabWidth + gap), y, tabWidth, tabHeight);
         wcscpy(item->text, TABS[i]);
         item->selected = i == tab;
         item->event.kind = UI_EVENT_SETTINGS_TAB;
@@ -362,13 +360,13 @@ static void build_settings(UiLayout *layout, const UiModel *model, float scale)
     int bodyHeight = y + hintHeight + TOOL_COUNT * row + pad;
     if (tab == 0) {
         static const wchar_t *const GENERAL_LABELS[6] = {
-            L"Auto-hide panels",        L"Hide panels from screenshots", L"Pastel color row",
-            L"Write a debug log",       L"Add desktop to exports",       L"Export the full screen"};
-        const bool generalValues[6] = {model->autoHide,  model->excludeCapture,    model->pastel,
-                                       model->debugLog,  model->exportBackground, model->exportFullScreen};
-        const UiEventKind generalKinds[6] = {UI_EVENT_SET_AUTO_HIDE,          UI_EVENT_SET_EXCLUDE_CAPTURE,
-                                             UI_EVENT_SET_PASTEL,             UI_EVENT_SET_DEBUG_LOG,
-                                             UI_EVENT_SET_EXPORT_BACKGROUND,  UI_EVENT_SET_EXPORT_FULL_SCREEN};
+            L"Auto-hide panels",  L"Hide panels from screenshots", L"Pastel color row",
+            L"Write a debug log", L"Add desktop to exports",       L"Export the full screen"};
+        const bool generalValues[6] = {model->autoHide, model->excludeCapture,   model->pastel,
+                                       model->debugLog, model->exportBackground, model->exportFullScreen};
+        const UiEventKind generalKinds[6] = {
+            UI_EVENT_SET_AUTO_HIDE, UI_EVENT_SET_EXCLUDE_CAPTURE,   UI_EVENT_SET_PASTEL,
+            UI_EVENT_SET_DEBUG_LOG, UI_EVENT_SET_EXPORT_BACKGROUND, UI_EVENT_SET_EXPORT_FULL_SCREEN};
         for (int i = 0; i < 6; i++) {
             label_add(layout, pad, y, switchX - gap - pad, row, GENERAL_LABELS[i], 13, COLOR_ICON);
             UiItem *toggle = item_add(layout, ITEM_SWITCH, switchX, y + (row - switchHeight) / 2, switchWidth,
@@ -386,8 +384,8 @@ static void build_settings(UiLayout *layout, const UiModel *model, float scale)
         int resetWidth = (width - 2 * pad - gap) / 2;
         int resetHeight = ui_px(scale, 38);
         for (int i = 0; i < 2; i++) {
-            UiItem *reset = item_add(layout, ITEM_TEXT_BUTTON, pad + i * (resetWidth + gap), y, resetWidth,
-                                     resetHeight);
+            UiItem *reset =
+                item_add(layout, ITEM_TEXT_BUTTON, pad + i * (resetWidth + gap), y, resetWidth, resetHeight);
             wcscpy(reset->text, RESET_LABELS[i]);
             reset->event.kind = resetKinds[i];
         }
@@ -429,15 +427,17 @@ static void build_settings(UiLayout *layout, const UiModel *model, float scale)
             int keyGap = ui_px(scale, 4);
             int keyWidth = (width - 2 * pad - labelWidth - keys * keyGap) / keys;
             for (int i = 0; i < keys; i++) {
-                UiItem *key = item_add(layout, ITEM_TEXT_BUTTON, pad + labelWidth + keyGap + i * (keyWidth + keyGap),
-                                       y + ui_px(scale, 3), keyWidth, hintHeight - ui_px(scale, 6));
+                UiItem *key =
+                    item_add(layout, ITEM_TEXT_BUTTON, pad + labelWidth + keyGap + i * (keyWidth + keyGap),
+                             y + ui_px(scale, 3), keyWidth, hintHeight - ui_px(scale, 6));
                 swprintf(key->text, UI_ITEM_TEXT_CHARS, L"F%d", 13 + i);
                 key->event.kind = UI_EVENT_TOOL_SHORTCUT_KEY;
                 key->event.tool = (Tool)model->learningTool;
                 key->event.index = VK_F13 + i;
             }
         } else {
-            label_add(layout, pad, y, width - 2 * pad, hintHeight, L"One extra key or pen button per tool.", 12, 0);
+            label_add(layout, pad, y, width - 2 * pad, hintHeight, L"One extra key or pen button per tool.",
+                      12, 0);
         }
         y += hintHeight;
         int clearX = width - pad - button;
@@ -446,13 +446,13 @@ static void build_settings(UiLayout *layout, const UiModel *model, float scale)
         for (int i = 0; i < TOOL_COUNT; i++) {
             Tool tool = order[i];
             item_add(layout, ITEM_ICON, pad, y, button, row)->icon = icon_for_tool(tool);
-            label_add(layout, pad + button + gap, y, shortcutX - 2 * gap - pad - button, row, TOOL_LABELS[tool], 13,
-                      COLOR_ICON);
+            label_add(layout, pad + button + gap, y, shortcutX - 2 * gap - pad - button, row,
+                      TOOL_LABELS[tool], 13, COLOR_ICON);
             bool learning = model->learningTool == (int)tool;
             const wchar_t *shortcut = model->toolShortcut[tool];
-            UiItem *extra = item_add(layout, ITEM_TEXT_BUTTON, shortcutX,
-                                     y + (row - ui_px(scale, SHORTCUT_HEIGHT)) / 2, shortcutWidth,
-                                     ui_px(scale, SHORTCUT_HEIGHT));
+            UiItem *extra =
+                item_add(layout, ITEM_TEXT_BUTTON, shortcutX, y + (row - ui_px(scale, SHORTCUT_HEIGHT)) / 2,
+                         shortcutWidth, ui_px(scale, SHORTCUT_HEIGHT));
             wcsncpy(extra->text, learning ? L"Press a button" : (shortcut[0] ? shortcut : L"Add"),
                     UI_ITEM_TEXT_CHARS - 1);
             extra->selected = learning;
@@ -468,10 +468,9 @@ static void build_settings(UiLayout *layout, const UiModel *model, float scale)
         }
     } else {
         int hintLine = ui_px(scale, 24);
-        static const wchar_t *const PEN_HINTS[3] = {
-            L"Drivers often cannot record F13 to F24.",
-            L"Click the driver's key box, then a key",
-            L"below: PenPane types it there."};
+        static const wchar_t *const PEN_HINTS[3] = {L"Drivers often cannot record F13 to F24.",
+                                                    L"Click the driver's key box, then a key",
+                                                    L"below: PenPane types it there."};
         for (int i = 0; i < 3; i++) {
             label_add(layout, pad, y, width - 2 * pad, hintLine, PEN_HINTS[i], 13, i == 1 ? COLOR_ICON : 0);
             y += hintLine;
@@ -479,8 +478,8 @@ static void build_settings(UiLayout *layout, const UiModel *model, float scale)
         y += ui_px(scale, 20);
         int keyWidth = (width - 2 * pad - 3 * gap) / 4;
         for (int i = 0; i < 4; i++) {
-            UiItem *key = item_add(layout, ITEM_TEXT_BUTTON, pad + i * (keyWidth + gap), y, keyWidth,
-                                   ui_px(scale, 38));
+            UiItem *key =
+                item_add(layout, ITEM_TEXT_BUTTON, pad + i * (keyWidth + gap), y, keyWidth, ui_px(scale, 38));
             swprintf(key->text, UI_ITEM_TEXT_CHARS, L"F%d", 13 + i);
             key->event.kind = UI_EVENT_SEND_KEY;
             key->event.index = VK_F13 + i;
@@ -509,15 +508,16 @@ static void build_confirm_clear(UiLayout *layout, float scale)
     int buttonHeight = ui_px(scale, 38);
     int confirmWidth = ui_px(scale, 116);
     int cancelWidth = ui_px(scale, 88);
-    UiItem *confirm = item_add(layout, ITEM_TEXT_BUTTON, width - pad - confirmWidth, y, confirmWidth,
-                               buttonHeight);
+    UiItem *confirm =
+        item_add(layout, ITEM_TEXT_BUTTON, width - pad - confirmWidth, y, confirmWidth, buttonHeight);
     wcscpy(confirm->text, L"Clear canvas");
     confirm->selected = true;
     confirm->color = COLOR_STROKE_RED;
     confirm->event.kind = UI_EVENT_ACTION;
     confirm->event.action = ACTION_CLEAR;
-    UiItem *cancel = item_add(layout, ITEM_TEXT_BUTTON, width - pad - confirmWidth - ui_px(scale, 10) - cancelWidth,
-                              y, cancelWidth, buttonHeight);
+    UiItem *cancel =
+        item_add(layout, ITEM_TEXT_BUTTON, width - pad - confirmWidth - ui_px(scale, 10) - cancelWidth, y,
+                 cancelWidth, buttonHeight);
     wcscpy(cancel->text, L"Cancel");
     cancel->event.kind = UI_EVENT_CLOSE_DIALOG;
     cancel->event.panel = PANEL_CONFIRM;
@@ -555,8 +555,8 @@ static void build_color_picker(UiLayout *layout, const UiModel *model, float sca
     current->color = model->style.stroke;
     wchar_t hex[UI_ITEM_TEXT_CHARS];
     swprintf(hex, UI_ITEM_TEXT_CHARS, L"#%06X", (unsigned)(model->style.stroke & 0xFFFFFFu));
-    UiItem *field = item_add(layout, ITEM_HEX, pad + cell + ui_px(scale, 10), y, inner - cell - ui_px(scale, 10),
-                             cell);
+    UiItem *field =
+        item_add(layout, ITEM_HEX, pad + cell + ui_px(scale, 10), y, inner - cell - ui_px(scale, 10), cell);
     wcscpy(field->text, hex);
     field->event.kind = UI_EVENT_EDIT_HEX;
     layout->width = width;
@@ -573,8 +573,8 @@ static void build_color_picker(UiLayout *layout, const UiModel *model, float sca
  */
 static int title_add(UiLayout *layout, float scale, int y, const wchar_t *text)
 {
-    UiItem *item = item_add(layout, ITEM_LABEL, ui_px(scale, SECTION_PAD), y,
-                            ui_px(scale, SECTION_INNER), ui_px(scale, TITLE_HEIGHT));
+    UiItem *item = item_add(layout, ITEM_LABEL, ui_px(scale, SECTION_PAD), y, ui_px(scale, SECTION_INNER),
+                            ui_px(scale, TITLE_HEIGHT));
     wcsncpy(item->text, text, UI_ITEM_TEXT_CHARS - 1);
     return y + ui_px(scale, TITLE_HEIGHT + TITLE_GAP);
 }
@@ -589,8 +589,8 @@ static int title_add(UiLayout *layout, float scale, int y, const wchar_t *text)
  * @param selected Index of the selected preset, or -1.
  * @param kind Event kind emitted when a swatch is chosen.
  */
-static void swatches_add(UiLayout *layout, float scale, int y, const Color *palette, int count,
-                         int selected, UiEventKind kind)
+static void swatches_add(UiLayout *layout, float scale, int y, const Color *palette, int count, int selected,
+                         UiEventKind kind)
 {
     int cell = ui_px(scale, SWATCH_CELL);
     for (int i = 0; i < count; i++) {
@@ -620,8 +620,9 @@ static int color_rows_add(UiLayout *layout, float scale, int y, const Color *col
     int cell = ui_px(scale, SWATCH_CELL);
     int step = cell + ui_px(scale, SWATCH_GAP);
     for (int i = 0; i < count; i++) {
-        UiItem *item = item_add(layout, ITEM_SWATCH, ui_px(scale, SECTION_PAD) + (i % SWATCHES_PER_ROW) * step,
-                                y + (i / SWATCHES_PER_ROW) * step, cell, cell);
+        UiItem *item =
+            item_add(layout, ITEM_SWATCH, ui_px(scale, SECTION_PAD) + (i % SWATCHES_PER_ROW) * step,
+                     y + (i / SWATCHES_PER_ROW) * step, cell, cell);
         item->color = colors[i];
         item->selected = colors[i] == selected;
         item->event.kind = UI_EVENT_SET_STROKE_COLOR;
@@ -665,7 +666,7 @@ static void build_properties(UiLayout *layout, const UiModel *model, bool pinned
 {
     static const Icon widthIcons[4] = {ICON_WIDTH_THIN, ICON_WIDTH_MEDIUM, ICON_WIDTH_BOLD, ICON_PRESSURE};
     static const Icon fontIcons[TEXT_FACE_COUNT] = {ICON_FONT_HAND, ICON_FONT_NORMAL, ICON_FONT_LEGIBLE};
-    static const Icon styleIcons[3] ={ICON_STYLE_SOLID, ICON_STYLE_DASHED, ICON_STYLE_DOTTED};
+    static const Icon styleIcons[3] = {ICON_STYLE_SOLID, ICON_STYLE_DASHED, ICON_STYLE_DOTTED};
     static const Icon laserIcons[2] = {ICON_LASER_TRAIL, ICON_LASER_POINTER};
     static const Icon arrowIcons[ARROW_HEAD_COUNT] = {ICON_ARROW_END, ICON_ARROW_BOTH};
     int pad = ui_px(scale, SECTION_PAD);
@@ -679,13 +680,13 @@ static void build_properties(UiLayout *layout, const UiModel *model, bool pinned
 
     if (model->sections & UI_SECTION_STROKE) {
         y = title_add(layout, scale, y, L"Stroke");
-        swatches_add(layout, scale, y, STROKE_PALETTE, STROKE_PALETTE_SIZE,
-                     style_stroke_index(style->stroke), UI_EVENT_SET_STROKE);
+        swatches_add(layout, scale, y, STROKE_PALETTE, STROKE_PALETTE_SIZE, style_stroke_index(style->stroke),
+                     UI_EVENT_SET_STROKE);
         int after = pad + STROKE_PALETTE_SIZE * (cell + ui_px(scale, SWATCH_GAP));
         int width = ui_px(scale, 1) > 0 ? ui_px(scale, 1) : 1;
-        item_add(layout, ITEM_DIVIDER, after, y + (cell - ui_px(scale, 20)) / 2, width,
-                 ui_px(scale, 20));
-        UiItem *picker = item_add(layout, ITEM_PICKER, after + width + ui_px(scale, SWATCH_GAP), y, cell, cell);
+        item_add(layout, ITEM_DIVIDER, after, y + (cell - ui_px(scale, 20)) / 2, width, ui_px(scale, 20));
+        UiItem *picker =
+            item_add(layout, ITEM_PICKER, after + width + ui_px(scale, SWATCH_GAP), y, cell, cell);
         picker->color = style->stroke;
         picker->selected = (model->dialogs & UI_DIALOG_BIT(PANEL_COLOR)) != 0;
         picker->event.kind = UI_EVENT_OPEN_PICKER;
@@ -702,8 +703,8 @@ static void build_properties(UiLayout *layout, const UiModel *model, bool pinned
     }
     if (model->sections & UI_SECTION_FILL) {
         y = title_add(layout, scale, y, L"Background");
-        swatches_add(layout, scale, y, FILL_PALETTE, FILL_PALETTE_SIZE,
-                     style_fill_index(style->fill), UI_EVENT_SET_FILL);
+        swatches_add(layout, scale, y, FILL_PALETTE, FILL_PALETTE_SIZE, style_fill_index(style->fill),
+                     UI_EVENT_SET_FILL);
         y += cell + gap;
     }
     if (model->sections & UI_SECTION_WIDTH) {
@@ -763,8 +764,8 @@ static void build_properties(UiLayout *layout, const UiModel *model, bool pinned
             value->color = COLOR_ICON;
             swprintf(value->text, UI_ITEM_TEXT_CHARS, L"%d", (int)lroundf(opacity * 100.0f));
         }
-        UiItem *slider = item_add(layout, ITEM_SLIDER, pad, y, ui_px(scale, SECTION_INNER),
-                                  ui_px(scale, SLIDER_HEIGHT));
+        UiItem *slider =
+            item_add(layout, ITEM_SLIDER, pad, y, ui_px(scale, SECTION_INNER), ui_px(scale, SLIDER_HEIGHT));
         slider->value = opacity;
         slider->event.kind = UI_EVENT_SET_OPACITY;
         slider->event.value = opacity;
@@ -795,11 +796,10 @@ void ui_layout_build(PanelId panel, const UiModel *model, bool pinned, float sca
 bool ui_item_equal(const UiItem *first, const UiItem *second)
 {
     return first->kind == second->kind && memcmp(&first->rect, &second->rect, sizeof first->rect) == 0 &&
-           first->icon == second->icon && first->hint == second->hint &&
-           first->color == second->color && first->selected == second->selected &&
-           first->enabled == second->enabled && first->checker == second->checker &&
-           first->alignRight == second->alignRight && first->value == second->value &&
-           first->value2 == second->value2 && first->hue == second->hue &&
+           first->icon == second->icon && first->hint == second->hint && first->color == second->color &&
+           first->selected == second->selected && first->enabled == second->enabled &&
+           first->checker == second->checker && first->alignRight == second->alignRight &&
+           first->value == second->value && first->value2 == second->value2 && first->hue == second->hue &&
            wcscmp(first->text, second->text) == 0 && first->event.kind == second->event.kind &&
            first->event.action == second->event.action && first->event.tool == second->event.tool &&
            first->event.index == second->event.index && first->event.value == second->event.value &&

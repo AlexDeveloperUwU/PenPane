@@ -31,11 +31,7 @@
 #define CONFIG_MAX_BINDINGS GESTURE_MAX_BINDINGS
 
 /** @brief Outcome of reading the configuration file. */
-typedef enum ConfigStatus {
-    CONFIG_MISSING,
-    CONFIG_LOADED,
-    CONFIG_UNREADABLE
-} ConfigStatus;
+typedef enum ConfigStatus { CONFIG_MISSING, CONFIG_LOADED, CONFIG_UNREADABLE } ConfigStatus;
 
 /** @brief Every persisted setting. */
 typedef struct Config {
@@ -82,7 +78,8 @@ void config_defaults(Config *config);
  * @param path File path.
  * @param errors Optional buffer receiving a short report of skipped lines, or NULL.
  * @param errorsSize Size of the errors buffer in characters.
- * @return CONFIG_LOADED when the file was read, CONFIG_MISSING when it does not exist (defaults applied), CONFIG_UNREADABLE otherwise.
+ * @return CONFIG_LOADED when the file was read, CONFIG_MISSING when it does not exist (defaults applied),
+ * CONFIG_UNREADABLE otherwise.
  */
 ConfigStatus config_load(Config *config, const wchar_t *path, wchar_t *errors, int errorsSize);
 

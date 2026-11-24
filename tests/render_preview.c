@@ -5,8 +5,8 @@
  *
  * Usage: render_preview OUTPUT_DIRECTORY
  *
- * Writes shapes.png, pens.png, sample.png, trails.png and selection.png, and prints stroke thickness tables and
- * pixel dumps in the same format that was used to measure Excalidraw, so the two can be compared.
+ * Writes shapes.png, pens.png, sample.png, trails.png and selection.png, and prints stroke thickness tables
+ * and pixel dumps in the same format that was used to measure Excalidraw, so the two can be compared.
  */
 #include <math.h>
 #include <stdio.h>
@@ -49,7 +49,8 @@ static uint32_t crc_update(uint32_t crc, const uint8_t *data, size_t length)
  */
 static void put32(FILE *file, uint32_t value)
 {
-    uint8_t bytes[4] = {(uint8_t)(value >> 24), (uint8_t)(value >> 16), (uint8_t)(value >> 8), (uint8_t)value};
+    uint8_t bytes[4] = {(uint8_t)(value >> 24), (uint8_t)(value >> 16), (uint8_t)(value >> 8),
+                        (uint8_t)value};
     fwrite(bytes, 1, 4, file);
 }
 
@@ -83,7 +84,8 @@ static void put_chunk(FILE *file, const char *type, const uint8_t *data, size_t 
  * @param zoom Integer nearest-neighbour magnification.
  * @return true on success.
  */
-static bool save_png(const Canvas *canvas, const char *path, int left, int top, int width, int height, int zoom)
+static bool save_png(const Canvas *canvas, const char *path, int left, int top, int width, int height,
+                     int zoom)
 {
     int outWidth = width * zoom;
     int outHeight = height * zoom;
@@ -144,9 +146,19 @@ static bool save_png(const Canvas *canvas, const char *path, int left, int top, 
     }
     static const uint8_t signature[8] = {0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A};
     fwrite(signature, 1, 8, file);
-    uint8_t header[13] = {(uint8_t)(outWidth >> 24), (uint8_t)(outWidth >> 16), (uint8_t)(outWidth >> 8),
-                          (uint8_t)outWidth, (uint8_t)(outHeight >> 24), (uint8_t)(outHeight >> 16),
-                          (uint8_t)(outHeight >> 8), (uint8_t)outHeight, 8, 2, 0, 0, 0};
+    uint8_t header[13] = {(uint8_t)(outWidth >> 24),
+                          (uint8_t)(outWidth >> 16),
+                          (uint8_t)(outWidth >> 8),
+                          (uint8_t)outWidth,
+                          (uint8_t)(outHeight >> 24),
+                          (uint8_t)(outHeight >> 16),
+                          (uint8_t)(outHeight >> 8),
+                          (uint8_t)outHeight,
+                          8,
+                          2,
+                          0,
+                          0,
+                          0};
     put_chunk(file, "IHDR", header, 13);
     put_chunk(file, "IDAT", z, at);
     put_chunk(file, "IEND", NULL, 0);
@@ -273,7 +285,8 @@ static void draw_and_free(Canvas *canvas, Element *element)
  * @param x2 Second x.
  * @param y2 Second y.
  */
-static void draw_shape(Canvas *canvas, ElementType type, const Style *style, float x1, float y1, float x2, float y2)
+static void draw_shape(Canvas *canvas, ElementType type, const Style *style, float x1, float y1, float x2,
+                       float y2)
 {
     Element element = element_make(type, style);
     element.from = (Point){x1, y1};
@@ -291,7 +304,8 @@ static void draw_shape(Canvas *canvas, ElementType type, const Style *style, flo
  * @param y Baseline y.
  * @param length Stroke length.
  */
-static void draw_pen_line(Canvas *canvas, float width, float spacing, float mode, float x, float y, float length)
+static void draw_pen_line(Canvas *canvas, float width, float spacing, float mode, float x, float y,
+                          float length)
 {
     Style style = style_default();
     style.width = width;
@@ -330,7 +344,8 @@ static void run_pen_table(Canvas *canvas)
     for (int w = 0; w < 3; w++) {
         clear_scene(canvas);
         draw_pen_line(canvas, widths[w], 5, PEN_PRESSURE_CONSTANT, 20, 40, 360);
-        printf("W%.0f: %.2f %.2f\n", widths[w], column_thickness(canvas, 200, 0, 90), column_thickness(canvas, 21 + 3, 0, 90));
+        printf("W%.0f: %.2f %.2f\n", widths[w], column_thickness(canvas, 200, 0, 90),
+               column_thickness(canvas, 21 + 3, 0, 90));
     }
 }
 
@@ -455,7 +470,8 @@ static void draw_loop_stroke(Canvas *canvas, Color stroke, float width, float ce
     float end = turns * 6.2831853f;
     pen_begin(&builder, &element, (Point){centerX + radiusX, centerY}, PEN_PRESSURE_SIMULATED);
     for (float angle = step; angle <= end; angle += step) {
-        Point p = {centerX + radiusX * cosf(angle) + drift * angle / 6.2831853f, centerY + radiusY * sinf(angle)};
+        Point p = {centerX + radiusX * cosf(angle) + drift * angle / 6.2831853f,
+                   centerY + radiusY * sinf(angle)};
         pen_add(&builder, &element, p, PEN_PRESSURE_SIMULATED);
     }
     pen_finish(&builder, &element);
@@ -463,7 +479,8 @@ static void draw_loop_stroke(Canvas *canvas, Color stroke, float width, float ce
 }
 
 /**
- * @brief Draws a typical annotation: a highlighted region, an arrow, a circled item and a hand-drawn underline.
+ * @brief Draws a typical annotation: a highlighted region, an arrow, a circled item and a hand-drawn
+ * underline.
  * @param canvas Target canvas.
  */
 static void draw_sample_scene(Canvas *canvas)
@@ -544,7 +561,6 @@ static void draw_selection_scene(Canvas *canvas)
     element_free(&ellipse);
 }
 
-
 /**
  * @brief Prints how long typical redraw workloads take.
  * @param canvas Scratch canvas.
@@ -562,20 +578,23 @@ static void run_timing(Canvas *canvas)
         draw_shape(canvas, ELEMENT_ARROW, &style, 10, 10, 1000, 700);
     }
     QueryPerformanceCounter(&end);
-    printf("50 diagonal arrows of 1200 px: %.1f ms\n", 1000.0 * (double)(end.QuadPart - begin.QuadPart) / (double)frequency.QuadPart);
+    printf("50 diagonal arrows of 1200 px: %.1f ms\n",
+           1000.0 * (double)(end.QuadPart - begin.QuadPart) / (double)frequency.QuadPart);
     QueryPerformanceCounter(&begin);
     for (int i = 0; i < 20; i++) {
         draw_pen_line(canvas, 4, 3, PEN_PRESSURE_SIMULATED, 20, 100 + i * 20, 900);
     }
     QueryPerformanceCounter(&end);
-    printf("20 pen strokes of 300 points: %.1f ms\n", 1000.0 * (double)(end.QuadPart - begin.QuadPart) / (double)frequency.QuadPart);
+    printf("20 pen strokes of 300 points: %.1f ms\n",
+           1000.0 * (double)(end.QuadPart - begin.QuadPart) / (double)frequency.QuadPart);
     QueryPerformanceCounter(&begin);
     for (int i = 0; i < 20; i++) {
         draw_shape(canvas, ELEMENT_RECTANGLE, &style, 20, 20, 1000, 700);
         style.fill = COLOR_FILL_RED;
     }
     QueryPerformanceCounter(&end);
-    printf("20 filled rectangles of 980x680: %.1f ms\n", 1000.0 * (double)(end.QuadPart - begin.QuadPart) / (double)frequency.QuadPart);
+    printf("20 filled rectangles of 980x680: %.1f ms\n",
+           1000.0 * (double)(end.QuadPart - begin.QuadPart) / (double)frequency.QuadPart);
 }
 /**
  * @brief Entry point.

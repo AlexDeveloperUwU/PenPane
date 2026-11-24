@@ -22,7 +22,8 @@ typedef struct Overlay {
 } Overlay;
 
 /**
- * @brief Creates the overlay window for a monitor rectangle, initially hidden and click-through, without a surface.
+ * @brief Creates the overlay window for a monitor rectangle, initially hidden and click-through, without a
+ * surface.
  * @param overlay Overlay to initialize.
  * @param instance Module instance used to register the window class.
  * @param bounds Screen rectangle in virtual-desktop coordinates.
@@ -30,8 +31,7 @@ typedef struct Overlay {
  * @param owner Pointer stored as window user data, retrievable with GetWindowLongPtr.
  * @return true on success, false when registration or window creation failed.
  */
-bool overlay_create(Overlay *overlay, HINSTANCE instance, RECT bounds, WNDPROC procedure,
-                    void *owner);
+bool overlay_create(Overlay *overlay, HINSTANCE instance, RECT bounds, WNDPROC procedure, void *owner);
 
 /**
  * @brief Destroys the window and releases the surface.

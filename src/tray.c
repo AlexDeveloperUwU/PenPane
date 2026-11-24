@@ -364,8 +364,8 @@ static int menu_run(const Tray *tray, const TrayState *state)
     POINT cursor;
     GetCursorPos(&cursor);
     SetForegroundWindow(tray->window);
-    int id = (int)TrackPopupMenu(menu, TPM_RETURNCMD | TPM_RIGHTBUTTON | TPM_NONOTIFY, cursor.x,
-                                 cursor.y, 0, tray->window, NULL);
+    int id = (int)TrackPopupMenu(menu, TPM_RETURNCMD | TPM_RIGHTBUTTON | TPM_NONOTIFY, cursor.x, cursor.y, 0,
+                                 tray->window, NULL);
     PostMessageW(tray->window, WM_NULL, 0, 0);
     DestroyMenu(menu);
     return id;
@@ -419,8 +419,8 @@ bool autostart_get(void)
 bool autostart_set(bool enable)
 {
     HKEY key;
-    if (RegCreateKeyExW(HKEY_CURRENT_USER, AUTOSTART_KEY, 0, NULL, 0, KEY_SET_VALUE, NULL, &key,
-                        NULL) != ERROR_SUCCESS) {
+    if (RegCreateKeyExW(HKEY_CURRENT_USER, AUTOSTART_KEY, 0, NULL, 0, KEY_SET_VALUE, NULL, &key, NULL) !=
+        ERROR_SUCCESS) {
         return false;
     }
     LONG result;

@@ -8,15 +8,15 @@
 #define KEYBOARD_LAYOUT_LIMIT 64
 
 /**
- * @brief Tells whether a keyboard layout is a plain layout of a Latin-script language that needs no text services.
+ * @brief Tells whether a keyboard layout is a plain layout of a Latin-script language that needs no text
+ * services.
  * @param layout Keyboard layout handle.
  * @return true for an ordinary layout of a supported language.
  */
 static bool is_plain_layout(HKL layout)
 {
-    static const WORD LANGUAGES[] = {LANG_ENGLISH, LANG_SPANISH, LANG_CATALAN, LANG_GALICIAN,
-                                     LANG_BASQUE,  LANG_FRENCH,  LANG_GERMAN,  LANG_ITALIAN,
-                                     LANG_PORTUGUESE, LANG_DUTCH};
+    static const WORD LANGUAGES[] = {LANG_ENGLISH, LANG_SPANISH, LANG_CATALAN, LANG_GALICIAN,   LANG_BASQUE,
+                                     LANG_FRENCH,  LANG_GERMAN,  LANG_ITALIAN, LANG_PORTUGUESE, LANG_DUTCH};
     if (((UINT_PTR)layout & 0xF0000000u) == 0xE0000000u) {
         return false;
     }

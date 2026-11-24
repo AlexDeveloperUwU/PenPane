@@ -77,8 +77,8 @@ void canvas_fill(Canvas *canvas, const RECT *area, Color color)
     }
 }
 
-void canvas_blend_coverage(Canvas *canvas, int originX, int originY, const uint8_t *coverage,
-                           int maskWidth, int maskHeight, Color color)
+void canvas_blend_coverage(Canvas *canvas, int originX, int originY, const uint8_t *coverage, int maskWidth,
+                           int maskHeight, Color color)
 {
     originX -= canvas->originX;
     originY -= canvas->originY;

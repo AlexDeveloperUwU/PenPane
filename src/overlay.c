@@ -3,7 +3,6 @@
 
 #include <string.h>
 
-
 #define OVERLAY_CLASS_NAME L"PenPaneOverlayWindow"
 #define OVERLAY_BASE_STYLE (WS_EX_LAYERED | WS_EX_TOPMOST | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE)
 #define INPUT_WINDOW_STYLE (WS_EX_LAYERED | WS_EX_TOPMOST | WS_EX_TOOLWINDOW)
@@ -19,8 +18,7 @@ static HWND input_target(const Overlay *overlay)
     return overlay->inputWindow ? overlay->inputWindow : overlay->window;
 }
 
-bool overlay_create(Overlay *overlay, HINSTANCE instance, RECT bounds, WNDPROC procedure,
-                    void *owner)
+bool overlay_create(Overlay *overlay, HINSTANCE instance, RECT bounds, WNDPROC procedure, void *owner)
 {
     memset(overlay, 0, sizeof *overlay);
     overlay->bounds = bounds;
@@ -37,9 +35,8 @@ bool overlay_create(Overlay *overlay, HINSTANCE instance, RECT bounds, WNDPROC p
     int width = bounds.right - bounds.left;
     int height = bounds.bottom - bounds.top;
     overlay->window =
-        CreateWindowExW(OVERLAY_BASE_STYLE | WS_EX_TRANSPARENT, OVERLAY_CLASS_NAME, L"PenPane",
-                        WS_POPUP, bounds.left, bounds.top, width, height, NULL, NULL, instance,
-                        owner);
+        CreateWindowExW(OVERLAY_BASE_STYLE | WS_EX_TRANSPARENT, OVERLAY_CLASS_NAME, L"PenPane", WS_POPUP,
+                        bounds.left, bounds.top, width, height, NULL, NULL, instance, owner);
     if (!overlay->window) {
         return false;
     }
@@ -91,9 +88,9 @@ bool overlay_set_input_window(Overlay *overlay, bool enabled, HINSTANCE instance
     }
     int width = overlay->bounds.right - overlay->bounds.left;
     int height = overlay->bounds.bottom - overlay->bounds.top;
-    HWND input = CreateWindowExW(INPUT_WINDOW_STYLE, OVERLAY_CLASS_NAME, L"PenPane", WS_POPUP,
-                                 overlay->bounds.left, overlay->bounds.top, width, height, NULL, NULL,
-                                 instance, NULL);
+    HWND input =
+        CreateWindowExW(INPUT_WINDOW_STYLE, OVERLAY_CLASS_NAME, L"PenPane", WS_POPUP, overlay->bounds.left,
+                        overlay->bounds.top, width, height, NULL, NULL, instance, NULL);
     if (!input) {
         return false;
     }

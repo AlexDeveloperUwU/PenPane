@@ -73,7 +73,8 @@ void trail_init(Trail *trail, float maxRadius, uint32_t lifetimeMs, Color color,
 void trail_add(Trail *trail, Point position, uint32_t nowMs);
 
 /**
- * @brief Starts a new stroke: the next point is not joined to the previous points and is not streamlined from them.
+ * @brief Starts a new stroke: the next point is not joined to the previous points and is not streamlined from
+ * them.
  * @param trail Trail to start a stroke on.
  */
 void trail_begin(Trail *trail);

@@ -126,8 +126,8 @@ static void test_pen_tap_makes_dot(void)
 }
 
 /**
- * @brief The highlighter draws a wide, constant-width pen stroke from its own width table, and switching tools
- * restores the pen widths.
+ * @brief The highlighter draws a wide, constant-width pen stroke from its own width table, and switching
+ * tools restores the pen widths.
  */
 static void test_highlighter_uses_own_widths(void)
 {
@@ -275,7 +275,8 @@ static void test_shift_constraints(void)
     controller_set_tool(&fixture.controller, TOOL_RECTANGLE);
     drag(&fixture, 100, 100, 260, 180, true);
     const Element *rectangle = &fixture.scene.items[0];
-    assert(fabsf(fabsf(rectangle->to.x - rectangle->from.x) - fabsf(rectangle->to.y - rectangle->from.y)) < 0.1f);
+    assert(fabsf(fabsf(rectangle->to.x - rectangle->from.x) - fabsf(rectangle->to.y - rectangle->from.y)) <
+           0.1f);
     controller_set_tool(&fixture.controller, TOOL_LINE);
     drag(&fixture, 400, 400, 500, 405, true);
     const Element *line = &fixture.scene.items[1];
@@ -375,7 +376,8 @@ static void test_style_change_undo(void)
 }
 
 /**
- * @brief Changing the tool while text is being edited commits the text without leaving a stale tool-finished flag.
+ * @brief Changing the tool while text is being edited commits the text without leaving a stale tool-finished
+ * flag.
  */
 static void test_tool_change_mid_text_leaves_no_stale_flag(void)
 {
@@ -418,7 +420,8 @@ static void test_backspace_removes_surrogate_pair(void)
 }
 
 /**
- * @brief A preview-and-commit style edit, as a slider drag does, is one undo step however many previews it had.
+ * @brief A preview-and-commit style edit, as a slider drag does, is one undo step however many previews it
+ * had.
  */
 static void test_style_drag_is_one_undo_step(void)
 {

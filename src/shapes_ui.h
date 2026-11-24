@@ -38,8 +38,8 @@ void ui_scratch_release(void);
  * @param radius Corner radius.
  * @param color Straight-alpha color.
  */
-void ui_fill_round_rect(Canvas *canvas, float left, float top, float width, float height,
-                        float radius, Color color);
+void ui_fill_round_rect(Canvas *canvas, float left, float top, float width, float height, float radius,
+                        Color color);
 
 /**
  * @brief Strokes a rounded rectangle outline whose centerline is the given rectangle.
@@ -52,8 +52,8 @@ void ui_fill_round_rect(Canvas *canvas, float left, float top, float width, floa
  * @param stroke Stroke width.
  * @param color Straight-alpha color.
  */
-void ui_stroke_round_rect(Canvas *canvas, float left, float top, float width, float height,
-                          float radius, float stroke, Color color);
+void ui_stroke_round_rect(Canvas *canvas, float left, float top, float width, float height, float radius,
+                          float stroke, Color color);
 
 /**
  * @brief Fills a circle.

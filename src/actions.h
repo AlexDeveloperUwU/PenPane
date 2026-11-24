@@ -8,34 +8,34 @@
 
 #include <stdbool.h>
 
-#define PENPANE_ACTION_LIST(X)                              \
-    X(ACTION_TOGGLE_OVERLAY, "toggle_overlay")              \
-    X(ACTION_TOGGLE_MODE, "toggle_mode")                    \
-    X(ACTION_TOOL_SELECT, "tool_select")                    \
-    X(ACTION_TOOL_RECTANGLE, "tool_rectangle")              \
-    X(ACTION_TOOL_ELLIPSE, "tool_ellipse")                  \
-    X(ACTION_TOOL_ARROW, "tool_arrow")                      \
-    X(ACTION_TOOL_LINE, "tool_line")                        \
-    X(ACTION_TOOL_PEN, "tool_pen")                          \
-    X(ACTION_TOOL_LASER, "tool_laser")                      \
-    X(ACTION_TOOL_TEXT, "tool_text")                        \
-    X(ACTION_TOOL_ERASER, "tool_eraser")                    \
-    X(ACTION_TOOL_DIAMOND, "tool_diamond")                  \
-    X(ACTION_TOOL_HIGHLIGHTER, "tool_highlighter")          \
-    X(ACTION_NEXT_TOOL, "next_tool")                        \
-    X(ACTION_PREVIOUS_TOOL, "previous_tool")                \
-    X(ACTION_CYCLE_COLOR, "cycle_color")                    \
-    X(ACTION_CYCLE_WIDTH, "cycle_width")                    \
-    X(ACTION_UNDO, "undo")                                  \
-    X(ACTION_REDO, "redo")                                  \
-    X(ACTION_CLEAR, "clear")                                \
-    X(ACTION_TOGGLE_LASER, "toggle_laser")                  \
-    X(ACTION_TOGGLE_TOOL_LOCK, "toggle_tool_lock")          \
-    X(ACTION_COPY_PNG, "copy_png")                          \
-    X(ACTION_SAVE_PNG, "save_png")                          \
-    X(ACTION_TOGGLE_DRAWINGS, "toggle_drawings")            \
-    X(ACTION_ASK_CLEAR, "ask_clear")                        \
-    X(ACTION_OPEN_SETTINGS, "open_settings")                \
+#define PENPANE_ACTION_LIST(X)                                                                               \
+    X(ACTION_TOGGLE_OVERLAY, "toggle_overlay")                                                               \
+    X(ACTION_TOGGLE_MODE, "toggle_mode")                                                                     \
+    X(ACTION_TOOL_SELECT, "tool_select")                                                                     \
+    X(ACTION_TOOL_RECTANGLE, "tool_rectangle")                                                               \
+    X(ACTION_TOOL_ELLIPSE, "tool_ellipse")                                                                   \
+    X(ACTION_TOOL_ARROW, "tool_arrow")                                                                       \
+    X(ACTION_TOOL_LINE, "tool_line")                                                                         \
+    X(ACTION_TOOL_PEN, "tool_pen")                                                                           \
+    X(ACTION_TOOL_LASER, "tool_laser")                                                                       \
+    X(ACTION_TOOL_TEXT, "tool_text")                                                                         \
+    X(ACTION_TOOL_ERASER, "tool_eraser")                                                                     \
+    X(ACTION_TOOL_DIAMOND, "tool_diamond")                                                                   \
+    X(ACTION_TOOL_HIGHLIGHTER, "tool_highlighter")                                                           \
+    X(ACTION_NEXT_TOOL, "next_tool")                                                                         \
+    X(ACTION_PREVIOUS_TOOL, "previous_tool")                                                                 \
+    X(ACTION_CYCLE_COLOR, "cycle_color")                                                                     \
+    X(ACTION_CYCLE_WIDTH, "cycle_width")                                                                     \
+    X(ACTION_UNDO, "undo")                                                                                   \
+    X(ACTION_REDO, "redo")                                                                                   \
+    X(ACTION_CLEAR, "clear")                                                                                 \
+    X(ACTION_TOGGLE_LASER, "toggle_laser")                                                                   \
+    X(ACTION_TOGGLE_TOOL_LOCK, "toggle_tool_lock")                                                           \
+    X(ACTION_COPY_PNG, "copy_png")                                                                           \
+    X(ACTION_SAVE_PNG, "save_png")                                                                           \
+    X(ACTION_TOGGLE_DRAWINGS, "toggle_drawings")                                                             \
+    X(ACTION_ASK_CLEAR, "ask_clear")                                                                         \
+    X(ACTION_OPEN_SETTINGS, "open_settings")                                                                 \
     X(ACTION_EMERGENCY_EXIT, "emergency_exit")
 
 /** @brief Every bindable action. */
@@ -43,7 +43,7 @@ typedef enum Action {
 #define PENPANE_ACTION_ENUM(id, name) id,
     PENPANE_ACTION_LIST(PENPANE_ACTION_ENUM)
 #undef PENPANE_ACTION_ENUM
-    ACTION_COUNT
+        ACTION_COUNT
 } Action;
 
 /**

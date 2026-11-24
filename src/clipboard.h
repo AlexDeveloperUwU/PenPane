@@ -16,7 +16,8 @@
  * @param owner Window that owns the clipboard while it is open.
  * @param canvas Source canvas holding premultiplied pixels.
  * @param region Region to copy, clipped to the canvas.
- * @param opaqueBackdrop true when the region is fully opaque (whiteboard); false keeps transparency in the PNG.
+ * @param opaqueBackdrop true when the region is fully opaque (whiteboard); false keeps transparency in the
+ * PNG.
  * @return true on success.
  */
 bool clipboard_copy_region(HWND owner, const Canvas *canvas, RECT region, bool opaqueBackdrop);

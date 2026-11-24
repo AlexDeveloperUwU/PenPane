@@ -71,16 +71,27 @@ static void on_event(void *user, const UiEvent *event)
     Preview *preview = user;
     UiModel *model = &preview->model;
     switch (event->kind) {
-    case UI_EVENT_SELECT_TOOL: model->tool = event->tool; break;    case UI_EVENT_SET_STROKE: model->style.stroke = STROKE_PALETTE[event->index]; break;
-    case UI_EVENT_SET_FILL: model->style.fill = FILL_PALETTE[event->index]; break;
+    case UI_EVENT_SELECT_TOOL:
+        model->tool = event->tool;
+        break;
+    case UI_EVENT_SET_STROKE:
+        model->style.stroke = STROKE_PALETTE[event->index];
+        break;
+    case UI_EVENT_SET_FILL:
+        model->style.fill = FILL_PALETTE[event->index];
+        break;
     case UI_EVENT_SET_WIDTH:
         model->style.pressure = event->index >= WIDTH_PRESET_COUNT;
         if (!model->style.pressure) {
             model->style.width = WIDTH_PRESETS[event->index];
         }
         break;
-    case UI_EVENT_SET_STROKE_STYLE: model->style.strokeStyle = (StrokeStyle)event->index; break;
-    case UI_EVENT_SET_OPACITY: model->style.opacity = event->value; break;
+    case UI_EVENT_SET_STROKE_STYLE:
+        model->style.strokeStyle = (StrokeStyle)event->index;
+        break;
+    case UI_EVENT_SET_OPACITY:
+        model->style.opacity = event->value;
+        break;
     case UI_EVENT_ACTION:
         if (event->action == ACTION_TOGGLE_TOOL_LOCK) {
             model->toolLocked = !model->toolLocked;
@@ -110,14 +121,30 @@ static void on_event(void *user, const UiEvent *event)
         printf("panel %d pinned %d\n", (int)event->panel, event->index);
         fflush(stdout);
         break;
-    case UI_EVENT_SET_FONT: model->style.face = (TextFace)event->index; break;
-    case UI_EVENT_SET_FONT_SIZE: model->style.fontSize = FONT_SIZES[event->index]; break;
-    case UI_EVENT_SET_LASER_MODE: model->laserPointer = event->index != 0; break;
-    case UI_EVENT_CLOSE_DIALOG: model->dialogs &= ~UI_DIALOG_BIT(event->panel); break;
-    case UI_EVENT_SET_ARROWHEADS: model->style.arrowHeads = (ArrowHeads)event->index; break;
-    case UI_EVENT_SET_DEBUG_LOG: model->debugLog = event->index != 0; break;
-    case UI_EVENT_SET_EXPORT_BACKGROUND: model->exportBackground = event->index != 0; break;
-    case UI_EVENT_SET_EXPORT_FULL_SCREEN: model->exportFullScreen = event->index != 0; break;
+    case UI_EVENT_SET_FONT:
+        model->style.face = (TextFace)event->index;
+        break;
+    case UI_EVENT_SET_FONT_SIZE:
+        model->style.fontSize = FONT_SIZES[event->index];
+        break;
+    case UI_EVENT_SET_LASER_MODE:
+        model->laserPointer = event->index != 0;
+        break;
+    case UI_EVENT_CLOSE_DIALOG:
+        model->dialogs &= ~UI_DIALOG_BIT(event->panel);
+        break;
+    case UI_EVENT_SET_ARROWHEADS:
+        model->style.arrowHeads = (ArrowHeads)event->index;
+        break;
+    case UI_EVENT_SET_DEBUG_LOG:
+        model->debugLog = event->index != 0;
+        break;
+    case UI_EVENT_SET_EXPORT_BACKGROUND:
+        model->exportBackground = event->index != 0;
+        break;
+    case UI_EVENT_SET_EXPORT_FULL_SCREEN:
+        model->exportFullScreen = event->index != 0;
+        break;
     case UI_EVENT_RESET_OPTIONS:
     case UI_EVENT_RESET_POSITIONS:
     case UI_EVENT_SEND_KEY:
@@ -128,8 +155,12 @@ static void on_event(void *user, const UiEvent *event)
     case UI_EVENT_EDIT_HEX:
     case UI_EVENT_EDIT_END:
         break;
-    case UI_EVENT_SET_AUTO_HIDE: model->autoHide = event->index != 0; break;
-    case UI_EVENT_SET_EXCLUDE_CAPTURE: model->excludeCapture = event->index != 0; break;
+    case UI_EVENT_SET_AUTO_HIDE:
+        model->autoHide = event->index != 0;
+        break;
+    case UI_EVENT_SET_EXCLUDE_CAPTURE:
+        model->excludeCapture = event->index != 0;
+        break;
     case UI_EVENT_TOOL_VISIBLE:
         model->hiddenTools = event->index != 0 ? model->hiddenTools & ~(1u << event->tool)
                                                : model->hiddenTools | (1u << event->tool);
@@ -145,8 +176,12 @@ static void on_event(void *user, const UiEvent *event)
             }
         }
         break;
-    case UI_EVENT_SET_STROKE_COLOR: model->style.stroke = event->color; break;
-    case UI_EVENT_SET_PASTEL: model->pastel = event->index != 0; break;
+    case UI_EVENT_SET_STROKE_COLOR:
+        model->style.stroke = event->color;
+        break;
+    case UI_EVENT_SET_PASTEL:
+        model->pastel = event->index != 0;
+        break;
     case UI_EVENT_OPEN_PICKER:
         model->dialogs ^= UI_DIALOG_BIT(PANEL_COLOR);
         break;
@@ -258,8 +293,8 @@ static void parse_arguments(Preview *preview, int argc, wchar_t **argv, bool *id
         } else if (wcscmp(argv[i], L"--dialog") == 0 && i + 1 < argc) {
             ++i;
             preview->model.dialogs |= UI_DIALOG_BIT(wcscmp(argv[i], L"settings") == 0 ? PANEL_SETTINGS
-                                                        : wcscmp(argv[i], L"color") == 0 ? PANEL_COLOR
-                                                                                         : PANEL_CONFIRM);
+                                                    : wcscmp(argv[i], L"color") == 0  ? PANEL_COLOR
+                                                                                      : PANEL_CONFIRM);
         } else if (wcscmp(argv[i], L"--pastel") == 0) {
             preview->model.pastel = true;
         } else if (wcscmp(argv[i], L"--custom") == 0 && i + 1 < argc) {
@@ -346,7 +381,8 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE previous, PWSTR command, int s
             static const float SQUARE[4][2] = {{0.85f, 0.25f}, {0.9f, 0.5f}, {1.4f, 1.3f}, {1.4f, 1.3f}};
             static const float HUE[3][2] = {{0.7f, 0.5f}, {0.3f, 3.0f}, {0.3f, 3.0f}};
             bool a = ui_test_drag(preview->ui, PANEL_COLOR, ITEM_SV, SQUARE, 4);
-            printf("square drag ok=%d sat=%.2f val=%.2f\n", a, preview->model.pickerSat, preview->model.pickerVal);
+            printf("square drag ok=%d sat=%.2f val=%.2f\n", a, preview->model.pickerSat,
+                   preview->model.pickerVal);
             bool b = ui_test_drag(preview->ui, PANEL_COLOR, ITEM_HUE, HUE, 3);
             printf("hue drag ok=%d hue=%.2f stroke=%06X\n", b, preview->model.pickerHue,
                    (unsigned)(preview->model.style.stroke & 0xFFFFFFu));

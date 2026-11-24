@@ -82,8 +82,7 @@ void mask_add_ellipse_fill(Mask *mask, Point center, float radiusX, float radius
  * @param radiusY Vertical radius of the stroke centerline.
  * @param strokeWidth Stroke width in pixels.
  */
-void mask_add_ellipse_stroke(Mask *mask, Point center, float radiusX, float radiusY,
-                             float strokeWidth);
+void mask_add_ellipse_stroke(Mask *mask, Point center, float radiusX, float radiusY, float strokeWidth);
 
 /**
  * @brief Adds a filled rounded rectangle.
@@ -94,8 +93,7 @@ void mask_add_ellipse_stroke(Mask *mask, Point center, float radiusX, float radi
  * @param height Height.
  * @param cornerRadius Corner radius, clamped to half the shorter side.
  */
-void mask_add_rect_fill(Mask *mask, float left, float top, float width, float height,
-                        float cornerRadius);
+void mask_add_rect_fill(Mask *mask, float left, float top, float width, float height, float cornerRadius);
 
 /**
  * @brief Adds a rounded rectangle outline.
@@ -107,8 +105,8 @@ void mask_add_rect_fill(Mask *mask, float left, float top, float width, float he
  * @param cornerRadius Corner radius of the centerline.
  * @param strokeWidth Stroke width in pixels.
  */
-void mask_add_rect_stroke(Mask *mask, float left, float top, float width, float height,
-                          float cornerRadius, float strokeWidth);
+void mask_add_rect_stroke(Mask *mask, float left, float top, float width, float height, float cornerRadius,
+                          float strokeWidth);
 
 /**
  * @brief Adds a soft drop shadow of a rounded rectangle.
@@ -120,8 +118,8 @@ void mask_add_rect_stroke(Mask *mask, float left, float top, float width, float 
  * @param cornerRadius Corner radius of the casting rectangle.
  * @param blur Blur distance in pixels.
  */
-void mask_add_rect_shadow(Mask *mask, float left, float top, float width, float height,
-                          float cornerRadius, float blur);
+void mask_add_rect_shadow(Mask *mask, float left, float top, float width, float height, float cornerRadius,
+                          float blur);
 
 /**
  * @brief Blends a mask onto a canvas and leaves the mask unchanged.

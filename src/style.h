@@ -18,18 +18,10 @@
 #define CUSTOM_COLOR_MAX 18
 
 /** @brief Line pattern of strokes. */
-typedef enum StrokeStyle {
-    STROKE_SOLID,
-    STROKE_DASHED,
-    STROKE_DOTTED
-} StrokeStyle;
+typedef enum StrokeStyle { STROKE_SOLID, STROKE_DASHED, STROKE_DOTTED } StrokeStyle;
 
 /** @brief Whether an arrow has a head at its end only or at both ends. */
-typedef enum ArrowHeads {
-    ARROW_HEAD_END,
-    ARROW_HEAD_BOTH,
-    ARROW_HEAD_COUNT
-} ArrowHeads;
+typedef enum ArrowHeads { ARROW_HEAD_END, ARROW_HEAD_BOTH, ARROW_HEAD_COUNT } ArrowHeads;
 
 /** @brief Typeface of text elements. */
 typedef enum TextFace {

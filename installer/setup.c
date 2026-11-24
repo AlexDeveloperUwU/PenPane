@@ -66,13 +66,12 @@ static struct {
     HWND path, desktop, autostart, launch, status, progress, welcomeText, finishText, optionsNote;
 } ui;
 
-static const wchar_t *const HEADER_TITLE[PAGE_COUNT] = {
-    L"Welcome to PenPane Setup", L"License Agreement", L"Install Options", L"Installing", L"Setup Complete"};
+static const wchar_t *const HEADER_TITLE[PAGE_COUNT] = {L"Welcome to PenPane Setup", L"License Agreement",
+                                                        L"Install Options", L"Installing", L"Setup Complete"};
 static const wchar_t *const HEADER_SUB[PAGE_COUNT] = {
     L"Setup will guide you through the installation.",
     L"Please review the license terms before installing PenPane.",
-    L"Choose where to install PenPane and what to set up.",
-    L"Please wait while PenPane is installed.",
+    L"Choose where to install PenPane and what to set up.", L"Please wait while PenPane is installed.",
     L"PenPane is ready to use."};
 
 /**
@@ -205,7 +204,8 @@ static void set_shortcut(REFKNOWNFOLDERID id, const wchar_t *target, const wchar
         return;
     }
     IShellLinkW *shell = NULL;
-    if (FAILED(CoCreateInstance(&CLSID_ShellLink, NULL, CLSCTX_INPROC_SERVER, &IID_IShellLinkW, (void **)&shell))) {
+    if (FAILED(CoCreateInstance(&CLSID_ShellLink, NULL, CLSCTX_INPROC_SERVER, &IID_IShellLinkW,
+                                (void **)&shell))) {
         return;
     }
     IShellLinkW_SetPath(shell, target);
@@ -231,7 +231,8 @@ static void set_text(HKEY key, const wchar_t *name, const wchar_t *value)
 static void set_autostart(const wchar_t *program)
 {
     HKEY key;
-    if (RegCreateKeyExW(HKEY_CURRENT_USER, RUN_KEY, 0, NULL, 0, KEY_SET_VALUE, NULL, &key, NULL) != ERROR_SUCCESS) {
+    if (RegCreateKeyExW(HKEY_CURRENT_USER, RUN_KEY, 0, NULL, 0, KEY_SET_VALUE, NULL, &key, NULL) !=
+        ERROR_SUCCESS) {
         return;
     }
     if (program) {
@@ -247,10 +248,12 @@ static void set_autostart(const wchar_t *program)
 /**
  * @brief Registers the program in Settings > Apps.
  */
-static void register_uninstall(const wchar_t *folder, const wchar_t *program, const wchar_t *uninstaller, DWORD sizeKb)
+static void register_uninstall(const wchar_t *folder, const wchar_t *program, const wchar_t *uninstaller,
+                               DWORD sizeKb)
 {
     HKEY key;
-    if (RegCreateKeyExW(HKEY_CURRENT_USER, UNINSTALL_KEY, 0, NULL, 0, KEY_SET_VALUE, NULL, &key, NULL) != ERROR_SUCCESS) {
+    if (RegCreateKeyExW(HKEY_CURRENT_USER, UNINSTALL_KEY, 0, NULL, 0, KEY_SET_VALUE, NULL, &key, NULL) !=
+        ERROR_SUCCESS) {
         return;
     }
     wchar_t command[MAX_PATH + 32];
@@ -303,7 +306,8 @@ static const wchar_t *perform_install(const wchar_t *folder, int desktop, int au
     step(5, L"Closing PenPane if it is running...");
     stop_running();
     step(20, L"Creating the install folder...");
-    if (SHCreateDirectoryExW(NULL, folder, NULL) != ERROR_SUCCESS && GetFileAttributesW(folder) == INVALID_FILE_ATTRIBUTES) {
+    if (SHCreateDirectoryExW(NULL, folder, NULL) != ERROR_SUCCESS &&
+        GetFileAttributesW(folder) == INVALID_FILE_ATTRIBUTES) {
         return L"The install folder could not be created.";
     }
     step(35, L"Copying PenPane...");
@@ -337,17 +341,20 @@ static const wchar_t *perform_install(const wchar_t *folder, int desktop, int au
 static bool default_folder(wchar_t *out, size_t size)
 {
     DWORD bytes = (DWORD)(size * sizeof(wchar_t));
-    if (RegGetValueW(HKEY_CURRENT_USER, UNINSTALL_KEY, L"InstallLocation", RRF_RT_REG_SZ, NULL, out, &bytes) == ERROR_SUCCESS &&
+    if (RegGetValueW(HKEY_CURRENT_USER, UNINSTALL_KEY, L"InstallLocation", RRF_RT_REG_SZ, NULL, out,
+                     &bytes) == ERROR_SUCCESS &&
         out[0] != L'\0') {
         ui.upgrade = true;
         return true;
     }
     wchar_t base[MAX_PATH];
-    return known_folder(&FOLDERID_LocalAppData, base, ARRAYSIZE(base)) && join(out, size, base, L"Programs\\PenPane");
+    return known_folder(&FOLDERID_LocalAppData, base, ARRAYSIZE(base)) &&
+           join(out, size, base, L"Programs\\PenPane");
 }
 
 /**
- * @brief Removes the registrations and program files, then hands the final folder removal to a temporary copy.
+ * @brief Removes the registrations and program files, then hands the final folder removal to a temporary
+ * copy.
  *
  * Only files the installer created are deleted; the folder is removed only when nothing else is left in it.
  * @return Process exit code.
@@ -369,7 +376,8 @@ static int uninstall(void)
         return 2;
     }
     stop_running();
-    static const wchar_t *const FILES[] = {L"PenPane.exe", L"PenPane.exe.new", L"PenPane.ini", L"PenPane.log", L"PenPane.log.1", L"ink.ini"};
+    static const wchar_t *const FILES[] = {L"PenPane.exe", L"PenPane.exe.new", L"PenPane.ini",
+                                           L"PenPane.log", L"PenPane.log.1",   L"ink.ini"};
     for (size_t i = 0; i < ARRAYSIZE(FILES); i++) {
         wchar_t path[MAX_PATH];
         if (join(path, ARRAYSIZE(path), folder, FILES[i])) {
@@ -385,7 +393,8 @@ static int uninstall(void)
     wchar_t copy[MAX_PATH];
     wchar_t name[48];
     _snwprintf(name, ARRAYSIZE(name), L"PenPaneUninstall%lu.exe", GetCurrentProcessId());
-    if (GetTempPathW(ARRAYSIZE(temp), temp) == 0 || !join(copy, ARRAYSIZE(copy), temp, name) || !CopyFileW(self, copy, FALSE)) {
+    if (GetTempPathW(ARRAYSIZE(temp), temp) == 0 || !join(copy, ARRAYSIZE(copy), temp, name) ||
+        !CopyFileW(self, copy, FALSE)) {
         return 1;
     }
     wchar_t command[2 * MAX_PATH + 32];
@@ -409,7 +418,9 @@ static int cleanup(const wchar_t *folder)
 {
     wchar_t uninstaller[MAX_PATH];
     if (join(uninstaller, ARRAYSIZE(uninstaller), folder, L"Uninstall.exe")) {
-        for (int i = 0; i < 100 && !DeleteFileW(uninstaller) && GetFileAttributesW(uninstaller) != INVALID_FILE_ATTRIBUTES; i++) {
+        for (int i = 0; i < 100 && !DeleteFileW(uninstaller) &&
+                        GetFileAttributesW(uninstaller) != INVALID_FILE_ATTRIBUTES;
+             i++) {
             Sleep(100);
         }
     }
@@ -417,10 +428,12 @@ static int cleanup(const wchar_t *folder)
     wchar_t self[MAX_PATH];
     if (GetModuleFileNameW(NULL, self, ARRAYSIZE(self)) < ARRAYSIZE(self)) {
         wchar_t command[MAX_PATH + 64];
-        _snwprintf(command, ARRAYSIZE(command), L"cmd.exe /c ping -n 3 127.0.0.1 >nul & del /f /q \"%ls\"", self);
+        _snwprintf(command, ARRAYSIZE(command), L"cmd.exe /c ping -n 3 127.0.0.1 >nul & del /f /q \"%ls\"",
+                   self);
         STARTUPINFOW startup = {.cb = sizeof startup};
         PROCESS_INFORMATION process;
-        if (CreateProcessW(NULL, command, NULL, NULL, FALSE, CREATE_NO_WINDOW, NULL, NULL, &startup, &process)) {
+        if (CreateProcessW(NULL, command, NULL, NULL, FALSE, CREATE_NO_WINDOW, NULL, NULL, &startup,
+                           &process)) {
             CloseHandle(process.hThread);
             CloseHandle(process.hProcess);
         }
@@ -436,11 +449,11 @@ static int scale(int value)
 /**
  * @brief Creates a child control on the given pages (a bit mask of ON(page)).
  */
-static HWND make(unsigned pages, const wchar_t *className, const wchar_t *text, DWORD style, DWORD exStyle, int x, int y,
-                 int w, int h, UINT id)
+static HWND make(unsigned pages, const wchar_t *className, const wchar_t *text, DWORD style, DWORD exStyle,
+                 int x, int y, int w, int h, UINT id)
 {
-    HWND control = CreateWindowExW(exStyle, className, text, WS_CHILD | style, scale(x), scale(y), scale(w), scale(h),
-                                   ui.window, (HMENU)(UINT_PTR)id, instance, NULL);
+    HWND control = CreateWindowExW(exStyle, className, text, WS_CHILD | style, scale(x), scale(y), scale(w),
+                                   scale(h), ui.window, (HMENU)(UINT_PTR)id, instance, NULL);
     SendMessageW(control, WM_SETFONT, (WPARAM)ui.font, TRUE);
     if (ui.count < MAX_ITEMS) {
         ui.items[ui.count].window = control;
@@ -470,7 +483,8 @@ static void load_license(HWND edit)
     const char *data = loaded ? LockResource(loaded) : NULL;
     int size = resource ? (int)SizeofResource(NULL, resource) : 0;
     if (!data || size == 0) {
-        SetWindowTextW(edit, L"The license text is not available. See https://www.gnu.org/licenses/gpl-3.0.html");
+        SetWindowTextW(edit,
+                       L"The license text is not available. See https://www.gnu.org/licenses/gpl-3.0.html");
         return;
     }
     wchar_t *text = malloc(((size_t)size * 2 + 1) * sizeof(wchar_t));
@@ -540,7 +554,8 @@ static void show_page(int page)
     }
     SetWindowTextW(ui.headerTitle, HEADER_TITLE[page]);
     SetWindowTextW(ui.headerSub, HEADER_SUB[page]);
-    static const wchar_t *const NEXT_TEXT[PAGE_COUNT] = {L"Next >", L"I Agree", L"Install", L"Install", L"Finish"};
+    static const wchar_t *const NEXT_TEXT[PAGE_COUNT] = {L"Next >", L"I Agree", L"Install", L"Install",
+                                                         L"Finish"};
     SetWindowTextW(ui.next, NEXT_TEXT[page]);
     bool busy = page == PAGE_PROGRESS;
     bool done = page == PAGE_FINISH;
@@ -565,7 +580,8 @@ static void start_install(void)
     while (length > 3 && ui.folder[length - 1] == L'\\') {
         ui.folder[--length] = L'\0';
     }
-    bool absolute = (length > 2 && ui.folder[1] == L':' && ui.folder[2] == L'\\') || wcsncmp(ui.folder, L"\\\\", 2) == 0;
+    bool absolute =
+        (length > 2 && ui.folder[1] == L':' && ui.folder[2] == L'\\') || wcsncmp(ui.folder, L"\\\\", 2) == 0;
     if (!absolute) {
         say(L"Enter a full folder path, for example C:\\Users\\you\\PenPane.", MB_ICONWARNING);
         return;
@@ -598,8 +614,8 @@ static void cancel(void)
     if (ui.page == PAGE_PROGRESS) {
         return;
     }
-    if (ui.page == PAGE_FINISH ||
-        MessageBoxW(ui.window, L"Setup is not finished. Exit anyway?", TITLE, MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON2) == IDYES) {
+    if (ui.page == PAGE_FINISH || MessageBoxW(ui.window, L"Setup is not finished. Exit anyway?", TITLE,
+                                              MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON2) == IDYES) {
         DestroyWindow(ui.window);
     }
 }
@@ -636,7 +652,8 @@ static LRESULT CALLBACK wizard_procedure(HWND window, UINT message, WPARAM wpara
         break;
     case WM_CTLCOLORSTATIC: {
         HWND control = (HWND)lparam;
-        if (control == ui.headerBand || control == ui.headerTitle || control == ui.headerSub || control == ui.headerIcon) {
+        if (control == ui.headerBand || control == ui.headerTitle || control == ui.headerSub ||
+            control == ui.headerIcon) {
             SetBkColor((HDC)wparam, RGB(255, 255, 255));
             return (LRESULT)GetStockObject(WHITE_BRUSH);
         }
@@ -674,9 +691,11 @@ static bool create_wizard(void)
     ui.font = make_font(ui.dpi, false);
     ui.titleFont = make_font(ui.dpi, true);
 
-    HICON big = LoadImageW(instance, MAKEINTRESOURCEW(ICON_ID), IMAGE_ICON, GetSystemMetricsForDpi(SM_CXICON, ui.dpi),
-                           GetSystemMetricsForDpi(SM_CYICON, ui.dpi), 0);
-    HICON small = LoadImageW(instance, MAKEINTRESOURCEW(ICON_ID), IMAGE_ICON, GetSystemMetricsForDpi(SM_CXSMICON, ui.dpi),
+    HICON big =
+        LoadImageW(instance, MAKEINTRESOURCEW(ICON_ID), IMAGE_ICON, GetSystemMetricsForDpi(SM_CXICON, ui.dpi),
+                   GetSystemMetricsForDpi(SM_CYICON, ui.dpi), 0);
+    HICON small = LoadImageW(instance, MAKEINTRESOURCEW(ICON_ID), IMAGE_ICON,
+                             GetSystemMetricsForDpi(SM_CXSMICON, ui.dpi),
                              GetSystemMetricsForDpi(SM_CYSMICON, ui.dpi), 0);
     WNDCLASSEXW windowClass = {.cbSize = sizeof windowClass,
                                .lpfnWndProc = wizard_procedure,
@@ -695,8 +714,9 @@ static bool create_wizard(void)
     int height = frame.bottom - frame.top;
     RECT area;
     SystemParametersInfoW(SPI_GETWORKAREA, 0, &area, 0);
-    ui.window = CreateWindowExW(0, WIZARD_CLASS, TITLE, style, area.left + (area.right - area.left - width) / 2,
-                                area.top + (area.bottom - area.top - height) / 2, width, height, NULL, NULL, instance, NULL);
+    ui.window = CreateWindowExW(
+        0, WIZARD_CLASS, TITLE, style, area.left + (area.right - area.left - width) / 2,
+        area.top + (area.bottom - area.top - height) / 2, width, height, NULL, NULL, instance, NULL);
     if (!ui.window) {
         return false;
     }
@@ -707,21 +727,28 @@ static bool create_wizard(void)
     ui.headerSub = make(ALL_PAGES, L"STATIC", L"", SS_LEFT | SS_NOPREFIX, 0, 20, 38, 420, 18, 0);
     ui.headerIcon = make(ALL_PAGES, L"STATIC", L"", SS_ICON, 0, 476, 8, 48, 48, 0);
     SendMessageW(ui.headerIcon, STM_SETICON,
-                 (WPARAM)LoadImageW(instance, MAKEINTRESOURCEW(ICON_ID), IMAGE_ICON, scale(48), scale(48), 0), 0);
+                 (WPARAM)LoadImageW(instance, MAKEINTRESOURCEW(ICON_ID), IMAGE_ICON, scale(48), scale(48), 0),
+                 0);
     make(ALL_PAGES, L"STATIC", L"", SS_ETCHEDHORZ, 0, 0, 64, 540, 2, 0);
 
     HWND icon = make(ON(PAGE_WELCOME), L"STATIC", L"", SS_ICON, 0, 24, 88, 64, 64, 0);
-    SendMessageW(icon, STM_SETICON, (WPARAM)LoadImageW(instance, MAKEINTRESOURCEW(ICON_ID), IMAGE_ICON, scale(64), scale(64), 0), 0);
+    SendMessageW(icon, STM_SETICON,
+                 (WPARAM)LoadImageW(instance, MAKEINTRESOURCEW(ICON_ID), IMAGE_ICON, scale(64), scale(64), 0),
+                 0);
     ui.welcomeText = label(ON(PAGE_WELCOME), L"", 108, 90, 416, 240);
 
-    HWND license = make(ON(PAGE_LICENSE), L"EDIT", L"", ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL | WS_VSCROLL | WS_TABSTOP,
+    HWND license = make(ON(PAGE_LICENSE), L"EDIT", L"",
+                        ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL | WS_VSCROLL | WS_TABSTOP,
                         WS_EX_CLIENTEDGE, 16, 78, 508, 228, 0);
     load_license(license);
-    label(ON(PAGE_LICENSE), L"If you accept the terms of the license, click I Agree to continue.", 16, 316, 508, 20);
+    label(ON(PAGE_LICENSE), L"If you accept the terms of the license, click I Agree to continue.", 16, 316,
+          508, 20);
 
     label(ON(PAGE_OPTIONS), L"Install PenPane to:", 16, 84, 508, 18);
-    ui.path = make(ON(PAGE_OPTIONS), L"EDIT", L"", ES_AUTOHSCROLL | WS_TABSTOP, WS_EX_CLIENTEDGE, 16, 106, 408, 24, ID_PATH);
-    make(ON(PAGE_OPTIONS), L"BUTTON", L"Browse...", BS_PUSHBUTTON | WS_TABSTOP, 0, 432, 105, 92, 26, ID_BROWSE);
+    ui.path = make(ON(PAGE_OPTIONS), L"EDIT", L"", ES_AUTOHSCROLL | WS_TABSTOP, WS_EX_CLIENTEDGE, 16, 106,
+                   408, 24, ID_PATH);
+    make(ON(PAGE_OPTIONS), L"BUTTON", L"Browse...", BS_PUSHBUTTON | WS_TABSTOP, 0, 432, 105, 92, 26,
+         ID_BROWSE);
     ui.desktop = checkbox(ON(PAGE_OPTIONS), L"Create a desktop shortcut", 16, 152, 508, 0);
     ui.autostart = checkbox(ON(PAGE_OPTIONS), L"Start PenPane when I sign in to Windows", 16, 178, 508, 0);
     ui.optionsNote = label(ON(PAGE_OPTIONS), L"", 16, 222, 508, 60);
@@ -737,29 +764,39 @@ static bool create_wizard(void)
     make(ALL_PAGES, L"STATIC", L"", SS_ETCHEDHORZ, 0, 0, 352, 540, 2, 0);
     ui.back = make(ALL_PAGES, L"BUTTON", L"< Back", BS_PUSHBUTTON | WS_TABSTOP, 0, 262, 362, 84, 26, ID_BACK);
     ui.next = make(ALL_PAGES, L"BUTTON", L"Next >", BS_DEFPUSHBUTTON | WS_TABSTOP, 0, 352, 362, 84, 26, IDOK);
-    ui.cancel = make(ALL_PAGES, L"BUTTON", L"Cancel", BS_PUSHBUTTON | WS_TABSTOP, 0, 442, 362, 82, 26, IDCANCEL);
+    ui.cancel =
+        make(ALL_PAGES, L"BUTTON", L"Cancel", BS_PUSHBUTTON | WS_TABSTOP, 0, 442, 362, 82, 26, IDCANCEL);
 
     wchar_t shortcut[MAX_PATH];
-    bool desktopExists = link_path(&FOLDERID_Desktop, shortcut, ARRAYSIZE(shortcut)) && GetFileAttributesW(shortcut) != INVALID_FILE_ATTRIBUTES;
-    bool autostartExists = RegGetValueW(HKEY_CURRENT_USER, RUN_KEY, L"PenPane", RRF_RT_REG_SZ, NULL, NULL, NULL) == ERROR_SUCCESS;
+    bool desktopExists = link_path(&FOLDERID_Desktop, shortcut, ARRAYSIZE(shortcut)) &&
+                         GetFileAttributesW(shortcut) != INVALID_FILE_ATTRIBUTES;
+    bool autostartExists = RegGetValueW(HKEY_CURRENT_USER, RUN_KEY, L"PenPane", RRF_RT_REG_SZ, NULL, NULL,
+                                        NULL) == ERROR_SUCCESS;
     SendMessageW(ui.desktop, BM_SETCHECK, desktopExists ? BST_CHECKED : BST_UNCHECKED, 0);
     SendMessageW(ui.autostart, BM_SETCHECK, autostartExists ? BST_CHECKED : BST_UNCHECKED, 0);
     SetWindowTextW(ui.path, ui.folder);
 
-    SetWindowTextW(ui.welcomeText,
-                   ui.upgrade ? L"PenPane is already installed on this computer. This wizard updates it to version " PENPANE_VERSION_TEXT
-                                L".\r\n\r\nYour settings are kept. Click Next to continue."
-                              : L"This wizard installs PenPane " PENPANE_VERSION_TEXT
-                                L" on your computer.\r\n\r\nPenPane is a small screen annotation overlay for Windows: draw over "
-                                L"anything on screen for presentations, demos and teaching.\r\n\r\nIt installs for your account only "
-                                L"and needs no administrator rights. Click Next to continue.");
-    SetWindowTextW(ui.optionsNote,
-                   L"PenPane keeps its settings and log in this folder, so choose a folder you can write to. The Start menu "
-                   L"shortcut is always created.");
-    SetWindowTextW(ui.finishText,
-                   L"PenPane " PENPANE_VERSION_TEXT L" has been installed.\r\n\r\nIt runs in the notification area. Click its "
-                   L"toolbar handle, then the drawing button, to start drawing over the screen. Press Ctrl+Alt+Shift+Esc at any "
-                   L"time to quit.\r\n\r\nTo remove PenPane later, use Settings > Apps.");
+    SetWindowTextW(
+        ui.welcomeText,
+        ui.upgrade
+            ? L"PenPane is already installed on this computer. This wizard updates it to "
+              L"version " PENPANE_VERSION_TEXT L".\r\n\r\nYour settings are kept. Click Next to continue."
+            : L"This wizard installs PenPane " PENPANE_VERSION_TEXT L" on your computer.\r\n\r\nPenPane is a "
+              L"small screen annotation overlay for "
+              L"Windows: draw over "
+              L"anything on screen for presentations, demos and teaching.\r\n\r\nIt installs for your "
+              L"account only "
+              L"and needs no administrator rights. Click Next to continue.");
+    SetWindowTextW(ui.optionsNote, L"PenPane keeps its settings and log in this folder, so choose a folder "
+                                   L"you can write to. The Start menu "
+                                   L"shortcut is always created.");
+    SetWindowTextW(
+        ui.finishText,
+        L"PenPane"
+        L" " PENPANE_VERSION_TEXT L" has been installed.\r\n\r\nIt runs in the notification area. Click its "
+        L"toolbar handle, then the drawing button, to start drawing over the screen. Press "
+        L"Ctrl+Alt+Shift+Esc at any "
+        L"time to quit.\r\n\r\nTo remove PenPane later, use Settings > Apps.");
     show_page(PAGE_WELCOME);
     ShowWindow(ui.window, SW_SHOW);
     return true;

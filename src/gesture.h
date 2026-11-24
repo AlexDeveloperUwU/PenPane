@@ -25,10 +25,7 @@
 #define GESTURE_MAX_TRACKED 16
 
 /** @brief Source of a trigger. */
-typedef enum TriggerKind {
-    TRIGGER_KEY,
-    TRIGGER_MOUSE_BUTTON
-} TriggerKind;
+typedef enum TriggerKind { TRIGGER_KEY, TRIGGER_MOUSE_BUTTON } TriggerKind;
 
 /** @brief Modifier bits stored in Trigger.modifiers, same values as the Win32 MOD_* flags. */
 #define TRIGGER_MOD_ALT 0x1u
@@ -44,11 +41,7 @@ typedef struct Trigger {
 } Trigger;
 
 /** @brief How a trigger is pressed. */
-typedef enum Gesture {
-    GESTURE_SINGLE,
-    GESTURE_DOUBLE,
-    GESTURE_LONG
-} Gesture;
+typedef enum Gesture { GESTURE_SINGLE, GESTURE_DOUBLE, GESTURE_LONG } Gesture;
 
 /** @brief One assignment of an action to a trigger and gesture. */
 typedef struct Binding {

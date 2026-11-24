@@ -46,7 +46,8 @@ typedef enum TrayCommand {
     TRAY_QUIT
 } TrayCommand;
 
-/** @brief A menu choice. value is a monitor index for the SET_*_MONITOR commands; action is set for TRAY_LEARN_ACTION. */
+/** @brief A menu choice. value is a monitor index for the SET_*_MONITOR commands; action is set for
+ * TRAY_LEARN_ACTION. */
 typedef struct TrayEvent {
     TrayCommand command;
     int value;
@@ -114,7 +115,8 @@ bool tray_is_registered(const Tray *tray);
  * @param tray Instance.
  * @param title Title, at most 63 characters.
  * @param text Body, at most 255 characters.
- * @return false when the icon is not registered or the shell rejected the notification, so the caller can keep the message.
+ * @return false when the icon is not registered or the shell rejected the notification, so the caller can
+ * keep the message.
  */
 bool tray_notify(Tray *tray, const wchar_t *title, const wchar_t *text);
 
@@ -125,7 +127,8 @@ bool tray_notify(Tray *tray, const wchar_t *title, const wchar_t *text);
 bool autostart_get(void);
 
 /**
- * @brief Registers or unregisters the program in the HKCU Run key; never called without an explicit user action.
+ * @brief Registers or unregisters the program in the HKCU Run key; never called without an explicit user
+ * action.
  * @param enable true to register the current executable path.
  * @return true on success.
  */

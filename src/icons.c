@@ -181,8 +181,8 @@ static void draw_lock(const Pen *pen, bool open)
  */
 static void draw_select(const Pen *pen)
 {
-    static const float shape[] = {4.0f, 2.5f, 4.0f, 12.6f, 6.7f, 10.2f, 8.7f, 14.0f,
-                                  10.4f, 13.1f, 8.5f, 9.5f, 12.2f, 9.3f};
+    static const float shape[] = {4.0f,  2.5f,  4.0f,  12.6f, 6.7f, 10.2f, 8.7f,
+                                  14.0f, 10.4f, 13.1f, 8.5f,  9.5f, 12.2f, 9.3f};
     poly(pen, shape, 7, true);
 }
 
@@ -264,8 +264,8 @@ static void draw_mode(const Pen *pen, bool whiteboard)
 static void draw_drawing(const Pen *pen, bool on)
 {
     static const float wave[] = {7.0f, 13.6f, 8.6f, 12.2f, 10.2f, 13.6f, 11.8f, 12.2f, 13.4f, 13.6f};
-    static const float cursor[] = {4.0f, 2.4f, 4.0f, 12.8f, 6.6f, 10.4f, 8.4f, 14.0f, 10.2f, 13.2f, 8.5f, 9.8f,
-                                   12.0f, 9.6f};
+    static const float cursor[] = {4.0f,  2.4f,  4.0f,  12.8f, 6.6f, 10.4f, 8.4f,
+                                   14.0f, 10.2f, 13.2f, 8.5f,  9.8f, 12.0f, 9.6f};
     if (on) {
         draw_pencil(pen);
         poly(pen, wave, 5, false);
@@ -281,8 +281,8 @@ static void draw_drawing(const Pen *pen, bool on)
  */
 static void draw_copy(const Pen *pen)
 {
-    static const float back[] = {6.0f, 11.4f, 3.6f, 11.4f, 2.6f, 10.4f, 2.6f, 4.0f,
-                                 3.6f, 3.0f,  11.0f, 3.0f, 12.0f, 4.0f, 12.0f, 6.0f};
+    static const float back[] = {6.0f, 11.4f, 3.6f,  11.4f, 2.6f,  10.4f, 2.6f,  4.0f,
+                                 3.6f, 3.0f,  11.0f, 3.0f,  12.0f, 4.0f,  12.0f, 6.0f};
     poly(pen, back, 8, false);
     box(pen, 6.0f, 6.0f, 8.0f, 8.0f, 1.4f);
 }
@@ -295,7 +295,8 @@ static void draw_copy(const Pen *pen)
 static void draw_font(const Pen *pen, int face)
 {
     if (face == 0) {
-        static const float hand[] = {2.6f, 13.2f, 4.4f, 8.0f, 6.6f, 3.0f, 8.6f, 5.4f, 10.6f, 9.6f, 13.4f, 13.4f};
+        static const float hand[] = {2.6f, 13.2f, 4.4f,  8.0f, 6.6f,  3.0f,
+                                     8.6f, 5.4f,  10.6f, 9.6f, 13.4f, 13.4f};
         poly(pen, hand, 6, false);
         line(pen, 4.8f, 10.4f, 11.0f, 9.8f);
     } else if (face == 1) {
@@ -399,8 +400,8 @@ static void draw_text(const Pen *pen)
  */
 static void draw_pin(Pen *pen, bool pinned)
 {
-    static const float body[] = {5.8f, 2.2f, 10.2f, 2.2f, 10.2f, 6.2f, 12.2f, 8.6f,
-                                 12.2f, 10.0f, 3.8f, 10.0f, 3.8f, 8.6f, 5.8f, 6.2f};
+    static const float body[] = {5.8f,  2.2f,  10.2f, 2.2f,  10.2f, 6.2f, 12.2f, 8.6f,
+                                 12.2f, 10.0f, 3.8f,  10.0f, 3.8f,  8.6f, 5.8f,  6.2f};
     if (!pinned) {
         pen->angle = PI_FLOAT * 0.25f;
     }
@@ -452,8 +453,8 @@ static void draw_trash(const Pen *pen)
  */
 static void draw_eye(const Pen *pen, bool hidden)
 {
-    static const float outline[16] = {1.4f, 8.0f, 3.8f, 5.2f, 8.0f, 3.8f, 12.2f, 5.2f,
-                                      14.6f, 8.0f, 12.2f, 10.8f, 8.0f, 12.2f, 3.8f, 10.8f};
+    static const float outline[16] = {1.4f,  8.0f, 3.8f,  5.2f,  8.0f, 3.8f,  12.2f, 5.2f,
+                                      14.6f, 8.0f, 12.2f, 10.8f, 8.0f, 12.2f, 3.8f,  10.8f};
     poly(pen, outline, 8, true);
     dot(pen, 8.0f, 8.0f, 2.0f);
     if (hidden) {
@@ -470,11 +471,21 @@ static void draw_eye(const Pen *pen, bool hidden)
 static bool draw_icon(Pen *pen, Icon icon)
 {
     switch (icon) {
-    case ICON_GRIP: draw_grip(pen); break;
-    case ICON_LOCK_CLOSED: draw_lock(pen, false); break;
-    case ICON_LOCK_OPEN: draw_lock(pen, true); break;
-    case ICON_SELECT: draw_select(pen); break;
-    case ICON_RECTANGLE: box(pen, 2.5f, 3.5f, 11.0f, 9.0f, 1.6f); break;
+    case ICON_GRIP:
+        draw_grip(pen);
+        break;
+    case ICON_LOCK_CLOSED:
+        draw_lock(pen, false);
+        break;
+    case ICON_LOCK_OPEN:
+        draw_lock(pen, true);
+        break;
+    case ICON_SELECT:
+        draw_select(pen);
+        break;
+    case ICON_RECTANGLE:
+        box(pen, 2.5f, 3.5f, 11.0f, 9.0f, 1.6f);
+        break;
     case ICON_ELLIPSE:
         mask_add_ellipse_stroke(pen->mask, at(pen, 8.0f, 8.0f), 5.6f * pen->unit, 5.6f * pen->unit,
                                 pen->half * 2.0f);
@@ -489,23 +500,49 @@ static bool draw_icon(Pen *pen, Icon icon)
         dot(pen, 3.4f, 12.6f, 1.5f);
         dot(pen, 12.6f, 3.4f, 1.5f);
         break;
-    case ICON_PEN: draw_pencil(pen); break;
-    case ICON_HIGHLIGHTER: draw_highlighter(pen); break;
-    case ICON_LASER: draw_laser(pen); break;
-    case ICON_TEXT: draw_text(pen); break;
-    case ICON_ERASER: draw_eraser(pen); break;
-    case ICON_MODE_DESKTOP: draw_mode(pen, false); break;
-    case ICON_MODE_WHITEBOARD: draw_mode(pen, true); break;
-    case ICON_DRAWING_ON: draw_drawing(pen, true); break;
-    case ICON_DRAWING_OFF: draw_drawing(pen, false); break;
-    case ICON_EXIT: draw_exit(pen); break;
-    case ICON_UNDO: draw_undo(pen); break;
+    case ICON_PEN:
+        draw_pencil(pen);
+        break;
+    case ICON_HIGHLIGHTER:
+        draw_highlighter(pen);
+        break;
+    case ICON_LASER:
+        draw_laser(pen);
+        break;
+    case ICON_TEXT:
+        draw_text(pen);
+        break;
+    case ICON_ERASER:
+        draw_eraser(pen);
+        break;
+    case ICON_MODE_DESKTOP:
+        draw_mode(pen, false);
+        break;
+    case ICON_MODE_WHITEBOARD:
+        draw_mode(pen, true);
+        break;
+    case ICON_DRAWING_ON:
+        draw_drawing(pen, true);
+        break;
+    case ICON_DRAWING_OFF:
+        draw_drawing(pen, false);
+        break;
+    case ICON_EXIT:
+        draw_exit(pen);
+        break;
+    case ICON_UNDO:
+        draw_undo(pen);
+        break;
     case ICON_REDO:
         pen->mirror = true;
         draw_undo(pen);
         break;
-    case ICON_COPY: draw_copy(pen); break;
-    case ICON_SAVE: draw_save(pen); break;
+    case ICON_COPY:
+        draw_copy(pen);
+        break;
+    case ICON_SAVE:
+        draw_save(pen);
+        break;
     case ICON_LASER_TRAIL: {
         static const float trail[] = {2.4f, 12.6f, 5.0f, 8.0f, 8.0f, 9.6f, 10.6f, 5.4f};
         poly(pen, trail, 4, false);
@@ -516,23 +553,49 @@ static bool draw_icon(Pen *pen, Icon icon)
         dot(pen, 8.0f, 8.0f, 2.4f);
         arc(pen, 8.0f, 8.0f, 5.6f, 0.0f, 360.0f);
         break;
-    case ICON_FONT_HAND: draw_font(pen, 0); break;
-    case ICON_FONT_NORMAL: draw_font(pen, 1); break;
-    case ICON_FONT_LEGIBLE: draw_font(pen, 2); break;
-    case ICON_STYLE_SOLID: draw_stroke_style(pen, 0); break;
-    case ICON_STYLE_DASHED: draw_stroke_style(pen, 1); break;
-    case ICON_STYLE_DOTTED: draw_stroke_style(pen, 2); break;
-    case ICON_WIDTH_THIN: bar(pen, 2.6f, 13.4f, 8.0f, 1.2f); break;
-    case ICON_WIDTH_MEDIUM: bar(pen, 2.6f, 13.4f, 8.0f, 2.6f); break;
-    case ICON_WIDTH_BOLD: bar(pen, 2.6f, 13.4f, 8.0f, 4.4f); break;
+    case ICON_FONT_HAND:
+        draw_font(pen, 0);
+        break;
+    case ICON_FONT_NORMAL:
+        draw_font(pen, 1);
+        break;
+    case ICON_FONT_LEGIBLE:
+        draw_font(pen, 2);
+        break;
+    case ICON_STYLE_SOLID:
+        draw_stroke_style(pen, 0);
+        break;
+    case ICON_STYLE_DASHED:
+        draw_stroke_style(pen, 1);
+        break;
+    case ICON_STYLE_DOTTED:
+        draw_stroke_style(pen, 2);
+        break;
+    case ICON_WIDTH_THIN:
+        bar(pen, 2.6f, 13.4f, 8.0f, 1.2f);
+        break;
+    case ICON_WIDTH_MEDIUM:
+        bar(pen, 2.6f, 13.4f, 8.0f, 2.6f);
+        break;
+    case ICON_WIDTH_BOLD:
+        bar(pen, 2.6f, 13.4f, 8.0f, 4.4f);
+        break;
     case ICON_PRESSURE:
         mask_add_capsule(pen->mask, at(pen, 2.6f, 8.0f), at(pen, 13.4f, 8.0f), 0.5f * pen->unit,
                          2.6f * pen->unit);
         break;
-    case ICON_SETTINGS: draw_gear(pen); break;
-    case ICON_TRASH: draw_trash(pen); break;
-    case ICON_EYE: draw_eye(pen, false); break;
-    case ICON_EYE_OFF: draw_eye(pen, true); break;
+    case ICON_SETTINGS:
+        draw_gear(pen);
+        break;
+    case ICON_TRASH:
+        draw_trash(pen);
+        break;
+    case ICON_EYE:
+        draw_eye(pen, false);
+        break;
+    case ICON_EYE_OFF:
+        draw_eye(pen, true);
+        break;
     case ICON_CLOSE:
         line(pen, 4.0f, 4.0f, 12.0f, 12.0f);
         line(pen, 12.0f, 4.0f, 4.0f, 12.0f);
@@ -547,8 +610,12 @@ static bool draw_icon(Pen *pen, Icon icon)
         poly(pen, shape, 3, false);
         break;
     }
-    case ICON_PIN: draw_pin(pen, true); break;
-    case ICON_PIN_OFF: draw_pin(pen, false); break;
+    case ICON_PIN:
+        draw_pin(pen, true);
+        break;
+    case ICON_PIN_OFF:
+        draw_pin(pen, false);
+        break;
     case ICON_DIAMOND: {
         static const float shape[8] = {8.0f, 2.2f, 13.8f, 8.0f, 8.0f, 13.8f, 2.2f, 8.0f};
         poly(pen, shape, 4, true);
@@ -565,7 +632,8 @@ static bool draw_icon(Pen *pen, Icon icon)
         }
         break;
     }
-    default: return false;
+    default:
+        return false;
     }
     return true;
 }
@@ -589,9 +657,8 @@ void icon_draw(Canvas *canvas, Icon icon, float centerX, float centerY, float si
 
 Icon icon_for_tool(int tool)
 {
-    static const Icon icons[TOOL_COUNT] = {ICON_SELECT, ICON_RECTANGLE, ICON_ELLIPSE,
-                                           ICON_ARROW,  ICON_LINE,      ICON_PEN,
-                                           ICON_LASER,  ICON_TEXT,      ICON_ERASER,
-                                           ICON_DIAMOND, ICON_HIGHLIGHTER};
+    static const Icon icons[TOOL_COUNT] = {ICON_SELECT, ICON_RECTANGLE, ICON_ELLIPSE,    ICON_ARROW,
+                                           ICON_LINE,   ICON_PEN,       ICON_LASER,      ICON_TEXT,
+                                           ICON_ERASER, ICON_DIAMOND,   ICON_HIGHLIGHTER};
     return (unsigned)tool < TOOL_COUNT ? icons[tool] : ICON_NONE;
 }

@@ -5,8 +5,7 @@
 #include <stdlib.h>
 
 const Color STROKE_PALETTE[STROKE_PALETTE_SIZE] = {
-    COLOR_STROKE_DEFAULT, COLOR_STROKE_RED, COLOR_STROKE_GREEN, COLOR_STROKE_BLUE,
-    COLOR_STROKE_YELLOW,
+    COLOR_STROKE_DEFAULT, COLOR_STROKE_RED, COLOR_STROKE_GREEN, COLOR_STROKE_BLUE, COLOR_STROKE_YELLOW,
 };
 
 const Color PASTEL_PALETTE[PASTEL_PALETTE_SIZE] = {
@@ -17,8 +16,7 @@ const Color FILL_PALETTE[FILL_PALETTE_SIZE] = {
     0, COLOR_FILL_RED, COLOR_FILL_GREEN, COLOR_FILL_BLUE, COLOR_FILL_YELLOW,
 };
 
-const float WIDTH_PRESETS[WIDTH_PRESET_COUNT] = {STROKE_WIDTH_THIN, STROKE_WIDTH_MEDIUM,
-                                                 STROKE_WIDTH_BOLD};
+const float WIDTH_PRESETS[WIDTH_PRESET_COUNT] = {STROKE_WIDTH_THIN, STROKE_WIDTH_MEDIUM, STROKE_WIDTH_BOLD};
 
 const float HIGHLIGHTER_WIDTHS[WIDTH_PRESET_COUNT] = {HIGHLIGHTER_WIDTH_THIN, HIGHLIGHTER_WIDTH_MEDIUM,
                                                       HIGHLIGHTER_WIDTH_BOLD};
@@ -27,8 +25,9 @@ const int FONT_SIZES[FONT_SIZE_COUNT] = {16, 20, 28, 36};
 
 Style style_default(void)
 {
-    Style style = {STROKE_PALETTE[0], 0, WIDTH_PRESETS[1], 1.0f, STROKE_SOLID, true, TEXT_FACE_HANDWRITTEN,
-                   ARROW_HEAD_END, false, FONT_SIZES[1]};
+    Style style = {
+        STROKE_PALETTE[0], 0,     WIDTH_PRESETS[1], 1.0f, STROKE_SOLID, true, TEXT_FACE_HANDWRITTEN,
+        ARROW_HEAD_END,    false, FONT_SIZES[1]};
     return style;
 }
 
@@ -81,12 +80,33 @@ Color color_from_hsv(float hue, float saturation, float value)
     float green = t;
     float blue = p;
     switch (sector % 6) {
-    case 1: red = q; green = value; blue = p; break;
-    case 2: red = p; green = value; blue = t; break;
-    case 3: red = p; green = q; blue = value; break;
-    case 4: red = t; green = p; blue = value; break;
-    case 5: red = value; green = p; blue = q; break;
-    default: break;
+    case 1:
+        red = q;
+        green = value;
+        blue = p;
+        break;
+    case 2:
+        red = p;
+        green = value;
+        blue = t;
+        break;
+    case 3:
+        red = p;
+        green = q;
+        blue = value;
+        break;
+    case 4:
+        red = t;
+        green = p;
+        blue = value;
+        break;
+    case 5:
+        red = value;
+        green = p;
+        blue = q;
+        break;
+    default:
+        break;
     }
     return 0xFF000000u | ((Color)lroundf(red * 255.0f) << 16) | ((Color)lroundf(green * 255.0f) << 8) |
            (Color)lroundf(blue * 255.0f);

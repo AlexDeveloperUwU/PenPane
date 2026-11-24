@@ -24,7 +24,8 @@ void render_element(Canvas *canvas, const Element *element, const RECT *clip);
  * @param canvas Target canvas.
  * @param scene Scene to draw.
  * @param clip Pixel rectangle to repaint.
- * @param backdrop Backdrop color: 0 transparent, 0x01000000 for hit-testable transparency, or an opaque color.
+ * @param backdrop Backdrop color: 0 transparent, 0x01000000 for hit-testable transparency, or an opaque
+ * color.
  */
 void render_scene(Canvas *canvas, const Scene *scene, const RECT *clip, Color backdrop);
 
