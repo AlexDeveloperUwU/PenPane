@@ -15,7 +15,13 @@ PenPane is a single native executable written in C11 against Win32. There is no 
 
 `log` is off by default. A `LOG(...)` call tests one flag; when the log is on it formats one line on the stack and writes it straight to the file (no heap, no buffer kept), rotating at 1 MB. It is called from the UI thread only and records events, never pointer movement.
 
-`gesture`, `pen`, `hittest`, `scene` and `controller` do not include Windows headers. `geometry.h` (which `element.h` includes) and `config.c` still do, and `config.h` includes the shell's `ui.h`; these are open boundary violations. `tests/` covers `config`, `controller`, `gesture` and `scene`; `pen` and `hittest` have no tests.
+None of `gesture`, `pen`, `hittest`, `scene` and `controller` includes a Windows header directly. The Model and Behavior layers still reach `windows.h` indirectly, because `geometry.h` (included by `element.h`) uses `RECT` and `POINT`, and `canvas.h` (included by `render.h`, which `controller.h` includes) uses GDI handles. That is accepted for now; only `gesture`, `actions`, `tool`, `style` and `prefs` are free of Windows types. Known boundary debt:
+
+- `element.c` measures text through `text.h` (GDI), so element bounds depend on the Pixels layer.
+- `controller.c` calls `render.h` to draw its own overlays (draft and trail), although the data flow below says it never draws to the screen.
+- `config.c` includes `windows.h` for file I/O; `config.h` is free of the shell: the panel preference types live in `prefs.h`.
+
+`tests/` covers `config`, `controller`, `gesture`, `scene` (which also exercises `pen` and `hittest` for rectangles) and `trail`.
 
 ## Data flow
 

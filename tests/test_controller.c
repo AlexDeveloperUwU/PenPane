@@ -168,7 +168,7 @@ static void test_deselect_repaints_decoration(void)
     Dirty repaint;
     Dirty direct;
     controller_take_dirty(&fixture.controller, &repaint, &direct);
-    RECT decoration = render_selection_bounds(&fixture.scene.items[0]);
+    RECT decoration = element_selection_bounds(&fixture.scene.items[0]);
     controller_deselect(&fixture.controller);
     controller_take_dirty(&fixture.controller, &repaint, &direct);
     assert(!repaint.empty);

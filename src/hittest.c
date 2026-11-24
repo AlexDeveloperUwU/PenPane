@@ -4,7 +4,6 @@
 #include <math.h>
 
 #include "pen.h"
-#include "render.h"
 
 #define HANDLE_HIT_RADIUS 10.0f
 
@@ -137,7 +136,7 @@ int hit_handle(const Element *element, Point point)
     if (element->type == ELEMENT_TEXT) {
         return HIT_HANDLE_NONE;
     }
-    FloatRect box = render_selection_box(element);
+    FloatRect box = element_selection_box(element);
     float xs[3] = {box.left, (box.left + box.right) * 0.5f, box.right};
     float ys[3] = {box.top, (box.top + box.bottom) * 0.5f, box.bottom};
     static const int ORDER[HIT_HANDLE_COUNT][2] = {{0, 0}, {1, 0}, {2, 0}, {2, 1},

@@ -24,9 +24,9 @@
 #include <wchar.h>
 
 #include "gesture.h"
+#include "prefs.h"
 #include "style.h"
 #include "tool.h"
-#include "ui.h"
 
 #define CONFIG_MAX_BINDINGS GESTURE_MAX_BINDINGS
 

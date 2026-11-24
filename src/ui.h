@@ -15,47 +15,14 @@
 #include <windows.h>
 
 #include "actions.h"
+#include "prefs.h"
 #include "style.h"
 #include "tool.h"
-
-/**
- * @brief The floating islands.
- *
- * PANEL_COUNT counts the panels with saved placement and pin state. The dialogs (settings, clear
- * confirmation, color picker) are extra islands that are centered when they open, never persisted
- * and open or close independently of each other.
- */
-typedef enum PanelId {
-    PANEL_TOOLBAR,
-    PANEL_PROPERTIES,
-    PANEL_HISTORY,
-    PANEL_COUNT,
-    PANEL_SETTINGS = PANEL_COUNT,
-    PANEL_CONFIRM,
-    PANEL_COLOR,
-    PANEL_ISLAND_COUNT
-} PanelId;
 
 /** @brief Tells whether an island is a dialog. */
 #define UI_PANEL_IS_DIALOG(panel) ((panel) >= PANEL_COUNT)
 /** @brief Bit of a dialog island in UiModel.dialogs. */
 #define UI_DIALOG_BIT(panel) (1u << (panel))
-
-/** @brief Persisted top-left screen position of one island. */
-typedef struct PanelPlacement {
-    bool set;
-    int x;
-    int y;
-} PanelPlacement;
-
-/** @brief UI preferences loaded from the configuration file. */
-typedef struct UiSettings {
-    PanelPlacement placement[PANEL_ISLAND_COUNT];
-    bool autoHide;
-    int autoHideMs;
-    bool excludeFromCapture;
-    bool pinned[PANEL_ISLAND_COUNT];
-} UiSettings;
 
 /** @brief Sections shown in the properties panel; bitmask for UiModel.sections. */
 #define UI_SECTION_STROKE 0x01u

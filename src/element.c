@@ -10,6 +10,7 @@
 #define ARROWHEAD_SIZE 25.0f
 #define ELEMENT_BOUNDS_MARGIN 3.0f
 #define PEN_MAX_RADIUS_FACTOR 12.0f
+#define SELECTION_PADDING 3.5f
 
 Element element_make(ElementType type, const Style *style)
 {
@@ -78,6 +79,22 @@ bool element_set_text(Element *element, const wchar_t *text)
     free(element->text);
     element->text = copy;
     return true;
+}
+
+FloatRect element_selection_box(const Element *element)
+{
+    FloatRect box = element_box(element);
+    float pad = SELECTION_PADDING + element->style.width * 0.5f;
+    box.left -= pad;
+    box.top -= pad;
+    box.right += pad;
+    box.bottom += pad;
+    return box;
+}
+
+RECT element_selection_bounds(const Element *element)
+{
+    return rect_from_float(element_selection_box(element), ELEMENT_HANDLE_SIZE);
 }
 
 FloatRect element_box(const Element *element)

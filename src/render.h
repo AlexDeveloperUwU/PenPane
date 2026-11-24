@@ -48,20 +48,6 @@ RECT render_pen_tail(Canvas *canvas, const Element *element, int firstGroup, con
 void render_selection(Canvas *canvas, const Element *element, const RECT *clip);
 
 /**
- * @brief Padded box that the selection outline and handles are drawn around.
- * @param element Selected element.
- * @return Floating rectangle; handle centers sit on its corners and edge midpoints.
- */
-FloatRect render_selection_box(const Element *element);
-
-/**
- * @brief Pixel bounds of the selection decoration for an element.
- * @param element Selected element.
- * @return Rectangle containing outline and handles.
- */
-RECT render_selection_bounds(const Element *element);
-
-/**
  * @brief Draws a text caret.
  * @param canvas Target canvas.
  * @param element Text element being edited.

@@ -119,7 +119,7 @@ static bool replace_with_copy(Scene *scene, Element *item, const Element *source
 static void clear_selection(Controller *controller)
 {
     if (controller->selected >= 0 && controller->selected < controller->scene->count) {
-        repaint_add(controller, render_selection_bounds(&controller->scene->items[controller->selected]));
+        repaint_add(controller, element_selection_bounds(&controller->scene->items[controller->selected]));
     }
     controller->selected = -1;
 }
@@ -363,7 +363,7 @@ static void select_element(Controller *controller, int index)
     clear_selection(controller);
     controller->selected = index;
     if (index >= 0) {
-        repaint_add(controller, render_selection_bounds(&controller->scene->items[index]));
+        repaint_add(controller, element_selection_bounds(&controller->scene->items[index]));
     }
 }
 
@@ -438,7 +438,7 @@ static void select_move(Controller *controller, const PointerSample *sample)
     }
     Element *item = &scene->items[controller->selected];
     repaint_add(controller, element_bounds(item));
-    repaint_add(controller, render_selection_bounds(item));
+    repaint_add(controller, element_selection_bounds(item));
     if (controller->interaction == INTERACTION_MOVE) {
         element_translate(item, sample->position.x - controller->dragStart.x,
                           sample->position.y - controller->dragStart.y);
@@ -452,7 +452,7 @@ static void select_move(Controller *controller, const PointerSample *sample)
         }
     }
     repaint_add(controller, element_bounds(item));
-    repaint_add(controller, render_selection_bounds(item));
+    repaint_add(controller, element_selection_bounds(item));
 }
 
 /**
@@ -640,7 +640,7 @@ void controller_style_preview(Controller *controller, const Style *style)
         item->fontSize = style->fontSize;
     }
     repaint_add(controller, element_bounds(item));
-    repaint_add(controller, render_selection_bounds(item));
+    repaint_add(controller, element_selection_bounds(item));
 }
 
 void controller_style_commit(Controller *controller)
@@ -662,7 +662,7 @@ void controller_delete_selection(Controller *controller)
     if (!controller->scene || controller->selected < 0 || controller->selected >= controller->scene->count) {
         return;
     }
-    repaint_add(controller, render_selection_bounds(&controller->scene->items[controller->selected]));
+    repaint_add(controller, element_selection_bounds(&controller->scene->items[controller->selected]));
     scene_remove(controller->scene, controller->selected);
     scene_commit(controller->scene);
     controller->selected = -1;
@@ -684,7 +684,7 @@ void controller_apply_style_to_selection(Controller *controller, const Style *st
         item->fontSize = style->fontSize;
     }
     repaint_add(controller, element_bounds(item));
-    repaint_add(controller, render_selection_bounds(item));
+    repaint_add(controller, element_selection_bounds(item));
     scene_record_change(controller->scene, controller->selected, &before);
     scene_commit(controller->scene);
 }
@@ -792,7 +792,7 @@ void controller_add_transient_bounds(const Controller *controller, Dirty *extent
     }
     if (controller->scene && controller->selected >= 0 && controller->selected < controller->scene->count) {
         const Element *selected = &controller->scene->items[controller->selected];
-        dirty_add(extent, rect_inflate(render_selection_bounds(selected), TRANSIENT_MARGIN));
+        dirty_add(extent, rect_inflate(element_selection_bounds(selected), TRANSIENT_MARGIN));
     }
     if (controller->laser.count > 0) {
         dirty_add(extent, rect_inflate(trail_bounds(&controller->laser), TRANSIENT_MARGIN));

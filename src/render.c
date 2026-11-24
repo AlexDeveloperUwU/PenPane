@@ -25,9 +25,8 @@
 #define MAX_PATH_POINTS 257
 #define ELLIPSE_SEGMENT_LENGTH 6.0f
 #define ELLIPSE_MIN_STEPS 48
-#define HANDLE_SIZE 8.0f
+#define HANDLE_SIZE ELEMENT_HANDLE_SIZE
 #define HANDLE_RADIUS 2.0f
-#define SELECTION_PADDING 3.5f
 #define SELECTION_OUTLINE_WIDTH 1.0f
 #define SELECTION_COLOR COLOR_SELECTION
 
@@ -474,30 +473,9 @@ RECT render_pen_tail(Canvas *canvas, const Element *element, int firstGroup, con
     return touched;
 }
 
-/**
- * @brief Computes the selection box in pixels, padded around the element geometry.
- * @param element Selected element.
- * @return Padded floating rectangle.
- */
-FloatRect render_selection_box(const Element *element)
-{
-    FloatRect box = element_box(element);
-    float pad = SELECTION_PADDING + element->style.width * 0.5f;
-    box.left -= pad;
-    box.top -= pad;
-    box.right += pad;
-    box.bottom += pad;
-    return box;
-}
-
-RECT render_selection_bounds(const Element *element)
-{
-    return rect_from_float(render_selection_box(element), HANDLE_SIZE);
-}
-
 void render_selection(Canvas *canvas, const Element *element, const RECT *clip)
 {
-    RECT bounds = render_selection_bounds(element);
+    RECT bounds = element_selection_bounds(element);
     RECT area;
     if (!rect_intersect(bounds, *clip, &area)) {
         return;
@@ -506,7 +484,7 @@ void render_selection(Canvas *canvas, const Element *element, const RECT *clip)
     if (!mask_scratch_acquire(&mask, area)) {
         return;
     }
-    FloatRect box = render_selection_box(element);
+    FloatRect box = element_selection_box(element);
     box.left = roundf(box.left);
     box.top = roundf(box.top);
     box.right = roundf(box.right);

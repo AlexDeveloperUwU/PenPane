@@ -94,6 +94,23 @@ bool element_set_text(Element *element, const wchar_t *text);
  */
 FloatRect element_box(const Element *element);
 
+/** @brief Side of a resize handle, in pixels. */
+#define ELEMENT_HANDLE_SIZE 8.0f
+
+/**
+ * @brief Padded box that the selection outline and handles are drawn around.
+ * @param element Selected element.
+ * @return Floating rectangle; handle centers sit on its corners and edge midpoints.
+ */
+FloatRect element_selection_box(const Element *element);
+
+/**
+ * @brief Pixel bounds of the selection decoration for an element.
+ * @param element Selected element.
+ * @return Rectangle containing outline and handles.
+ */
+RECT element_selection_bounds(const Element *element);
+
 /**
  * @brief Pixel bounds including stroke width, arrowhead and antialiasing margins.
  * @param element Element to measure.
