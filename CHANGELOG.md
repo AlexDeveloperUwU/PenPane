@@ -4,6 +4,17 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [0.7.2] - 2026-11-24
+
+### Added
+
+- Tests for hit testing, geometry, the PNG encoder and the array growth helper. The test script has a `-Sanitize` mode that runs them under AddressSanitizer and UBSan, and CI runs it.
+- A weekly and per-push CodeQL analysis.
+
+### Changed
+
+- The PNG encoder, bitmap header and array growth code are shared instead of duplicated, and pi and the arrowhead size are defined once.
+
 ## [0.7.1] - 2026-11-24
 
 ### Changed
