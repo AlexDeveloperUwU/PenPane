@@ -29,7 +29,7 @@ foreach ($test in $tests) {
     }
     $exe = Join-Path $outputDirectory "$name.exe"
     $extra = if ($linkerFlags.ContainsKey($name)) { $linkerFlags[$name] } else { @() }
-    $arguments = @("-std=c11", "-Wall", "-Wextra", "-DUNICODE", "-D_UNICODE", "-D_WIN32_WINNT=0x0A00", "-O0", "-g", $test.FullName) + $sources + @("-o", $exe, "-luser32", "-lgdi32", "-lshell32", "-ladvapi32", "-lwtsapi32") + $extra
+    $arguments = @("-std=c11", "-Wall", "-Wextra", "-Werror", "-DUNICODE", "-D_UNICODE", "-D_WIN32_WINNT=0x0A00", "-O0", "-g", $test.FullName) + $sources + @("-o", $exe, "-luser32", "-lgdi32", "-lshell32", "-ladvapi32", "-lwtsapi32") + $extra
     & "$Toolchain\bin\clang.exe" @arguments
     if ($LASTEXITCODE -ne 0) {
         $failed += "$name (compile)"

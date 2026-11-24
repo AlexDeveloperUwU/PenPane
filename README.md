@@ -1,5 +1,11 @@
 # PenPane
 
+[![CI](https://github.com/AlexDeveloperUwU/PenPane/actions/workflows/ci.yml/badge.svg)](https://github.com/AlexDeveloperUwU/PenPane/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/AlexDeveloperUwU/PenPane)](https://github.com/AlexDeveloperUwU/PenPane/releases/latest)
+[![License: GPL-3.0-or-later](https://img.shields.io/github/license/AlexDeveloperUwU/PenPane)](LICENSE)
+![Platform: Windows 10 and 11](https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078D4)
+![Language: C11](https://img.shields.io/badge/language-C11-555555)
+
 PenPane is a small native screen-annotation overlay for Windows 10 and 11. Draw over whatever is on screen for presentations, demos and teaching, or switch to a dark whiteboard. It is built for pen tablets: the buttons of the pen can run every action, and the drawing feel follows Excalidraw.
 
 It is one executable of about 150 KB, written in C11 against the Win32 API. There is no runtime and no UI toolkit (the installer is optional), and when it is idle it uses no CPU.

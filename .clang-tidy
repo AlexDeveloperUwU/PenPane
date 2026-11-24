@@ -1,0 +1,28 @@
+Checks: >
+  -*,
+  bugprone-*,
+  -bugprone-easily-swappable-parameters,
+  -bugprone-narrowing-conversions,
+  -bugprone-signed-bitwise,
+  clang-analyzer-*,
+  -clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling,
+  misc-redundant-expression,
+  misc-misplaced-const,
+  readability-function-size,
+  readability-function-cognitive-complexity,
+  readability-else-after-return,
+  readability-redundant-control-flow,
+  readability-non-const-parameter
+WarningsAsErrors: ''
+HeaderFilterRegex: '.*[\\/]src[\\/].*'
+CheckOptions:
+  - key: readability-function-size.LineThreshold
+    value: 60
+  - key: readability-function-size.StatementThreshold
+    value: 200
+  - key: readability-function-size.ParameterThreshold
+    value: 6
+  - key: readability-function-size.NestingThreshold
+    value: 5
+  - key: readability-function-cognitive-complexity.Threshold
+    value: 25

@@ -12,6 +12,6 @@
 - [ ] No inline comments; Doxygen blocks for new code
 - [ ] SPDX line at the top of new files
 - [ ] Decision note added from `docs/notes/_template.md` when the decision is not obvious
-- [ ] `CHANGELOG.md` updated under Unreleased
+- [ ] `CHANGELOG.md` updated in the top version section
 - [ ] Commits follow Conventional Commits
 - [ ] I agree that my contribution is licensed under GPL-3.0-or-later

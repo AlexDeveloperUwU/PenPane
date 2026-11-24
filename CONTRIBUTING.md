@@ -36,7 +36,7 @@ A non-obvious decision gets a note: copy `docs/notes/_template.md` to `docs/note
 
 - Use [Conventional Commits](https://www.conventionalcommits.org/): `feat:`, `fix:`, `perf:`, `refactor:`, `docs:`, `test:`, `build:`, `ci:`, `chore:`, with an optional scope such as `feat(ui):`. Use `!` or a `BREAKING CHANGE:` footer for incompatible changes.
 - Keep one logical change per commit and per pull request.
-- Add a line under `[Unreleased]` in [CHANGELOG.md](CHANGELOG.md) for every change a user can notice.
+- Add a line to the top version section of [CHANGELOG.md](CHANGELOG.md) for every change a user can notice. There is no `[Unreleased]` section: maintainers open the next version with `scripts\bump.ps1 patch|minor|major`, which also updates `src\version.h` and `Doxyfile`.
 - Fill in the pull request template. Describe what you tested and on which Windows version.
 
 ## Reporting bugs and ideas

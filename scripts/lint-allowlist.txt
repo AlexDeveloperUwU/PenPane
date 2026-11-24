@@ -1,0 +1,18 @@
+# Files with known clang-tidy findings (technical debt). Remove a line when the file is clean; never add one.
+app.c
+canvas.c
+clipboard.c
+config.c
+gesture.c
+hittest.c
+icons.c
+main.c
+raster.c
+scene.c
+shapes_ui.c
+text.c
+tool.c
+tray.c
+ui.c
+ui_layout.c
+ui_paint.c

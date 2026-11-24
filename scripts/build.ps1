@@ -11,7 +11,7 @@ New-Item -ItemType Directory -Force (Split-Path $Output) | Out-Null
 $clang = "$Toolchain\bin\clang.exe"
 $windres = "$Toolchain\bin\llvm-windres.exe"
 $libraries = @("-luser32", "-lgdi32", "-lshell32", "-ladvapi32", "-lwtsapi32", "-limm32")
-$common = @("-std=c11", "-Wall", "-Wextra", "-municode", "-D_WIN32_WINNT=0x0A00")
+$common = @("-std=c11", "-Wall", "-Wextra", "-Werror", "-municode", "-D_WIN32_WINNT=0x0A00")
 $objects = Join-Path (Split-Path $Output) "obj"
 New-Item -ItemType Directory -Force $objects | Out-Null
 

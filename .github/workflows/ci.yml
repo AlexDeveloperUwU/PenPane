@@ -32,6 +32,14 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           "path=$($path | Select-Object -Last 1)" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
 
+      - name: Check formatting
+        shell: powershell
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File scripts\format.ps1 -Check -Toolchain "${{ steps.toolchain.outputs.path }}"
+
+      - name: Lint
+        shell: powershell
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File scripts\lint.ps1 -Toolchain "${{ steps.toolchain.outputs.path }}"
+
       - name: Build
         shell: powershell
         run: powershell -NoProfile -ExecutionPolicy Bypass -File scripts\package.ps1 -Toolchain "${{ steps.toolchain.outputs.path }}"
@@ -47,4 +55,5 @@ jobs:
           path: |
             build/PenPane.exe
             build/PenPane-Setup-*.exe
+            build/*.sha256
           if-no-files-found: error

@@ -18,7 +18,7 @@ Get-ChildItem $OutDir -Filter "PenPane-Setup-*.exe*" | Remove-Item -Force
 
 & "$Toolchain\bin\llvm-windres.exe" "-I" "res" "-I" "src" "-I" "installer" "-I" $OutDir "-I" "." "-O" "coff" "installer\setup.rc" "-o" $resource
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-& "$Toolchain\bin\clang.exe" -std=c11 -Wall -Wextra -municode -mwindows -D_WIN32_WINNT=0x0A00 -Oz -s "-Wl,--gc-sections" -I src installer\setup.c $resource -o $output -lshell32 -lole32 -luuid -ladvapi32 -luser32 -lcomctl32
+& "$Toolchain\bin\clang.exe" -std=c11 -Wall -Wextra -Werror -municode -mwindows -D_WIN32_WINNT=0x0A00 -Oz -s "-Wl,--gc-sections" -I src installer\setup.c $resource -o $output -lshell32 -lole32 -luuid -ladvapi32 -luser32 -lcomctl32
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 foreach ($file in @($output, $program)) {
