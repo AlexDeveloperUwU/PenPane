@@ -17,16 +17,23 @@ static uint32_t premultiply(Color color)
     return (alpha << 24) | (red << 16) | (green << 8) | blue;
 }
 
+BITMAPINFOHEADER canvas_dib_header(int width, int height)
+{
+    BITMAPINFOHEADER header = {0};
+    header.biSize = sizeof header;
+    header.biWidth = width;
+    header.biHeight = height;
+    header.biPlanes = 1;
+    header.biBitCount = 32;
+    header.biCompression = BI_RGB;
+    return header;
+}
+
 bool canvas_create(Canvas *canvas, int width, int height)
 {
     memset(canvas, 0, sizeof *canvas);
     BITMAPINFO info = {0};
-    info.bmiHeader.biSize = sizeof info.bmiHeader;
-    info.bmiHeader.biWidth = width;
-    info.bmiHeader.biHeight = -height;
-    info.bmiHeader.biPlanes = 1;
-    info.bmiHeader.biBitCount = 32;
-    info.bmiHeader.biCompression = BI_RGB;
+    info.bmiHeader = canvas_dib_header(width, -height);
 
     void *bits = NULL;
     canvas->bitmap = CreateDIBSection(NULL, &info, DIB_RGB_COLORS, &bits, NULL, 0);

@@ -8,8 +8,6 @@
 #include "pen.h"
 #include "text.h"
 
-#define PI_FLOAT 3.14159265f
-#define ARROWHEAD_SIZE 25.0f
 #define ARROWHEAD_MIN_ANGLE 20.0f
 #define ARROWHEAD_MAX_ANGLE 30.0f
 #define ERASING_OPACITY 0.2f

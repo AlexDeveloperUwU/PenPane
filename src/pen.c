@@ -15,7 +15,6 @@
 #define PEN_DOT_PRESSURE 0.5f
 #define PEN_CONSTANT_DOT_LIMIT 0.05f
 #define PEN_MIN_DISTANCE 0.5f
-#define PI_FLOAT 3.14159265f
 
 float pen_radius(float width, float pressure)
 {

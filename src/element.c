@@ -5,9 +5,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "grow.h"
 #include "text.h"
 
-#define ARROWHEAD_SIZE 25.0f
 #define ELEMENT_BOUNDS_MARGIN 3.0f
 #define PEN_MAX_RADIUS_FACTOR 12.0f
 #define SELECTION_PADDING 3.5f
@@ -57,15 +57,12 @@ void element_free(Element *element)
 
 bool element_add_point(Element *element, PenPoint point)
 {
-    if (element->pointCount == element->pointCapacity) {
-        int capacity = element->pointCapacity ? element->pointCapacity * 2 : 64;
-        PenPoint *grown = realloc(element->points, sizeof(PenPoint) * (size_t)capacity);
-        if (!grown) {
-            return false;
-        }
-        element->points = grown;
-        element->pointCapacity = capacity;
+    PenPoint *grown = array_reserve_one(element->points, element->pointCount, &element->pointCapacity,
+                                        sizeof(PenPoint), 64);
+    if (!grown) {
+        return false;
     }
+    element->points = grown;
     element->points[element->pointCount++] = point;
     return true;
 }

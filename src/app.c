@@ -740,12 +740,7 @@ static bool composite_over_desktop(Canvas *export, RECT screen)
     int width = export->width;
     int height = export->height;
     BITMAPINFO info = {0};
-    info.bmiHeader.biSize = sizeof info.bmiHeader;
-    info.bmiHeader.biWidth = width;
-    info.bmiHeader.biHeight = -height;
-    info.bmiHeader.biPlanes = 1;
-    info.bmiHeader.biBitCount = 32;
-    info.bmiHeader.biCompression = BI_RGB;
+    info.bmiHeader = canvas_dib_header(width, -height);
     HDC screenDc = GetDC(NULL);
     HDC memoryDc = screenDc ? CreateCompatibleDC(screenDc) : NULL;
     uint32_t *bits = NULL;

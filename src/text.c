@@ -186,12 +186,7 @@ static bool surface_ensure(int width, int height)
     surface_release_bitmap();
 
     BITMAPINFO info = {0};
-    info.bmiHeader.biSize = sizeof info.bmiHeader;
-    info.bmiHeader.biWidth = newWidth;
-    info.bmiHeader.biHeight = -newHeight;
-    info.bmiHeader.biPlanes = 1;
-    info.bmiHeader.biBitCount = 32;
-    info.bmiHeader.biCompression = BI_RGB;
+    info.bmiHeader = canvas_dib_header(newWidth, -newHeight);
     void *bits = NULL;
     g_surface.bitmap = CreateDIBSection(NULL, &info, DIB_RGB_COLORS, &bits, NULL, 0);
     if (!g_surface.bitmap) {

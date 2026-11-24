@@ -3,13 +3,13 @@
 
 #include <math.h>
 
+#include "geometry.h"
 #include "shapes_ui.h"
 #include "tool.h"
 
 #define ICON_GRID 16.0f
 #define ICON_HALF_STROKE 0.7f
 #define ICON_MAX_VERTICES 16
-#define PI_FLOAT 3.14159265f
 
 /** @brief Drawing context mapping the 16 unit grid onto a scratch mask. */
 typedef struct Pen {

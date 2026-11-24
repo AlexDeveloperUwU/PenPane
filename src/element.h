@@ -94,6 +94,9 @@ bool element_set_text(Element *element, const wchar_t *text);
  */
 FloatRect element_box(const Element *element);
 
+/** @brief Length of an arrowhead's sides, in pixels. */
+#define ARROWHEAD_SIZE 25.0f
+
 /** @brief Side of a resize handle, in pixels. */
 #define ELEMENT_HANDLE_SIZE 8.0f
 

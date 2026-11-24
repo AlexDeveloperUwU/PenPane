@@ -1,12 +1,13 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later */
 #include "shapes_ui.h"
 
+#include "geometry.h"
+
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
 
 #define ARC_SEGMENT_DEGREES 12.0f
-#define PI_FLOAT 3.14159265f
 
 static Mask g_scratch;
 static size_t g_scratchCapacity;

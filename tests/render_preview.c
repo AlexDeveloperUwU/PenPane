@@ -16,6 +16,7 @@
 
 #include "element.h"
 #include "pen.h"
+#include "png.h"
 #include "render.h"
 #include "trail.h"
 
@@ -23,55 +24,6 @@
 #define SCENE_HEIGHT 768
 #define LUMA_BACKDROP 18.0f
 #define LUMA_STROKE 211.0f
-
-/**
- * @brief Computes the CRC-32 of a byte range as required by PNG chunks.
- * @param crc Running value, 0xFFFFFFFF for a new chunk.
- * @param data Bytes to add.
- * @param length Number of bytes.
- * @return Updated running value.
- */
-static uint32_t crc_update(uint32_t crc, const uint8_t *data, size_t length)
-{
-    for (size_t i = 0; i < length; i++) {
-        crc ^= data[i];
-        for (int bit = 0; bit < 8; bit++) {
-            crc = (crc >> 1) ^ (0xEDB88320u & (0u - (crc & 1u)));
-        }
-    }
-    return crc;
-}
-
-/**
- * @brief Writes a big-endian 32-bit value.
- * @param file Output file.
- * @param value Value to write.
- */
-static void put32(FILE *file, uint32_t value)
-{
-    uint8_t bytes[4] = {(uint8_t)(value >> 24), (uint8_t)(value >> 16), (uint8_t)(value >> 8),
-                        (uint8_t)value};
-    fwrite(bytes, 1, 4, file);
-}
-
-/**
- * @brief Writes one PNG chunk.
- * @param file Output file.
- * @param type Four character chunk type.
- * @param data Chunk payload.
- * @param length Payload size.
- */
-static void put_chunk(FILE *file, const char *type, const uint8_t *data, size_t length)
-{
-    put32(file, (uint32_t)length);
-    fwrite(type, 1, 4, file);
-    if (length) {
-        fwrite(data, 1, length, file);
-    }
-    uint32_t crc = crc_update(0xFFFFFFFFu, (const uint8_t *)type, 4);
-    crc = crc_update(crc, data, length);
-    put32(file, ~crc);
-}
 
 /**
  * @brief Saves a rectangle of a canvas as an uncompressed PNG, optionally magnified.
@@ -89,83 +41,35 @@ static bool save_png(const Canvas *canvas, const char *path, int left, int top, 
 {
     int outWidth = width * zoom;
     int outHeight = height * zoom;
-    size_t rowBytes = (size_t)outWidth * 3 + 1;
-    size_t rawSize = rowBytes * (size_t)outHeight;
-    uint8_t *raw = malloc(rawSize);
-    if (!raw) {
+    uint8_t *rgba = malloc((size_t)outWidth * (size_t)outHeight * 4);
+    if (!rgba) {
         return false;
     }
     for (int y = 0; y < outHeight; y++) {
-        uint8_t *row = raw + rowBytes * (size_t)y;
-        row[0] = 0;
+        uint8_t *row = rgba + (size_t)y * (size_t)outWidth * 4;
         for (int x = 0; x < outWidth; x++) {
             int sx = left + x / zoom;
             int sy = top + y / zoom;
             uint32_t pixel = canvas->pixels[(size_t)sy * canvas->width + sx];
-            row[1 + x * 3] = (uint8_t)(pixel >> 16);
-            row[2 + x * 3] = (uint8_t)(pixel >> 8);
-            row[3 + x * 3] = (uint8_t)pixel;
+            row[x * 4] = (uint8_t)(pixel >> 16);
+            row[x * 4 + 1] = (uint8_t)(pixel >> 8);
+            row[x * 4 + 2] = (uint8_t)pixel;
+            row[x * 4 + 3] = 0xFF;
         }
     }
-    size_t blocks = (rawSize + 65534) / 65535;
-    size_t zSize = 2 + rawSize + blocks * 5 + 4;
-    uint8_t *z = malloc(zSize);
-    if (!z) {
-        free(raw);
+    size_t pngSize = 0;
+    uint8_t *png = png_encode_rgba(rgba, outWidth, outHeight, &pngSize);
+    free(rgba);
+    if (!png) {
         return false;
     }
-    size_t at = 0;
-    z[at++] = 0x78;
-    z[at++] = 0x01;
-    uint32_t a = 1;
-    uint32_t b = 0;
-    for (size_t i = 0; i < rawSize; i++) {
-        a = (a + raw[i]) % 65521u;
-        b = (b + a) % 65521u;
-    }
-    for (size_t offset = 0; offset < rawSize; offset += 65535) {
-        size_t chunk = rawSize - offset < 65535 ? rawSize - offset : 65535;
-        z[at++] = offset + chunk >= rawSize ? 1 : 0;
-        z[at++] = (uint8_t)chunk;
-        z[at++] = (uint8_t)(chunk >> 8);
-        z[at++] = (uint8_t)~chunk;
-        z[at++] = (uint8_t)(~chunk >> 8);
-        memcpy(z + at, raw + offset, chunk);
-        at += chunk;
-    }
-    uint32_t adler = (b << 16) | a;
-    z[at++] = (uint8_t)(adler >> 24);
-    z[at++] = (uint8_t)(adler >> 16);
-    z[at++] = (uint8_t)(adler >> 8);
-    z[at++] = (uint8_t)adler;
     FILE *file = fopen(path, "wb");
-    if (!file) {
-        free(raw);
-        free(z);
-        return false;
+    bool ok = file && fwrite(png, 1, pngSize, file) == pngSize;
+    if (file) {
+        fclose(file);
     }
-    static const uint8_t signature[8] = {0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A};
-    fwrite(signature, 1, 8, file);
-    uint8_t header[13] = {(uint8_t)(outWidth >> 24),
-                          (uint8_t)(outWidth >> 16),
-                          (uint8_t)(outWidth >> 8),
-                          (uint8_t)outWidth,
-                          (uint8_t)(outHeight >> 24),
-                          (uint8_t)(outHeight >> 16),
-                          (uint8_t)(outHeight >> 8),
-                          (uint8_t)outHeight,
-                          8,
-                          2,
-                          0,
-                          0,
-                          0};
-    put_chunk(file, "IHDR", header, 13);
-    put_chunk(file, "IDAT", z, at);
-    put_chunk(file, "IEND", NULL, 0);
-    fclose(file);
-    free(raw);
-    free(z);
-    return true;
+    free(png);
+    return ok;
 }
 
 /**

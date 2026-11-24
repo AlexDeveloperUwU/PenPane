@@ -6,8 +6,8 @@ PenPane is a single native executable written in C11 against Win32. There is no 
 
 | Layer | Modules | Responsibility |
 |---|---|---|
-| Pixels | `canvas`, `raster`, `mask_scratch`, `text` | Premultiplied DIB surface, anti-aliased shapes through signed distance fields, one reusable coverage buffer, GDI text turned into coverage masks |
-| Model | `element`, `scene`, `style`, `geometry` | Editable elements, ordered scene, unlimited undo and redo as grouped operations, palettes, rectangles and dirty regions |
+| Pixels | `canvas`, `raster`, `mask_scratch`, `text`, `png` | Premultiplied DIB surface, anti-aliased shapes through signed distance fields, one reusable coverage buffer, GDI text turned into coverage masks, uncompressed PNG encoder |
+| Model | `element`, `scene`, `style`, `geometry`, `grow` | Editable elements, ordered scene, unlimited undo and redo as grouped operations, palettes, rectangles and dirty regions, array growth helper |
 | Behavior | `controller`, `pen`, `hittest`, `trail`, `tool` | Pointer and keyboard interaction for every tool, freehand model, hit testing, fading laser and eraser trails |
 | Drawing | `render` | Draws elements, selection decoration, text caret, clipped to a rectangle |
 | Input | `gesture`, `hotkeys`, `config`, `actions` | Single, double and long gestures, global hotkeys, mouse buttons, learn mode, plain-text configuration |

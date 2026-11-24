@@ -11,6 +11,9 @@
 
 #include "raster.h"
 
+/** @brief Pi as a float, for angles in the drawing and icon code. */
+#define PI_FLOAT 3.14159265f
+
 /** @brief Axis-aligned rectangle in floating point. */
 typedef struct FloatRect {
     float left;

@@ -35,6 +35,14 @@ typedef struct Canvas {
 bool canvas_create(Canvas *canvas, int width, int height);
 
 /**
+ * @brief Builds the header of a 32-bit BGRA uncompressed bitmap.
+ * @param width Bitmap width in pixels.
+ * @param height Bitmap height; negative describes rows stored top-down.
+ * @return Header ready to use in a BITMAPINFO or a clipboard DIB.
+ */
+BITMAPINFOHEADER canvas_dib_header(int width, int height);
+
+/**
  * @brief Releases every resource owned by the canvas and zeroes it.
  * @param canvas Canvas to release, may already be released.
  */

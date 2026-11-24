@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "grow.h"
+
 /**
  * @brief Frees every element copy held by a step and the step's operation array.
  * @param step Step to release.
@@ -26,15 +28,11 @@ static void step_free(Step *step)
  */
 static bool step_push(Step *step, const Op *operation)
 {
-    if (step->count == step->capacity) {
-        int capacity = step->capacity ? step->capacity * 2 : 4;
-        Op *grown = realloc(step->ops, sizeof(Op) * (size_t)capacity);
-        if (!grown) {
-            return false;
-        }
-        step->ops = grown;
-        step->capacity = capacity;
+    Op *grown = array_reserve_one(step->ops, step->count, &step->capacity, sizeof(Op), 4);
+    if (!grown) {
+        return false;
     }
+    step->ops = grown;
     step->ops[step->count++] = *operation;
     return true;
 }
@@ -49,15 +47,11 @@ static bool step_push(Step *step, const Op *operation)
  */
 static bool stack_push(Step **stack, int *count, int *capacity, const Step *step)
 {
-    if (*count == *capacity) {
-        int grown = *capacity ? *capacity * 2 : 16;
-        Step *replacement = realloc(*stack, sizeof(Step) * (size_t)grown);
-        if (!replacement) {
-            return false;
-        }
-        *stack = replacement;
-        *capacity = grown;
+    Step *grown = array_reserve_one(*stack, *count, capacity, sizeof(Step), 16);
+    if (!grown) {
+        return false;
     }
+    *stack = grown;
     (*stack)[(*count)++] = *step;
     return true;
 }
@@ -102,15 +96,11 @@ static void history_discard(Scene *scene)
  */
 static bool items_insert(Scene *scene, int index, const Element *element)
 {
-    if (scene->count == scene->capacity) {
-        int capacity = scene->capacity ? scene->capacity * 2 : 64;
-        Element *grown = realloc(scene->items, sizeof(Element) * (size_t)capacity);
-        if (!grown) {
-            return false;
-        }
-        scene->items = grown;
-        scene->capacity = capacity;
+    Element *grown = array_reserve_one(scene->items, scene->count, &scene->capacity, sizeof(Element), 64);
+    if (!grown) {
+        return false;
     }
+    scene->items = grown;
     if (index < 0) {
         index = 0;
     } else if (index > scene->count) {
