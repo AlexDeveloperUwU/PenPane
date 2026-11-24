@@ -20,7 +20,7 @@ concurrency:
 
 jobs:
   sync:
-    uses: ZyFeronix/utils/.github/workflows/sync-gitlab.yml@main
+    uses: ZyFeronix/utils/.github/workflows/sync-gitlab.yml@0a445e9df2aed650a775eac14a0458f8d810c70a
     with:
       gitlab-path: git.alexdevuwu.com/personal/applications
       gitlab-repo: penpane
