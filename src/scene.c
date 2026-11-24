@@ -80,6 +80,20 @@ static void stack_free(Step **stack, int *count, int *capacity)
 }
 
 /**
+ * @brief Drops all undo and redo history, including the pending step.
+ *
+ * Used when an out-of-memory failure leaves the scene changed without a matching record, so that
+ * undo can never replay a history that no longer describes the scene.
+ * @param scene Scene whose history is discarded.
+ */
+static void history_discard(Scene *scene)
+{
+    step_free(&scene->pending);
+    stack_free(&scene->undo, &scene->undoCount, &scene->undoCapacity);
+    stack_free(&scene->redo, &scene->redoCount, &scene->redoCapacity);
+}
+
+/**
  * @brief Inserts an element copy into the item list at an index.
  * @param scene Target scene.
  * @param index Insert position, clamped to the list size.
@@ -97,7 +111,9 @@ static bool items_insert(Scene *scene, int index, const Element *element)
         scene->items = grown;
         scene->capacity = capacity;
     }
-    if (index > scene->count) {
+    if (index < 0) {
+        index = 0;
+    } else if (index > scene->count) {
         index = scene->count;
     }
     memmove(scene->items + index + 1, scene->items + index, sizeof(Element) * (size_t)(scene->count - index));
@@ -166,10 +182,14 @@ void scene_remove(Scene *scene, int index)
     Op operation = {OP_REMOVE, index, scene->items[index], {0}};
     operation.before.erasing = false;
     scene_mark_dirty(scene, element_bounds(&scene->items[index]));
-    if (!step_push(&scene->pending, &operation)) {
+    bool recorded = step_push(&scene->pending, &operation);
+    if (!recorded) {
         element_free(&scene->items[index]);
     }
     items_erase(scene, index);
+    if (!recorded) {
+        history_discard(scene);
+    }
 }
 
 void scene_record_change(Scene *scene, int index, Element *before)
@@ -177,6 +197,7 @@ void scene_record_change(Scene *scene, int index, Element *before)
     Op operation = {OP_REPLACE, index, *before, {0}};
     if (!element_copy(&operation.after, &scene->items[index])) {
         element_free(before);
+        history_discard(scene);
         return;
     }
     operation.before.erasing = false;
@@ -186,6 +207,7 @@ void scene_record_change(Scene *scene, int index, Element *before)
     } else {
         element_free(&operation.after);
         element_free(before);
+        history_discard(scene);
     }
 }
 
@@ -198,7 +220,7 @@ void scene_commit(Scene *scene)
         memset(&scene->pending, 0, sizeof scene->pending);
         stack_free(&scene->redo, &scene->redoCount, &scene->redoCapacity);
     } else {
-        step_free(&scene->pending);
+        history_discard(scene);
     }
 }
 
@@ -215,9 +237,11 @@ void scene_clear(Scene *scene)
  * @param scene Target scene.
  * @param step Step to apply.
  * @param undoing true to invert the step, false to replay it.
+ * @return false when an allocation failed and the step was only partly applied.
  */
-static void step_apply(Scene *scene, const Step *step, bool undoing)
+static bool step_apply(Scene *scene, const Step *step, bool undoing)
 {
+    bool complete = true;
     for (int n = 0; n < step->count; n++) {
         const Op *operation = &step->ops[undoing ? step->count - 1 - n : n];
         OpKind kind = operation->kind;
@@ -226,8 +250,12 @@ static void step_apply(Scene *scene, const Step *step, bool undoing)
         if (add) {
             Element copy;
             const Element *source = kind == OP_ADD ? &operation->after : &operation->before;
-            if (element_copy(&copy, source)) {
-                items_insert(scene, operation->index, &copy);
+            if (!element_copy(&copy, source)) {
+                complete = false;
+            } else if (!items_insert(scene, operation->index, &copy)) {
+                element_free(&copy);
+                complete = false;
+            } else {
                 scene_mark_dirty(scene, element_bounds(&copy));
             }
         } else if (remove && operation->index < scene->count) {
@@ -242,9 +270,12 @@ static void step_apply(Scene *scene, const Step *step, bool undoing)
                 scene_mark_dirty(scene, element_bounds(&copy));
                 element_free(&scene->items[operation->index]);
                 scene->items[operation->index] = copy;
+            } else {
+                complete = false;
             }
         }
     }
+    return complete;
 }
 
 bool scene_undo(Scene *scene)
@@ -253,9 +284,10 @@ bool scene_undo(Scene *scene)
         return false;
     }
     Step step = scene->undo[--scene->undoCount];
-    step_apply(scene, &step, true);
-    if (!stack_push(&scene->redo, &scene->redoCount, &scene->redoCapacity, &step)) {
+    bool complete = step_apply(scene, &step, true);
+    if (!complete || !stack_push(&scene->redo, &scene->redoCount, &scene->redoCapacity, &step)) {
         step_free(&step);
+        history_discard(scene);
     }
     return true;
 }
@@ -266,9 +298,10 @@ bool scene_redo(Scene *scene)
         return false;
     }
     Step step = scene->redo[--scene->redoCount];
-    step_apply(scene, &step, false);
-    if (!stack_push(&scene->undo, &scene->undoCount, &scene->undoCapacity, &step)) {
+    bool complete = step_apply(scene, &step, false);
+    if (!complete || !stack_push(&scene->undo, &scene->undoCount, &scene->undoCapacity, &step)) {
         step_free(&step);
+        history_discard(scene);
     }
     return true;
 }

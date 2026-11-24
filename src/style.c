@@ -69,7 +69,9 @@ int style_fill_index(Color color)
 
 Color color_from_hsv(float hue, float saturation, float value)
 {
-    hue -= floorf(hue);
+    hue = isfinite(hue) ? hue - floorf(hue) : 0.0f;
+    saturation = fminf(fmaxf(saturation, 0.0f), 1.0f);
+    value = fminf(fmaxf(value, 0.0f), 1.0f);
     float scaled = hue * 6.0f;
     int sector = (int)scaled;
     float fraction = scaled - (float)sector;

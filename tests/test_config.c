@@ -570,6 +570,16 @@ static void test_unreadable_file_is_not_missing(void)
     config.doubleWindowMs = 79;
     assert(config_load(&config, path, NULL, 0) == CONFIG_UNREADABLE);
     assert(config.doubleWindowMs == 79);
+
+    scratch_path(L"penpane_test_huge.cfg", path, MAX_PATH);
+    HANDLE huge = CreateFileW(path, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+    assert(huge != INVALID_HANDLE_VALUE);
+    assert(SetFilePointer(huge, 300000, NULL, FILE_BEGIN) == 300000 && SetEndOfFile(huge));
+    CloseHandle(huge);
+    config.doubleWindowMs = 80;
+    assert(config_load(&config, path, NULL, 0) == CONFIG_UNREADABLE);
+    assert(config.doubleWindowMs == 80);
+    DeleteFileW(path);
 }
 
 /** @brief Plain typing keys need Ctrl, Alt or Win; Shift alone does not count; other keys and mouse buttons
@@ -713,6 +723,6 @@ int main(void)
     test_trigger_parsing();
     test_trigger_to_text_truncation();
     test_legacy_migration();
-    printf("test_config: 19 tests passed\n");
+    printf("test_config: all tests passed\n");
     return 0;
 }

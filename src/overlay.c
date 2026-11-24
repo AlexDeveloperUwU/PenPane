@@ -118,6 +118,9 @@ void overlay_raise(Overlay *overlay)
 
 void overlay_present(Overlay *overlay, const RECT *dirty)
 {
+    if (!overlay->canvas.dc) {
+        return;
+    }
     POINT position = {overlay->bounds.left + overlay->canvas.originX,
                       overlay->bounds.top + overlay->canvas.originY};
     SIZE size = {overlay->canvas.width, overlay->canvas.height};

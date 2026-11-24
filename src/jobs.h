@@ -31,7 +31,8 @@ bool jobs_save_config(const Config *config, const wchar_t *path);
  * @param canvas Fully rendered canvas; on success its ownership moves to the job and it is zeroed.
  * @param region Region to copy.
  * @param opaqueBackdrop true when the region is fully opaque.
- * @return true when queued; on false the caller still owns the canvas.
+ * @return true when queued; false when an earlier export is still waiting, and the caller still owns
+ * the canvas.
  */
 bool jobs_copy_region(HWND owner, Canvas *canvas, RECT region, bool opaqueBackdrop);
 
@@ -41,7 +42,8 @@ bool jobs_copy_region(HWND owner, Canvas *canvas, RECT region, bool opaqueBackdr
  * @param region Region to save.
  * @param opaqueBackdrop true when the region is fully opaque.
  * @param path Destination file path; copied before the call returns.
- * @return true when queued; on false the caller still owns the canvas.
+ * @return true when queued; false when the path is longer than MAX_PATH or an earlier export is still
+ * waiting, and the caller still owns the canvas.
  */
 bool jobs_save_region(Canvas *canvas, RECT region, bool opaqueBackdrop, const wchar_t *path);
 

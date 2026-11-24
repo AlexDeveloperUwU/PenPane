@@ -56,7 +56,7 @@ static DWORD WINAPI worker_main(LPVOID parameter)
         SaveJob *save = NULL;
         CopyJob copy;
         bool haveCopy = false;
-        static SaveJob local;
+        SaveJob local;
         if (g_save.pending) {
             local = g_save;
             g_save.pending = false;
@@ -132,19 +132,22 @@ bool jobs_save_config(const Config *config, const wchar_t *path)
  * @param region Region to export.
  * @param opaqueBackdrop true when the region is fully opaque.
  * @param path Destination file, or NULL for the clipboard.
- * @return true when queued.
+ * @return true when queued; false when the path is too long or an earlier export is still waiting.
  */
 static bool queue_export(HWND owner, Canvas *canvas, RECT region, bool opaqueBackdrop, const wchar_t *path)
 {
+    if (path && wcslen(path) >= MAX_PATH) {
+        return false;
+    }
     ensure_lock();
     EnterCriticalSection(&g_lock);
     if (g_copy.pending) {
-        canvas_destroy(&g_copy.canvas);
+        LeaveCriticalSection(&g_lock);
+        return false;
     }
     g_copy.path[0] = 0;
     if (path) {
-        wcsncpy(g_copy.path, path, MAX_PATH - 1);
-        g_copy.path[MAX_PATH - 1] = 0;
+        wcscpy(g_copy.path, path);
     }
     g_copy.owner = owner;
     g_copy.canvas = *canvas;

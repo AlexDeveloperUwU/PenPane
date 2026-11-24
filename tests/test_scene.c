@@ -266,8 +266,62 @@ static void test_add_fails_when_items_cannot_grow(void)
     scene_destroy(&scene);
 }
 
+/** @brief A remove that cannot be recorded drops the whole history instead of leaving a stale one. */
+static void test_remove_without_record_discards_history(void)
+{
+    Scene scene;
+    scene_init(&scene);
+    Element stroke = make_stroke();
+    assert(scene_add(&scene, &stroke));
+    scene_commit(&scene);
+    assert(scene_can_undo(&scene));
+    g_reallocBudget = 0;
+    scene_remove(&scene, 0);
+    g_reallocBudget = -1;
+    assert(scene.count == 0);
+    assert(!scene_can_undo(&scene) && !scene_can_redo(&scene));
+    scene_destroy(&scene);
+}
+
+/** @brief A commit that cannot be stored drops the history instead of keeping unrelated older steps. */
+static void test_commit_failure_discards_history(void)
+{
+    Scene scene;
+    scene_init(&scene);
+    Element first = make_stroke();
+    assert(scene_add(&scene, &first));
+    Element second = make_stroke();
+    assert(scene_add(&scene, &second));
+    g_reallocBudget = 0;
+    scene_commit(&scene);
+    g_reallocBudget = -1;
+    assert(scene.count == 2);
+    assert(scene.pending.count == 0);
+    assert(!scene_can_undo(&scene) && !scene_can_redo(&scene));
+    scene_destroy(&scene);
+}
+
+/** @brief An undo whose redo record cannot be stored still changes the scene and leaves no stale history. */
+static void test_undo_without_redo_record_discards_history(void)
+{
+    Scene scene;
+    scene_init(&scene);
+    Element stroke = make_stroke();
+    assert(scene_add(&scene, &stroke));
+    scene_commit(&scene);
+    g_reallocBudget = 0;
+    assert(scene_undo(&scene));
+    g_reallocBudget = -1;
+    assert(scene.count == 0);
+    assert(!scene_can_undo(&scene) && !scene_can_redo(&scene));
+    scene_destroy(&scene);
+}
+
 int main(void)
 {
+    test_remove_without_record_discards_history();
+    test_commit_failure_discards_history();
+    test_undo_without_redo_record_discards_history();
     test_add_fails_when_step_cannot_grow();
     test_add_fails_when_items_cannot_grow();
     test_add_undo_redo();

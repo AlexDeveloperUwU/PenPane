@@ -906,7 +906,8 @@ bool hotkeys_apply(Hotkeys *hotkeys, const Config *config, wchar_t *report, int 
     reinstall_mouse_hook(hotkeys);
     if (hotkeys->mouseBindingsExist && hotkeys->mouseHook == NULL) {
         allRegistered = false;
-        report_failure(report, reportSize, (Trigger){TRIGGER_MOUSE_BUTTON, VK_MBUTTON, 0}, GetLastError());
+        report_text(report, reportSize,
+                    L"The mouse hook could not be installed; mouse button bindings do not work.");
     }
     if (config_trigger_count(config) > GESTURE_MAX_TRACKED) {
         allRegistered = false;

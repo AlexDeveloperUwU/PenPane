@@ -393,7 +393,8 @@ static int uninstall(void)
     wchar_t copy[MAX_PATH];
     wchar_t name[48];
     _snwprintf(name, ARRAYSIZE(name), L"PenPaneUninstall%lu.exe", GetCurrentProcessId());
-    if (GetTempPathW(ARRAYSIZE(temp), temp) == 0 || !join(copy, ARRAYSIZE(copy), temp, name) ||
+    DWORD tempLength = GetTempPathW(ARRAYSIZE(temp), temp);
+    if (tempLength == 0 || tempLength >= ARRAYSIZE(temp) || !join(copy, ARRAYSIZE(copy), temp, name) ||
         !CopyFileW(self, copy, FALSE)) {
         return 1;
     }
@@ -408,6 +409,17 @@ static int uninstall(void)
     CloseHandle(process.hProcess);
     say(L"PenPane was removed.", MB_ICONINFORMATION);
     return 0;
+}
+
+/**
+ * @brief Tells whether a folder is a full path: a drive path such as C:\Programs or a UNC path.
+ * @param folder Folder text to check.
+ * @return true when the path is absolute.
+ */
+static bool is_absolute_folder(const wchar_t *folder)
+{
+    size_t length = wcslen(folder);
+    return (length > 2 && folder[1] == L':' && folder[2] == L'\\') || wcsncmp(folder, L"\\\\", 2) == 0;
 }
 
 /**
@@ -580,9 +592,7 @@ static void start_install(void)
     while (length > 3 && ui.folder[length - 1] == L'\\') {
         ui.folder[--length] = L'\0';
     }
-    bool absolute =
-        (length > 2 && ui.folder[1] == L':' && ui.folder[2] == L'\\') || wcsncmp(ui.folder, L"\\\\", 2) == 0;
-    if (!absolute) {
+    if (!is_absolute_folder(ui.folder)) {
         say(L"Enter a full folder path, for example C:\\Users\\you\\PenPane.", MB_ICONWARNING);
         return;
     }
@@ -845,7 +855,11 @@ int WINAPI wWinMain(HINSTANCE self, HINSTANCE previous, PWSTR commandLine, int s
             wcscpy(folder, arguments[i] + 3);
         }
     }
-    CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
+    if (folder[0] != L'\0' && !is_absolute_folder(folder)) {
+        say(L"The /D= folder must be a full path, for example /D=C:\\Users\\you\\PenPane.", MB_ICONERROR);
+        return 1;
+    }
+    HRESULT comResult = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
     int result;
     if (cleanupFolder) {
         result = cleanup(cleanupFolder);
@@ -869,7 +883,9 @@ int WINAPI wWinMain(HINSTANCE self, HINSTANCE previous, PWSTR commandLine, int s
             }
         }
     }
-    CoUninitialize();
+    if (SUCCEEDED(comResult)) {
+        CoUninitialize();
+    }
     LocalFree(arguments);
     return result;
 }

@@ -685,8 +685,10 @@ static char *read_file(const wchar_t *path, DWORD *length, DWORD *error)
     char *buffer = NULL;
     if (!GetFileSizeEx(file, &size)) {
         *error = GetLastError();
+    } else if (size.QuadPart > CONFIG_MAX_FILE_BYTES) {
+        *error = ERROR_FILE_TOO_LARGE;
     } else {
-        DWORD wanted = size.QuadPart > CONFIG_MAX_FILE_BYTES ? CONFIG_MAX_FILE_BYTES : (DWORD)size.QuadPart;
+        DWORD wanted = (DWORD)size.QuadPart;
         buffer = HeapAlloc(GetProcessHeap(), 0, (SIZE_T)wanted + 1);
         DWORD got = 0;
         if (buffer == NULL) {

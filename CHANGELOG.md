@@ -4,6 +4,20 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [0.7.1] - 2026-11-24
+
+### Changed
+
+- A second PNG export or clipboard copy while one is still running is refused with a notice instead of silently replacing the first. A save path longer than the Windows limit is refused instead of being cut short.
+- A settings file larger than 256 KB is reported as unreadable and left untouched, instead of being read in part and later overwritten.
+- The installer's `/D=` switch needs a full folder path.
+
+### Fixed
+
+- After an out-of-memory error, undo and redo no longer replay a history that does not match the drawing; the history is dropped instead.
+- A failed settings save, a missing toolbar and a mouse hook that could not be installed are now reported to the user.
+- A negative screen index in the tray menu no longer breaks the radio check, and colors from out-of-range values are clamped.
+
 ## [0.7.0] - 2026-11-24
 
 ### Added

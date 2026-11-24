@@ -239,7 +239,7 @@ static HMENU screens_menu(int count, int selected, int baseId)
     }
     if (count > 0) {
         CheckMenuRadioItem(menu, (UINT)baseId, (UINT)(baseId + count - 1),
-                           (UINT)(baseId + (selected < count ? selected : 0)), MF_BYCOMMAND);
+                           (UINT)(baseId + (selected >= 0 && selected < count ? selected : 0)), MF_BYCOMMAND);
     }
     return menu;
 }

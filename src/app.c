@@ -509,8 +509,7 @@ static bool animationTimerOn;
 static void update_animation_timer(void)
 {
     if (!animationTimerOn && (app.controller.laser.count > 0 || app.controller.eraser.count > 0)) {
-        SetTimer(app.messageWindow, TIMER_ANIMATE, ANIMATION_INTERVAL_MS, NULL);
-        animationTimerOn = true;
+        animationTimerOn = SetTimer(app.messageWindow, TIMER_ANIMATE, ANIMATION_INTERVAL_MS, NULL) != 0;
     }
 }
 
@@ -869,6 +868,7 @@ static void copy_drawing_png(void)
     }
     if (!jobs_copy_region(app.messageWindow, &export, local, opaque)) {
         canvas_destroy(&export);
+        notify(L"Export", L"Another export is still running; try again in a moment.");
     }
 }
 
@@ -927,6 +927,9 @@ static void save_drawing_png(void)
     }
     if (!chosen || !jobs_save_region(&export, local, opaque, path)) {
         canvas_destroy(&export);
+        if (chosen) {
+            notify(L"Export", L"The drawing was not saved: another export is still running.");
+        }
     }
 }
 
@@ -1211,7 +1214,9 @@ static void save_config(void)
     if (app.configProtected || app.configPath[0] == L'\0') {
         return;
     }
-    jobs_save_config(&app.config, app.configPath);
+    if (!jobs_save_config(&app.config, app.configPath)) {
+        notify(L"Settings", L"The settings could not be saved.");
+    }
 }
 
 /**
@@ -2216,6 +2221,8 @@ int app_run(HINSTANCE instance)
         ui_place_defaults(app.ui, app.monitors[panel_monitor()].work, false);
         ui_set_visible(app.ui, true, false);
         app_sync_ui();
+    } else {
+        notify(L"PenPane", L"The toolbar could not be created. Use the tray menu instead.");
     }
     create_tray();
     WTSRegisterSessionNotification(app.messageWindow, NOTIFY_FOR_THIS_SESSION);
