@@ -1,0 +1,49 @@
+name: CodeQL
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "0 5 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    runs-on: windows-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Cache toolchain
+        uses: actions/cache@v6
+        with:
+          path: ${{ runner.temp }}\tools
+          key: llvm-mingw-20261117-ucrt-x86_64
+
+      - name: Install toolchain
+        id: toolchain
+        shell: powershell
+        run: |
+          $path = powershell -NoProfile -ExecutionPolicy Bypass -File scripts\setup-toolchain.ps1 -Root "$env:RUNNER_TEMP\tools"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          "path=$($path | Select-Object -Last 1)" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: c-cpp
+          build-mode: manual
+
+      - name: Build
+        shell: powershell
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File scripts\build.ps1 -Toolchain "${{ steps.toolchain.outputs.path }}"
+
+      - name: Analyze
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: /language:c-cpp

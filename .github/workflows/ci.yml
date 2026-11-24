@@ -48,6 +48,10 @@ jobs:
         shell: powershell
         run: powershell -NoProfile -ExecutionPolicy Bypass -File scripts\test.ps1 -Toolchain "${{ steps.toolchain.outputs.path }}"
 
+      - name: Test with AddressSanitizer and UBSan
+        shell: powershell
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File scripts\test.ps1 -Sanitize -Toolchain "${{ steps.toolchain.outputs.path }}"
+
       - name: Upload executables
         uses: actions/upload-artifact@v7
         with:
