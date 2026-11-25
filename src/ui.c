@@ -67,6 +67,7 @@ struct Ui {
     UiSettings settings;
     UiModel model;
     bool visible;
+    bool captureHidden;
     bool drawing;
     Island islands[PANEL_ISLAND_COUNT];
 };
@@ -684,10 +685,13 @@ static void island_refresh_visibility(Island *island)
     if (eyeMode) {
         want = island->id == PANEL_HISTORY;
     }
+    if (ui->captureHidden) {
+        want = false;
+    }
     if (!want) {
         if (island->shown) {
             island->savedCollapsed = island->collapsed;
-            island->hasSaved = eyeMode;
+            island->hasSaved = eyeMode || ui->captureHidden;
             island_hide(island);
         }
         return;
@@ -1283,6 +1287,14 @@ void ui_set_visible(Ui *ui, bool visible, bool drawing)
 {
     ui->visible = visible;
     ui->drawing = drawing;
+    for (int i = 0; i < PANEL_ISLAND_COUNT; i++) {
+        island_refresh_visibility(&ui->islands[i]);
+    }
+}
+
+void ui_set_capture_hidden(Ui *ui, bool hidden)
+{
+    ui->captureHidden = hidden;
     for (int i = 0; i < PANEL_ISLAND_COUNT; i++) {
         island_refresh_visibility(&ui->islands[i]);
     }

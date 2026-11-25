@@ -82,9 +82,43 @@ static void test_toolbar_stays_centered(void)
     ui_destroy(ui);
 }
 
+/**
+ * @brief Hiding the panels for a screenshot removes them, and restoring brings back the same extent.
+ */
+static void test_capture_hide_restores_panels(void)
+{
+    UiSettings settings;
+    memset(&settings, 0, sizeof settings);
+    Ui *ui = ui_create(GetModuleHandleW(NULL), ignore_event, NULL, &settings);
+    assert(ui);
+    UiModel model;
+    memset(&model, 0, sizeof model);
+    model.style = style_default();
+    tool_order_default(model.toolOrder);
+    ui_update(ui, &model);
+    RECT work = {0, 0, WORK_WIDTH, WORK_HEIGHT};
+    ui_place_defaults(ui, work, false);
+    ui_set_visible(ui, true, true);
+    int left;
+    int right;
+    toolbar_extent(ui, &left, &right);
+    ui_set_capture_hidden(ui, true);
+    int hiddenLeft;
+    int hiddenRight;
+    toolbar_extent(ui, &hiddenLeft, &hiddenRight);
+    assert(hiddenLeft < 0);
+    ui_set_capture_hidden(ui, false);
+    int backLeft;
+    int backRight;
+    toolbar_extent(ui, &backLeft, &backRight);
+    assert(backLeft == left && backRight == right);
+    ui_destroy(ui);
+}
+
 int main(void)
 {
     test_toolbar_stays_centered();
+    test_capture_hide_restores_panels();
     printf("toolbar tests passed\n");
     return 0;
 }

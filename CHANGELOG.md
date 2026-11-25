@@ -4,6 +4,26 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [0.8.0] - 2026-11-25
+
+### Added
+
+- A Corners option (round or sharp) for rectangles.
+- Fill styles for rectangles, ellipses and diamonds: solid, hachure and cross-hatch.
+- Text alignment (left, center, right).
+- Text inside shapes: click a shape with the text tool, or double-click it with the select tool.
+
+### Changed
+
+- The line and arrow tools are one Line tool (`L`) with an arrowheads option: none, end or both. The old `arrow` and `tool_arrow` names in the config still work.
+- The settings dialog has consistent spacing, fonts and a fixed size across tabs.
+
+### Fixed
+
+- The Opacity title in the properties panel was erased by its value label.
+- The toolbar went off-center when tools were hidden or shown.
+- After copying a screenshot with the desktop included, the panels looked faded and ignored clicks; the overlay's input window ended up above them. The panels are raised again and keep their collapsed state.
+
 ## [0.7.2] - 2026-11-24
 
 ### Added

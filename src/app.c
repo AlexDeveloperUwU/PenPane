@@ -762,7 +762,7 @@ static bool composite_over_desktop(Canvas *export, RECT screen)
             overlay_set_visible(&app.overlay, false);
         }
         if (app.ui) {
-            ui_set_visible(app.ui, false, false);
+            ui_set_capture_hidden(app.ui, true);
         }
         Sleep(150);
         ok = BitBlt(memoryDc, 0, 0, width, height, screenDc, screen.left, screen.top, SRCCOPY) != 0;
@@ -771,11 +771,15 @@ static bool composite_over_desktop(Canvas *export, RECT screen)
             overlay_raise(&app.overlay);
         }
         if (app.ui) {
-            ui_set_visible(app.ui, true, app.drawing || app.drawingsHidden);
+            ui_set_capture_hidden(app.ui, false);
             ui_raise(app.ui);
         }
         if (app.overlayReady && app.drawing) {
             focus_overlay();
+            overlay_raise(&app.overlay);
+            if (app.ui) {
+                ui_raise(app.ui);
+            }
         }
         SelectObject(memoryDc, previous);
         GdiFlush();

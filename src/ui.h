@@ -239,6 +239,12 @@ void ui_apply_settings(Ui *ui, const UiSettings *settings);
 void ui_set_visible(Ui *ui, bool visible, bool drawing);
 
 /**
+ * @brief Hides every panel for a screenshot and brings them back as they were, collapsed or not.
+ * @param ui UI instance.
+ * @param hidden true to hide, false to restore.
+ */
+void ui_set_capture_hidden(Ui *ui, bool hidden);
+/**
  * @brief Places islands that have no saved position at their defaults on a monitor.
  *
  * Defaults mirror Excalidraw: toolbar centered at the top, properties panel at the left,
