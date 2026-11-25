@@ -20,6 +20,10 @@ bool action_from_name(const char *name, Action *action)
     if (name == NULL || action == NULL) {
         return false;
     }
+    if (strcasecmp(name, "tool_arrow") == 0) {
+        *action = ACTION_TOOL_LINE;
+        return true;
+    }
     for (int i = 0; i < ACTION_COUNT; i++) {
         if (strcasecmp(name, ACTION_NAMES[i]) == 0) {
             *action = (Action)i;

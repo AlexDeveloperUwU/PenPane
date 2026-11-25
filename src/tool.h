@@ -8,12 +8,11 @@
 
 #include <stdbool.h>
 
-/** @brief Drawing tools in toolbar order. */
+/** @brief Drawing tools in toolbar order. TOOL_LINE draws lines and arrows; arrowheads are a style option. */
 typedef enum Tool {
     TOOL_SELECT,
     TOOL_RECTANGLE,
     TOOL_ELLIPSE,
-    TOOL_ARROW,
     TOOL_LINE,
     TOOL_PEN,
     TOOL_LASER,
@@ -32,7 +31,7 @@ typedef enum Tool {
 const char *tool_name(Tool tool);
 
 /**
- * @brief Parses a tool name, case-insensitively.
+ * @brief Parses a tool name, case-insensitively. The retired name "arrow" means the line tool.
  * @param name Text such as "rectangle".
  * @param tool Receives the tool on success.
  * @return true when the name is known.
@@ -49,7 +48,7 @@ void tool_order_default(Tool order[TOOL_COUNT]);
  * @brief Parses a comma separated list of tool names into a toolbar order.
  *
  * Tools missing from the list are placed right after the tool that precedes them in the default order, or at
- * the end when that tool is not listed either.
+ * the end when that tool is not listed either. The retired name "arrow" is accepted and ignored.
  * @param text List such as "select, pen, eraser".
  * @param order Receives every tool once on success.
  * @return false when a name is unknown, repeated or the list is empty.
@@ -58,7 +57,7 @@ bool tool_order_parse(const char *text, Tool order[TOOL_COUNT]);
 
 /**
  * @brief Parses a comma separated list of tool names into a bitmask (bit n set for the tool with value n).
- * @param text List such as "laser, text"; may be empty.
+ * @param text List such as "laser, text"; may be empty. The retired name "arrow" is accepted and ignored.
  * @param mask Receives the mask on success.
  * @return false when a name is unknown or every tool would be hidden.
  */
@@ -74,12 +73,12 @@ bool tool_order_valid(const Tool order[TOOL_COUNT]);
 /**
  * @brief Returns the single-letter keyboard shortcut of a tool.
  * @param tool Tool to query.
- * @return Uppercase letter: V R O D A L P K T E H.
+ * @return Uppercase letter: V R O D L P K T E H.
  */
 char tool_shortcut(Tool tool);
 
 /**
- * @brief Finds the tool bound to a shortcut letter (V R O D A L P K T E H, and X for the pen).
+ * @brief Finds the tool bound to a shortcut letter (V R O D L P K T E H, and X for the pen).
  * @param letter Uppercase letter.
  * @param tool Receives the tool on success.
  * @return true when a tool uses that letter.

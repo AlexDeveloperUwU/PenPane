@@ -202,9 +202,35 @@ static void test_tool_order(void)
     Tool order[TOOL_COUNT];
     tool_order_default(order);
     assert(tool_at_slot(order, 0, 0, &slot) && slot == TOOL_SELECT);
-    assert(tool_at_slot(order, 0, 10, &slot) && slot == TOOL_LASER);
+    assert(tool_at_slot(order, 0, TOOL_COUNT - 1, &slot) && slot == TOOL_LASER);
     assert(tool_at_slot(order, 1u << TOOL_PEN, 1, &slot) && slot == TOOL_HIGHLIGHTER);
-    assert(!tool_at_slot(order, 1u << TOOL_PEN, 10, &slot));
+    assert(!tool_at_slot(order, 1u << TOOL_PEN, TOOL_COUNT - 1, &slot));
+    DeleteFileW(path);
+}
+
+/** @brief Configuration written before the arrow tool was merged into the line tool still loads. */
+static void test_retired_arrow_names(void)
+{
+    wchar_t path[MAX_PATH];
+    wchar_t errors[256];
+    Config config;
+    Action action;
+    scratch_path(L"penpane_test_arrow.cfg", path, MAX_PATH);
+    write_text(path, "default_tool = arrow\n");
+    assert(config_load(&config, path, errors, 256) == CONFIG_LOADED);
+    assert(config.defaultTool == TOOL_LINE && errors[0] == L'\0');
+    write_text(path,
+               "tool_order = select, pen, eraser, text, rectangle, ellipse, diamond, arrow, line, laser\n");
+    assert(config_load(&config, path, errors, 256) == CONFIG_LOADED);
+    assert(errors[0] == L'\0' && tool_order_valid(config.toolOrder));
+    assert(config.toolOrder[TOOL_COUNT - 2] == TOOL_LINE && config.toolOrder[TOOL_COUNT - 1] == TOOL_LASER);
+    write_text(path, "hidden_tools = arrow\n");
+    assert(config_load(&config, path, errors, 256) == CONFIG_LOADED);
+    assert(config.hiddenTools == 0 && errors[0] == L'\0');
+    write_text(path, "reset_bindings = true\nbind = F20 single tool_arrow\n");
+    assert(config_load(&config, path, errors, 256) == CONFIG_LOADED);
+    assert(errors[0] == L'\0' && config.bindingCount == 1);
+    assert(find_binding(&config, key(VK_F20, 0), GESTURE_SINGLE, &action) && action == ACTION_TOOL_LINE);
     DeleteFileW(path);
 }
 
@@ -710,6 +736,7 @@ int main(void)
     test_round_trip();
     test_pinned_keys();
     test_tool_order();
+    test_retired_arrow_names();
     test_custom_colors();
     test_save_replaces_file();
     test_missing_file();

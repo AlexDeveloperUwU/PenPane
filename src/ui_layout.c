@@ -321,9 +321,9 @@ static int dialog_header_add(UiLayout *layout, float scale, int width, PanelId p
  */
 static void build_settings(UiLayout *layout, const UiModel *model, float scale)
 {
-    static const wchar_t *const TOOL_LABELS[TOOL_COUNT] = {L"Select", L"Rectangle", L"Ellipse",    L"Arrow",
-                                                           L"Line",   L"Pen",       L"Laser",      L"Text",
-                                                           L"Eraser", L"Diamond",   L"Highlighter"};
+    static const wchar_t *const TOOL_LABELS[TOOL_COUNT] = {L"Select",  L"Rectangle",  L"Ellipse", L"Line",
+                                                           L"Pen",     L"Laser",      L"Text",    L"Eraser",
+                                                           L"Diamond", L"Highlighter"};
     int width = ui_px(scale, SETTINGS_WIDTH);
     int pad = ui_px(scale, DIALOG_PAD);
     int row = ui_px(scale, SETTINGS_ROW);
@@ -669,7 +669,7 @@ static void build_properties(UiLayout *layout, const UiModel *model, bool pinned
     static const Icon fontIcons[TEXT_FACE_COUNT] = {ICON_FONT_HAND, ICON_FONT_NORMAL, ICON_FONT_LEGIBLE};
     static const Icon styleIcons[3] = {ICON_STYLE_SOLID, ICON_STYLE_DASHED, ICON_STYLE_DOTTED};
     static const Icon laserIcons[2] = {ICON_LASER_TRAIL, ICON_LASER_POINTER};
-    static const Icon arrowIcons[ARROW_HEAD_COUNT] = {ICON_ARROW_END, ICON_ARROW_BOTH};
+    static const Icon arrowIcons[ARROW_HEAD_COUNT] = {ICON_ARROW_NONE, ICON_ARROW_END, ICON_ARROW_BOTH};
     int pad = ui_px(scale, SECTION_PAD);
     int gap = ui_px(scale, SECTION_GAP);
     int cell = ui_px(scale, SWATCH_CELL);

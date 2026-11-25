@@ -128,7 +128,7 @@ FloatRect element_box(const Element *element)
 RECT element_bounds(const Element *element)
 {
     float margin = element->style.width + ELEMENT_BOUNDS_MARGIN;
-    if (element->type == ELEMENT_ARROW) {
+    if (element->type == ELEMENT_LINE && element->style.arrowHeads != ARROW_HEAD_NONE) {
         margin += ARROWHEAD_SIZE;
     } else if (element->type == ELEMENT_PEN) {
         margin = element->style.width * PEN_MAX_RADIUS_FACTOR + ELEMENT_BOUNDS_MARGIN;

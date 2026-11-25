@@ -32,8 +32,7 @@ The program starts on the select tool, so nothing is drawn until you pick a draw
 | Rectangle | R |
 | Ellipse | O |
 | Diamond | D |
-| Arrow | A |
-| Line | L |
+| Line and arrow | L |
 | Pen | P or X |
 | Laser | K |
 | Text | T |
@@ -47,7 +46,7 @@ The tool lock keeps the current tool after each stroke. It is on by default; wit
 ## Features
 
 **Drawing**
-- Selection (move, resize, delete), rectangle, ellipse, diamond, arrow (one head or two), line, pen, laser pointer, text and eraser.
+- Selection (move, resize, delete), rectangle, ellipse, diamond, line (plain, or with one or two arrowheads), pen, laser pointer, text and eraser.
 - Stroke and background colors, three widths plus pen pressure, solid, dashed and dotted styles, opacity, and unlimited undo and redo.
 - Colors: five presets, a color picker with a hex field, an optional pastel row, and your own colors from the configuration file.
 - Real pen pressure when the tablet reports it; otherwise the stroke width follows speed, using the model measured from Excalidraw.

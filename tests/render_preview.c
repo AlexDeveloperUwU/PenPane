@@ -276,22 +276,24 @@ static void draw_shapes_scene(Canvas *canvas)
     style.strokeStyle = STROKE_DASHED;
     draw_shape(canvas, ELEMENT_ELLIPSE, &style, 740, 200, 940, 320);
     style.strokeStyle = STROKE_SOLID;
+    style.arrowHeads = ARROW_HEAD_END;
     style.width = 1;
-    draw_shape(canvas, ELEMENT_ARROW, &style, 20, 360, 220, 360);
+    draw_shape(canvas, ELEMENT_LINE, &style, 20, 360, 220, 360);
     style.width = 2;
-    draw_shape(canvas, ELEMENT_ARROW, &style, 260, 360, 460, 360);
+    draw_shape(canvas, ELEMENT_LINE, &style, 260, 360, 460, 360);
     style.width = 4;
-    draw_shape(canvas, ELEMENT_ARROW, &style, 500, 360, 700, 360);
+    draw_shape(canvas, ELEMENT_LINE, &style, 500, 360, 700, 360);
     style.width = 2;
-    draw_shape(canvas, ELEMENT_ARROW, &style, 740, 360, 860, 420);
+    draw_shape(canvas, ELEMENT_LINE, &style, 740, 360, 860, 420);
     style.strokeStyle = STROKE_DASHED;
-    draw_shape(canvas, ELEMENT_ARROW, &style, 20, 420, 220, 420);
+    draw_shape(canvas, ELEMENT_LINE, &style, 20, 420, 220, 420);
     style.strokeStyle = STROKE_DOTTED;
-    draw_shape(canvas, ELEMENT_ARROW, &style, 260, 420, 460, 420);
+    draw_shape(canvas, ELEMENT_LINE, &style, 260, 420, 460, 420);
     style.strokeStyle = STROKE_SOLID;
-    draw_shape(canvas, ELEMENT_ARROW, &style, 500, 420, 530, 420);
-    draw_shape(canvas, ELEMENT_ARROW, &style, 560, 420, 620, 420);
-    draw_shape(canvas, ELEMENT_ARROW, &style, 650, 420, 750, 420);
+    draw_shape(canvas, ELEMENT_LINE, &style, 500, 420, 530, 420);
+    draw_shape(canvas, ELEMENT_LINE, &style, 560, 420, 620, 420);
+    draw_shape(canvas, ELEMENT_LINE, &style, 650, 420, 750, 420);
+    style.arrowHeads = ARROW_HEAD_NONE;
     draw_shape(canvas, ELEMENT_LINE, &style, 20, 480, 220, 480);
     style.strokeStyle = STROKE_DASHED;
     draw_shape(canvas, ELEMENT_LINE, &style, 260, 480, 460, 480);
@@ -395,7 +397,8 @@ static void draw_sample_scene(Canvas *canvas)
     style.width = 2;
     draw_shape(canvas, ELEMENT_RECTANGLE, &style, 90, 120, 480, 300);
     style.width = 4;
-    draw_shape(canvas, ELEMENT_ARROW, &style, 760, 120, 500, 220);
+    style.arrowHeads = ARROW_HEAD_END;
+    draw_shape(canvas, ELEMENT_LINE, &style, 760, 120, 500, 220);
     style = style_default();
     style.stroke = COLOR_STROKE_BLUE;
     style.fill = COLOR_FILL_BLUE;
@@ -477,9 +480,10 @@ static void run_timing(Canvas *canvas)
     QueryPerformanceFrequency(&frequency);
     clear_scene(canvas);
     Style style = style_default();
+    style.arrowHeads = ARROW_HEAD_END;
     QueryPerformanceCounter(&begin);
     for (int i = 0; i < 50; i++) {
-        draw_shape(canvas, ELEMENT_ARROW, &style, 10, 10, 1000, 700);
+        draw_shape(canvas, ELEMENT_LINE, &style, 10, 10, 1000, 700);
     }
     QueryPerformanceCounter(&end);
     printf("50 diagonal arrows of 1200 px: %.1f ms\n",

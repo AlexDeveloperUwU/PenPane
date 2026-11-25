@@ -106,7 +106,6 @@ bool hit_element(const Element *element, Point point, float tolerance)
                segment_distance(point, right, bottom) <= reach ||
                segment_distance(point, bottom, left) <= reach || segment_distance(point, left, top) <= reach;
     }
-    case ELEMENT_ARROW:
     case ELEMENT_LINE:
         return segment_distance(point, element->from, element->to) <= reach;
     case ELEMENT_PEN: {

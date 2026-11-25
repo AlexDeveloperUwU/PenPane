@@ -309,9 +309,9 @@ static void render_ellipse(Canvas *canvas, const Element *element, RECT area)
 }
 
 /**
- * @brief Renders a line or an arrow element.
+ * @brief Renders a line element, with arrowheads when its style asks for them.
  * @param canvas Target canvas.
- * @param element Line or arrow element.
+ * @param element Line element.
  * @param area Pixel work area.
  */
 static void render_line(Canvas *canvas, const Element *element, RECT area)
@@ -322,7 +322,7 @@ static void render_line(Canvas *canvas, const Element *element, RECT area)
     }
     Point points[2] = {element->from, element->to};
     stroke_path(&mask, points, 2, &element->style);
-    if (element->type == ELEMENT_ARROW) {
+    if (element->style.arrowHeads != ARROW_HEAD_NONE) {
         float width = visible_width(element->style.width);
         add_arrowhead(&mask, element->from, element->to, width);
         if (element->style.arrowHeads == ARROW_HEAD_BOTH) {
@@ -417,7 +417,6 @@ void render_element(Canvas *canvas, const Element *element, const RECT *clip)
     case ELEMENT_DIAMOND:
         render_diamond(canvas, element, area);
         break;
-    case ELEMENT_ARROW:
     case ELEMENT_LINE:
         render_line(canvas, element, area);
         break;

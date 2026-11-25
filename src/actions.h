@@ -14,7 +14,6 @@
     X(ACTION_TOOL_SELECT, "tool_select")                                                                     \
     X(ACTION_TOOL_RECTANGLE, "tool_rectangle")                                                               \
     X(ACTION_TOOL_ELLIPSE, "tool_ellipse")                                                                   \
-    X(ACTION_TOOL_ARROW, "tool_arrow")                                                                       \
     X(ACTION_TOOL_LINE, "tool_line")                                                                         \
     X(ACTION_TOOL_PEN, "tool_pen")                                                                           \
     X(ACTION_TOOL_LASER, "tool_laser")                                                                       \
@@ -54,7 +53,8 @@ typedef enum Action {
 const char *action_name(Action action);
 
 /**
- * @brief Parses a configuration-file action name, case-insensitively.
+ * @brief Parses a configuration-file action name, case-insensitively. The retired "tool_arrow" means
+ * "tool_line".
  * @param name Text such as "toggle_mode".
  * @param action Receives the parsed action on success.
  * @return true when the name is known.

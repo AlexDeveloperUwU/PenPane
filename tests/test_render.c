@@ -82,8 +82,46 @@ static void test_fill_styles_render(void)
     assert(empty > 0 && inked > 0);
 }
 
+/**
+ * @brief Renders a horizontal line and reports whether pixels exist where an end arrowhead wing would be.
+ * @param heads Arrowhead style of the line.
+ * @param endWing Receives true when the wing beside the end point is inked.
+ * @param startWing Receives true when the wing beside the start point is inked.
+ */
+static void line_wings(ArrowHeads heads, bool *endWing, bool *startWing)
+{
+    Canvas canvas;
+    assert(canvas_create(&canvas, CANVAS_SIZE, CANVAS_SIZE));
+    Style style = style_default();
+    style.arrowHeads = heads;
+    Element element = element_make(ELEMENT_LINE, &style);
+    element.from = (Point){20.0f, 100.0f};
+    element.to = (Point){180.0f, 100.0f};
+    RECT clip = canvas_area(&canvas);
+    render_element(&canvas, &element, &clip);
+    *endWing = (canvas.pixels[96 * CANVAS_SIZE + 170] >> 24) != 0;
+    *startWing = (canvas.pixels[96 * CANVAS_SIZE + 30] >> 24) != 0;
+    canvas_destroy(&canvas);
+}
+
+/**
+ * @brief A line draws no head, an end head or both heads according to its arrowhead style.
+ */
+static void test_line_arrowheads(void)
+{
+    bool end;
+    bool start;
+    line_wings(ARROW_HEAD_NONE, &end, &start);
+    assert(!end && !start);
+    line_wings(ARROW_HEAD_END, &end, &start);
+    assert(end && !start);
+    line_wings(ARROW_HEAD_BOTH, &end, &start);
+    assert(end && start);
+}
+
 int main(void)
 {
+    test_line_arrowheads();
     test_rectangle_corners();
     test_fill_styles_render();
     printf("render tests passed\n");

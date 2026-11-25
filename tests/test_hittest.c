@@ -55,13 +55,15 @@ static void test_diamond(void)
 }
 
 /**
- * @brief Lines and arrows hit within half the stroke width plus the tolerance of the segment.
+ * @brief Lines, with and without arrowheads, hit within half the stroke width plus the tolerance of the
+ * segment.
  */
 static void test_line_and_arrow(void)
 {
-    ElementType types[2] = {ELEMENT_LINE, ELEMENT_ARROW};
-    for (int i = 0; i < 2; i++) {
-        Element line = make_shape(types[i], 100, 100, 300, 100);
+    ArrowHeads heads[ARROW_HEAD_COUNT] = {ARROW_HEAD_NONE, ARROW_HEAD_END, ARROW_HEAD_BOTH};
+    for (int i = 0; i < ARROW_HEAD_COUNT; i++) {
+        Element line = make_shape(ELEMENT_LINE, 100, 100, 300, 100);
+        line.style.arrowHeads = heads[i];
         assert(hit_element(&line, (Point){200, 100}, 4.0f));
         assert(hit_element(&line, (Point){200, 103}, 4.0f));
         assert(!hit_element(&line, (Point){200, 130}, 4.0f));

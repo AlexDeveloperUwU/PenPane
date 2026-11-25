@@ -10,10 +10,22 @@ typedef struct ToolInfo {
 } ToolInfo;
 
 static const ToolInfo TOOL_INFO[TOOL_COUNT] = {
-    {"select", 'V'}, {"rectangle", 'R'}, {"ellipse", 'O'},     {"arrow", 'A'},
-    {"line", 'L'},   {"pen", 'P'},       {"laser", 'K'},       {"text", 'T'},
-    {"eraser", 'E'}, {"diamond", 'D'},   {"highlighter", 'H'},
+    {"select", 'V'}, {"rectangle", 'R'}, {"ellipse", 'O'}, {"line", 'L'},    {"pen", 'P'},
+    {"laser", 'K'},  {"text", 'T'},      {"eraser", 'E'},  {"diamond", 'D'}, {"highlighter", 'H'},
 };
+
+/** @brief Name the arrow tool had before it was merged into the line tool. */
+#define RETIRED_ARROW "arrow"
+
+/**
+ * @brief Tells whether a name is the retired arrow tool name.
+ * @param name Tool name.
+ * @return true for "arrow", compared case-insensitively.
+ */
+static bool is_retired_arrow(const char *name)
+{
+    return strcasecmp(name, RETIRED_ARROW) == 0;
+}
 
 const char *tool_name(Tool tool)
 {
@@ -22,6 +34,10 @@ const char *tool_name(Tool tool)
 
 bool tool_from_name(const char *name, Tool *tool)
 {
+    if (is_retired_arrow(name)) {
+        *tool = TOOL_LINE;
+        return true;
+    }
     for (int i = 0; i < TOOL_COUNT; i++) {
         if (strcasecmp(name, TOOL_INFO[i].name) == 0) {
             *tool = (Tool)i;
@@ -33,7 +49,7 @@ bool tool_from_name(const char *name, Tool *tool)
 
 static const Tool DEFAULT_ORDER[TOOL_COUNT] = {TOOL_SELECT, TOOL_PEN,       TOOL_HIGHLIGHTER, TOOL_ERASER,
                                                TOOL_TEXT,   TOOL_RECTANGLE, TOOL_ELLIPSE,     TOOL_DIAMOND,
-                                               TOOL_ARROW,  TOOL_LINE,      TOOL_LASER};
+                                               TOOL_LINE,   TOOL_LASER};
 
 void tool_order_default(Tool order[TOOL_COUNT])
 {
@@ -62,10 +78,12 @@ bool tool_mask_parse(const char *text, unsigned *mask)
             }
             memcpy(name, cursor, length);
             name[length] = '\0';
-            if (!tool_from_name(name, &tool)) {
-                return false;
+            if (!is_retired_arrow(name)) {
+                if (!tool_from_name(name, &tool)) {
+                    return false;
+                }
+                result |= 1u << tool;
             }
-            result |= 1u << tool;
         }
         if (!end) {
             break;
@@ -113,11 +131,13 @@ bool tool_order_parse(const char *text, Tool order[TOOL_COUNT])
         }
         memcpy(name, cursor, length);
         name[length] = '\0';
-        if (!tool_from_name(name, &tool) || seen[tool]) {
-            return false;
+        if (!is_retired_arrow(name)) {
+            if (!tool_from_name(name, &tool) || seen[tool]) {
+                return false;
+            }
+            seen[tool] = true;
+            order[count++] = tool;
         }
-        seen[tool] = true;
-        order[count++] = tool;
         cursor = end ? end + 1 : cursor + length;
         if (!end) {
             break;

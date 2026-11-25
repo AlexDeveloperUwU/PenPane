@@ -20,8 +20,8 @@
 /** @brief Line pattern of strokes. */
 typedef enum StrokeStyle { STROKE_SOLID, STROKE_DASHED, STROKE_DOTTED } StrokeStyle;
 
-/** @brief Whether an arrow has a head at its end only or at both ends. */
-typedef enum ArrowHeads { ARROW_HEAD_END, ARROW_HEAD_BOTH, ARROW_HEAD_COUNT } ArrowHeads;
+/** @brief Whether a line has no head, a head at its end only or heads at both ends. */
+typedef enum ArrowHeads { ARROW_HEAD_NONE, ARROW_HEAD_END, ARROW_HEAD_BOTH, ARROW_HEAD_COUNT } ArrowHeads;
 
 /** @brief Corner shape of rectangles. */
 typedef enum Corners { CORNERS_ROUND, CORNERS_SHARP, CORNERS_COUNT } Corners;

@@ -204,7 +204,7 @@ static void update_shape_draft(Controller *controller, Point position, bool shif
     float dx = position.x - origin.x;
     float dy = position.y - origin.y;
     if (shift) {
-        if (draft->type == ELEMENT_LINE || draft->type == ELEMENT_ARROW) {
+        if (draft->type == ELEMENT_LINE) {
             float length = sqrtf(dx * dx + dy * dy);
             float angle = roundf(atan2f(dy, dx) / SNAP_ANGLE) * SNAP_ANGLE;
             dx = cosf(angle) * length;
@@ -240,7 +240,7 @@ static float pen_pressure(const Style *style, const PointerSample *sample)
 static bool begin_draft(Controller *controller, const PointerSample *sample)
 {
     static const ElementType TYPES[TOOL_COUNT] = {
-        ELEMENT_PEN, ELEMENT_RECTANGLE, ELEMENT_ELLIPSE, ELEMENT_ARROW,   ELEMENT_LINE, ELEMENT_PEN,
+        ELEMENT_PEN, ELEMENT_RECTANGLE, ELEMENT_ELLIPSE, ELEMENT_LINE,    ELEMENT_PEN,
         ELEMENT_PEN, ELEMENT_TEXT,      ELEMENT_PEN,     ELEMENT_DIAMOND, ELEMENT_PEN};
     controller->draft = element_make(TYPES[controller->tool], &controller->style);
     controller->hasDraft = true;
@@ -469,7 +469,7 @@ static void finish_draft(Controller *controller)
         draft->type == ELEMENT_DIAMOND) {
         keep = fabsf(draft->to.x - draft->from.x) >= MIN_SHAPE_SIZE ||
                fabsf(draft->to.y - draft->from.y) >= MIN_SHAPE_SIZE;
-    } else if (draft->type == ELEMENT_LINE || draft->type == ELEMENT_ARROW) {
+    } else if (draft->type == ELEMENT_LINE) {
         keep = hypotf(draft->to.x - draft->from.x, draft->to.y - draft->from.y) >= MIN_SHAPE_SIZE;
     }
     repaint_add(controller, controller->draftBounds);

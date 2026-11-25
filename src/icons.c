@@ -495,11 +495,6 @@ static bool draw_icon(Pen *pen, Icon icon)
         line(pen, 13.0f, 3.0f, 7.4f, 3.0f);
         line(pen, 13.0f, 3.0f, 13.0f, 8.6f);
         break;
-    case ICON_LINE:
-        line(pen, 4.0f, 12.0f, 12.0f, 4.0f);
-        dot(pen, 3.4f, 12.6f, 1.5f);
-        dot(pen, 12.6f, 3.4f, 1.5f);
-        break;
     case ICON_PEN:
         draw_pencil(pen);
         break;
@@ -621,11 +616,14 @@ static bool draw_icon(Pen *pen, Icon icon)
         poly(pen, shape, 4, true);
         break;
     }
+    case ICON_ARROW_NONE:
     case ICON_ARROW_END:
     case ICON_ARROW_BOTH: {
         line(pen, 2.4f, 8.0f, 13.6f, 8.0f);
-        line(pen, 13.6f, 8.0f, 9.6f, 4.6f);
-        line(pen, 13.6f, 8.0f, 9.6f, 11.4f);
+        if (icon != ICON_ARROW_NONE) {
+            line(pen, 13.6f, 8.0f, 9.6f, 4.6f);
+            line(pen, 13.6f, 8.0f, 9.6f, 11.4f);
+        }
         if (icon == ICON_ARROW_BOTH) {
             line(pen, 2.4f, 8.0f, 6.4f, 4.6f);
             line(pen, 2.4f, 8.0f, 6.4f, 11.4f);
@@ -695,8 +693,8 @@ void icon_draw(Canvas *canvas, Icon icon, float centerX, float centerY, float si
 
 Icon icon_for_tool(int tool)
 {
-    static const Icon icons[TOOL_COUNT] = {ICON_SELECT, ICON_RECTANGLE, ICON_ELLIPSE,    ICON_ARROW,
-                                           ICON_LINE,   ICON_PEN,       ICON_LASER,      ICON_TEXT,
-                                           ICON_ERASER, ICON_DIAMOND,   ICON_HIGHLIGHTER};
+    static const Icon icons[TOOL_COUNT] = {ICON_SELECT,  ICON_RECTANGLE,  ICON_ELLIPSE, ICON_ARROW,
+                                           ICON_PEN,     ICON_LASER,      ICON_TEXT,    ICON_ERASER,
+                                           ICON_DIAMOND, ICON_HIGHLIGHTER};
     return (unsigned)tool < TOOL_COUNT ? icons[tool] : ICON_NONE;
 }

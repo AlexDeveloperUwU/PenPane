@@ -17,7 +17,6 @@ typedef enum ElementType {
     ELEMENT_RECTANGLE,
     ELEMENT_ELLIPSE,
     ELEMENT_DIAMOND,
-    ELEMENT_ARROW,
     ELEMENT_LINE,
     ELEMENT_PEN,
     ELEMENT_TEXT
@@ -33,8 +32,9 @@ typedef struct PenPoint {
 /**
  * @brief A drawing element.
  *
- * Rectangles, ellipses and diamonds use from and to as opposite corners of their box. Lines and arrows use
- * them as the two endpoints. Text uses from as the top-left origin. Pen strokes use the points array.
+ * Rectangles, ellipses and diamonds use from and to as opposite corners of their box. Lines, with or without
+ * arrowheads, use them as the two endpoints. Text uses from as the top-left origin. Pen strokes use the
+ * points array.
  */
 typedef struct Element {
     ElementType type;

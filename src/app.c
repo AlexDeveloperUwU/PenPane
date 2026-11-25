@@ -342,9 +342,6 @@ static unsigned sections_for_state(void)
     case TOOL_DIAMOND:
         type = ELEMENT_DIAMOND;
         break;
-    case TOOL_ARROW:
-        type = ELEMENT_ARROW;
-        break;
     case TOOL_LINE:
         type = ELEMENT_LINE;
         break;
@@ -367,11 +364,9 @@ static unsigned sections_for_state(void)
     case ELEMENT_DIAMOND:
         return UI_SECTION_STROKE | UI_SECTION_FILL | UI_SECTION_FILL_STYLE | UI_SECTION_WIDTH |
                UI_SECTION_STROKE_STYLE | UI_SECTION_OPACITY;
-    case ELEMENT_ARROW:
+    case ELEMENT_LINE:
         return UI_SECTION_STROKE | UI_SECTION_WIDTH | UI_SECTION_STROKE_STYLE | UI_SECTION_ARROWHEADS |
                UI_SECTION_OPACITY;
-    case ELEMENT_LINE:
-        return UI_SECTION_STROKE | UI_SECTION_WIDTH | UI_SECTION_STROKE_STYLE | UI_SECTION_OPACITY;
     case ELEMENT_PEN:
         if (selection && app.controller.tool == TOOL_SELECT && selection->style.highlighter) {
             return UI_SECTION_STROKE | UI_SECTION_WIDTH | UI_SECTION_OPACITY;
@@ -1018,7 +1013,6 @@ static void perform_action(Action action)
     case ACTION_TOOL_SELECT:
     case ACTION_TOOL_RECTANGLE:
     case ACTION_TOOL_ELLIPSE:
-    case ACTION_TOOL_ARROW:
     case ACTION_TOOL_LINE:
     case ACTION_TOOL_PEN:
     case ACTION_TOOL_LASER:
@@ -1026,9 +1020,8 @@ static void perform_action(Action action)
     case ACTION_TOOL_ERASER:
     case ACTION_TOOL_DIAMOND:
     case ACTION_TOOL_HIGHLIGHTER: {
-        static const Tool MAP[] = {TOOL_SELECT, TOOL_RECTANGLE, TOOL_ELLIPSE,    TOOL_ARROW,
-                                   TOOL_LINE,   TOOL_PEN,       TOOL_LASER,      TOOL_TEXT,
-                                   TOOL_ERASER, TOOL_DIAMOND,   TOOL_HIGHLIGHTER};
+        static const Tool MAP[] = {TOOL_SELECT, TOOL_RECTANGLE, TOOL_ELLIPSE, TOOL_LINE,    TOOL_PEN,
+                                   TOOL_LASER,  TOOL_TEXT,      TOOL_ERASER,  TOOL_DIAMOND, TOOL_HIGHLIGHTER};
         select_tool(MAP[action - ACTION_TOOL_SELECT]);
         break;
     }

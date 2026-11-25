@@ -19,8 +19,7 @@ The application starts on the select tool, so nothing is drawn until you choose 
 | Rectangle | R | Shift makes a square |
 | Ellipse | O | Shift makes a circle |
 | Diamond | D | Shift makes an equal-sided diamond |
-| Arrow | A | Shift snaps to 15 degrees; the properties panel chooses one head or two |
-| Line | L | Shift snaps to 15 degrees |
+| Line and arrow | L | Shift snaps to 15 degrees; the properties panel chooses no head, one head or two |
 | Pen | P or X | pressure when the tablet reports it, speed based otherwise |
 | Laser | K | fading red trail, leaves nothing behind; after you lift the pen every stroke fades tail first, short ones too |
 | Text | T | Enter adds a line, Esc finishes |

@@ -32,7 +32,7 @@ Style style_default(void)
                    STROKE_SOLID,
                    true,
                    TEXT_FACE_HANDWRITTEN,
-                   ARROW_HEAD_END,
+                   ARROW_HEAD_NONE,
                    false,
                    FONT_SIZES[1],
                    CORNERS_ROUND,
