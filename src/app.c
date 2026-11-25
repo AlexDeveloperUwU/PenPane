@@ -317,6 +317,17 @@ static bool create_overlay(void)
 }
 
 /**
+ * @brief Gives the font sections for a selected shape that carries a text label.
+ * @param selection Selected element, or NULL.
+ * @return UI_SECTION_FONT and UI_SECTION_FONT_SIZE, or 0.
+ */
+static unsigned label_sections(const Element *selection)
+{
+    bool labelled = selection && element_is_shape(selection) && selection->text && selection->text[0];
+    return labelled ? UI_SECTION_FONT | UI_SECTION_FONT_SIZE : 0;
+}
+
+/**
  * @brief Computes which property sections apply to the current tool and selection.
  * @return Bitmask of UI_SECTION_* values.
  */
@@ -359,11 +370,11 @@ static unsigned sections_for_state(void)
     switch (type) {
     case ELEMENT_RECTANGLE:
         return UI_SECTION_STROKE | UI_SECTION_FILL | UI_SECTION_FILL_STYLE | UI_SECTION_WIDTH |
-               UI_SECTION_STROKE_STYLE | UI_SECTION_CORNERS | UI_SECTION_OPACITY;
+               UI_SECTION_STROKE_STYLE | UI_SECTION_CORNERS | UI_SECTION_OPACITY | label_sections(selection);
     case ELEMENT_ELLIPSE:
     case ELEMENT_DIAMOND:
         return UI_SECTION_STROKE | UI_SECTION_FILL | UI_SECTION_FILL_STYLE | UI_SECTION_WIDTH |
-               UI_SECTION_STROKE_STYLE | UI_SECTION_OPACITY;
+               UI_SECTION_STROKE_STYLE | UI_SECTION_OPACITY | label_sections(selection);
     case ELEMENT_LINE:
         return UI_SECTION_STROKE | UI_SECTION_WIDTH | UI_SECTION_STROKE_STYLE | UI_SECTION_ARROWHEADS |
                UI_SECTION_OPACITY;

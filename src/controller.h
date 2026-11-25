@@ -37,7 +37,14 @@ typedef enum Interaction {
     INTERACTION_LASER
 } Interaction;
 
-/** @brief Tool controller state. */
+/**
+ * @brief Tool controller state.
+ *
+ * While editingText is set, typed characters go to the draft element, or, when editIndex is not negative, to
+ * the label of the scene element at that index (textBefore holds its copy from before the edit).
+ * lastDownMs, lastDownPosition and hasLastDown remember the previous pointer press for double click
+ * detection.
+ */
 typedef struct Controller {
     Scene *scene;
     Canvas *canvas;
@@ -64,6 +71,12 @@ typedef struct Controller {
     bool laserDotVisible;
     Point laserDot;
     bool editingText;
+    int editIndex;
+    Element textBefore;
+    bool hasTextBefore;
+    uint32_t lastDownMs;
+    Point lastDownPosition;
+    bool hasLastDown;
     Dirty repaint;
     Dirty direct;
     bool toolFinished;

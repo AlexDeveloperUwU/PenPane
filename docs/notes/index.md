@@ -61,3 +61,4 @@ One note per non-obvious decision, written from `_template.md`.
 | [0093](0093-gpl-3-or-later-licence.md) | PenPane is licensed under GPL-3.0-or-later |
 | [0094](0094-hatch-fills-are-stripes-cut-from-the-fill-mask.md) | Hatch fills are stripes cut from the fill mask |
 | [0095](0095-line-and-arrow-are-one-tool.md) | Line and arrow are one tool |
+| [0096](0096-shape-labels-edit-in-place.md) | Shape labels are edited in place and opened by the controller |

@@ -332,6 +332,72 @@ static void test_text_editing(void)
 }
 
 /**
+ * @brief Types a string into the text being edited.
+ * @param fixture Fixture to drive.
+ * @param text Characters to type.
+ */
+static void type_text(Fixture *fixture, const wchar_t *text)
+{
+    for (const wchar_t *c = text; *c; c++) {
+        assert(controller_text_input(&fixture->controller, *c));
+    }
+}
+
+/**
+ * @brief The text tool attaches typed text to the shape under the pointer, and the edit is one undo step.
+ */
+static void test_text_in_shape_with_text_tool(void)
+{
+    Fixture fixture;
+    fixture_init(&fixture);
+    draw_rectangle(&fixture, 100, 100, 300, 200);
+    controller_set_tool(&fixture.controller, TOOL_TEXT);
+    PointerSample down = sample_at(&fixture, 200, 150, false);
+    controller_pointer_down(&fixture.controller, &down);
+    assert(controller_is_busy(&fixture.controller) && fixture.scene.count == 1);
+    type_text(&fixture, L"Hi");
+    controller_text_commit(&fixture.controller);
+    assert(fixture.scene.count == 1 && !controller_is_busy(&fixture.controller));
+    assert(wcscmp(fixture.scene.items[0].text, L"Hi") == 0);
+    assert(scene_undo(&fixture.scene));
+    assert(!fixture.scene.items[0].text || fixture.scene.items[0].text[0] == L'\0');
+    assert(scene_redo(&fixture.scene) && wcscmp(fixture.scene.items[0].text, L"Hi") == 0);
+    PointerSample outside = sample_at(&fixture, 500, 400, false);
+    controller_pointer_down(&fixture.controller, &outside);
+    controller_text_commit(&fixture.controller);
+    assert(fixture.scene.count == 1);
+    fixture_destroy(&fixture);
+}
+
+/**
+ * @brief A quick second press with the select tool starts editing the shape's label; a slow one does not.
+ */
+static void test_text_in_shape_with_double_click(void)
+{
+    Fixture fixture;
+    fixture_init(&fixture);
+    draw_rectangle(&fixture, 100, 100, 300, 200);
+    controller_set_tool(&fixture.controller, TOOL_SELECT);
+    PointerSample first = sample_at(&fixture, 200, 150, false);
+    controller_pointer_down(&fixture.controller, &first);
+    controller_pointer_up(&fixture.controller, &first);
+    PointerSample slow = {{200, 150}, -1.0f, fixture.clock + 2000, false};
+    controller_pointer_down(&fixture.controller, &slow);
+    controller_pointer_up(&fixture.controller, &slow);
+    assert(!controller_is_busy(&fixture.controller));
+    PointerSample quick = {{201, 150}, -1.0f, slow.timeMs + 100, false};
+    controller_pointer_down(&fixture.controller, &quick);
+    assert(controller_is_busy(&fixture.controller));
+    type_text(&fixture, L"A\rB");
+    controller_text_commit(&fixture.controller);
+    assert(wcscmp(fixture.scene.items[0].text, L"A\nB") == 0);
+    PointerSample again = {{200, 150}, -1.0f, quick.timeMs + 100, false};
+    controller_pointer_down(&fixture.controller, &again);
+    assert(!controller_is_busy(&fixture.controller));
+    fixture_destroy(&fixture);
+}
+
+/**
  * @brief The laser leaves no element in the scene and its trail dies out, stopping the animation.
  */
 static void test_laser_is_transient(void)
@@ -477,6 +543,8 @@ int main(void)
     test_text_editing();
     test_laser_is_transient();
     test_style_change_undo();
+    test_text_in_shape_with_text_tool();
+    test_text_in_shape_with_double_click();
     printf("controller tests passed\n");
     return 0;
 }

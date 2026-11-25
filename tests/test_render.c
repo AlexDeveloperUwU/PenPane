@@ -119,8 +119,43 @@ static void test_line_arrowheads(void)
     assert(end && start);
 }
 
+/**
+ * @brief A shape with text draws ink in the middle of its box, and its bounds include the label.
+ */
+static void test_shape_label(void)
+{
+    Canvas canvas;
+    assert(canvas_create(&canvas, CANVAS_SIZE, CANVAS_SIZE));
+    Style style = style_default();
+    style.fontSize = 36;
+    Element element = element_make(ELEMENT_ELLIPSE, &style);
+    element.from = (Point){20.0f, 20.0f};
+    element.to = (Point){180.0f, 180.0f};
+    assert(element_set_text(&element, L"WWWW"));
+    RECT clip = canvas_area(&canvas);
+    render_element(&canvas, &element, &clip);
+    int inked = 0;
+    for (int y = 80; y < 120; y++) {
+        for (int x = 60; x < 140; x++) {
+            inked += (canvas.pixels[y * CANVAS_SIZE + x] >> 24) != 0;
+        }
+    }
+    assert(inked > 50);
+    Element small = element_make(ELEMENT_RECTANGLE, &style);
+    small.from = (Point){90.0f, 90.0f};
+    small.to = (Point){110.0f, 110.0f};
+    RECT withoutLabel = element_bounds(&small);
+    assert(element_set_text(&small, L"A long label that overflows the shape"));
+    RECT withLabel = element_bounds(&small);
+    assert(withLabel.left < withoutLabel.left && withLabel.right > withoutLabel.right);
+    element_free(&element);
+    element_free(&small);
+    canvas_destroy(&canvas);
+}
+
 int main(void)
 {
+    test_shape_label();
     test_line_arrowheads();
     test_rectangle_corners();
     test_fill_styles_render();

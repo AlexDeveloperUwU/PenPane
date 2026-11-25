@@ -6,6 +6,7 @@
 #include <string.h>
 
 #include "hittest.h"
+#include "shape_text.h"
 
 #define SELECT_TOLERANCE 6.0f
 #define ERASE_TOLERANCE 3.0f
@@ -36,6 +37,7 @@ void controller_init(Controller *controller)
     controller->tool = TOOL_PEN;
     controller->style = style_default();
     controller->selected = -1;
+    controller->editIndex = -1;
     controller->handle = HIT_HANDLE_NONE;
     trail_init(&controller->laser, LASER_RADIUS, LASER_LIFETIME_MS, COLOR_LASER, true);
     trail_init(&controller->eraser, ERASER_RADIUS, ERASER_LIFETIME_MS, ERASER_COLOR, false);
@@ -490,6 +492,9 @@ void controller_pointer_down(Controller *controller, const PointerSample *sample
     if (controller->editingText) {
         controller_text_commit(controller);
     }
+    if (shape_text_pointer_down(controller, sample)) {
+        return;
+    }
     switch (controller->tool) {
     case TOOL_SELECT:
         select_down(controller, sample);
@@ -688,12 +693,30 @@ void controller_apply_style_to_selection(Controller *controller, const Style *st
     scene_commit(controller->scene);
 }
 
+/**
+ * @brief Finds the element that typed text goes into.
+ * @param controller Controller to query.
+ * @return The scene element whose label is edited in place, the text draft, or NULL when not editing. The
+ *         draft pointer is only handed to callers that already hold the controller mutably or only read it.
+ */
+static Element *edit_target(const Controller *controller)
+{
+    if (!controller->editingText) {
+        return NULL;
+    }
+    if (controller->editIndex >= 0) {
+        bool valid = controller->scene && controller->editIndex < controller->scene->count;
+        return valid ? &controller->scene->items[controller->editIndex] : NULL;
+    }
+    return controller->hasDraft ? (Element *)&controller->draft : NULL;
+}
+
 bool controller_text_input(Controller *controller, wchar_t character)
 {
-    if (!controller->editingText || !controller->hasDraft) {
+    Element *draft = edit_target(controller);
+    if (!draft) {
         return false;
     }
-    Element *draft = &controller->draft;
     size_t length = wcslen(draft->text);
     wchar_t *buffer = malloc((length + 2) * sizeof(wchar_t));
     if (!buffer) {
@@ -721,7 +744,7 @@ bool controller_text_input(Controller *controller, wchar_t character)
         free(buffer);
         return false;
     }
-    repaint_add(controller, rect_inflate(controller->draftBounds, 8));
+    repaint_add(controller, rect_inflate(element_bounds(draft), 8));
     bool stored = element_set_text(draft, buffer);
     free(buffer);
     if (!stored) {
@@ -735,6 +758,10 @@ bool controller_text_input(Controller *controller, wchar_t character)
 void controller_text_commit(Controller *controller)
 {
     if (!controller->editingText) {
+        return;
+    }
+    if (controller->editIndex >= 0) {
+        shape_text_commit(controller);
         return;
     }
     controller->editingText = false;
@@ -769,9 +796,10 @@ void controller_draw_overlays(const Controller *controller, Canvas *canvas, cons
 {
     if (controller->hasDraft) {
         render_element(canvas, &controller->draft, clip);
-        if (controller->editingText) {
-            render_text_caret(canvas, &controller->draft, clip);
-        }
+    }
+    const Element *target = edit_target(controller);
+    if (target) {
+        render_text_caret(canvas, target, clip);
     }
     if (controller->tool == TOOL_SELECT && controller->scene && controller->selected >= 0 &&
         controller->selected < controller->scene->count && controller->interaction != INTERACTION_ERASE) {

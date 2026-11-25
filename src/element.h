@@ -144,4 +144,20 @@ void element_remap(Element *element, FloatRect oldBox, FloatRect newBox);
  */
 bool element_is_filled(const Element *element);
 
+/**
+ * @brief Reports whether an element is a closed shape that can carry a text label.
+ * @param element Element to test.
+ * @return true for rectangles, ellipses and diamonds.
+ */
+bool element_is_shape(const Element *element);
+
+/**
+ * @brief Gives the top-left corner of a shape's label, which is centered in the shape's box.
+ *
+ * The label uses the shape's own font face and size (style.face, style.fontSize) with centered lines.
+ * @param element Rectangle, ellipse or diamond; its text may be empty.
+ * @return Top-left corner of the label's text block in canvas pixels.
+ */
+Point element_shape_text_origin(const Element *element);
+
 #endif

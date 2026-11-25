@@ -11,6 +11,7 @@
 #define ELEMENT_BOUNDS_MARGIN 3.0f
 #define PEN_MAX_RADIUS_FACTOR 12.0f
 #define SELECTION_PADDING 3.5f
+#define SHAPE_LABEL_MARGIN 4.0f
 
 Element element_make(ElementType type, const Style *style)
 {
@@ -125,6 +126,38 @@ FloatRect element_box(const Element *element)
     }
 }
 
+/**
+ * @brief Pixel bounds of the label of a shape, which may be larger than the shape.
+ * @param element Rectangle, ellipse or diamond with text.
+ * @return Rectangle with a margin for antialiasing.
+ */
+static RECT shape_label_bounds(const Element *element)
+{
+    int width = 0;
+    int height = 0;
+    text_measure(text_font_for_face(element->style.face), element->text, element->style.fontSize, &width,
+                 &height);
+    Point origin = element_shape_text_origin(element);
+    return rect_from_float((FloatRect){origin.x, origin.y, origin.x + (float)width, origin.y + (float)height},
+                           SHAPE_LABEL_MARGIN);
+}
+
+/**
+ * @brief Smallest rectangle containing two rectangles.
+ * @param a First rectangle.
+ * @param b Second rectangle.
+ * @return Union of both.
+ */
+static RECT rect_union(RECT a, RECT b)
+{
+    RECT out = a;
+    out.left = b.left < a.left ? b.left : a.left;
+    out.top = b.top < a.top ? b.top : a.top;
+    out.right = b.right > a.right ? b.right : a.right;
+    out.bottom = b.bottom > a.bottom ? b.bottom : a.bottom;
+    return out;
+}
+
 RECT element_bounds(const Element *element)
 {
     float margin = element->style.width + ELEMENT_BOUNDS_MARGIN;
@@ -135,7 +168,11 @@ RECT element_bounds(const Element *element)
     } else if (element->type == ELEMENT_TEXT) {
         margin = 4.0f;
     }
-    return rect_from_float(element_box(element), margin);
+    RECT bounds = rect_from_float(element_box(element), margin);
+    if (element_is_shape(element) && element->text && element->text[0]) {
+        bounds = rect_union(bounds, shape_label_bounds(element));
+    }
+    return bounds;
 }
 
 void element_translate(Element *element, float dx, float dy)
@@ -182,9 +219,24 @@ void element_remap(Element *element, FloatRect oldBox, FloatRect newBox)
     }
 }
 
+bool element_is_shape(const Element *element)
+{
+    return element->type == ELEMENT_RECTANGLE || element->type == ELEMENT_ELLIPSE ||
+           element->type == ELEMENT_DIAMOND;
+}
+
 bool element_is_filled(const Element *element)
 {
-    return (element->type == ELEMENT_RECTANGLE || element->type == ELEMENT_ELLIPSE ||
-            element->type == ELEMENT_DIAMOND) &&
-           (element->style.fill >> 24) != 0;
+    return element_is_shape(element) && (element->style.fill >> 24) != 0;
+}
+
+Point element_shape_text_origin(const Element *element)
+{
+    int width = 0;
+    int height = 0;
+    text_measure(text_font_for_face(element->style.face), element->text ? element->text : L"",
+                 element->style.fontSize, &width, &height);
+    FloatRect box = element_box(element);
+    return (Point){(box.left + box.right - (float)width) * 0.5f,
+                   (box.top + box.bottom - (float)height) * 0.5f};
 }

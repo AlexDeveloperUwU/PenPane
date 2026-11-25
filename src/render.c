@@ -399,6 +399,32 @@ static void render_text(Canvas *canvas, const Element *element, RECT area)
     mask_destroy(&mask);
 }
 
+/**
+ * @brief Renders the centered text label of a rectangle, ellipse or diamond.
+ * @param canvas Target canvas.
+ * @param element Shape element.
+ * @param area Pixel work area.
+ */
+static void render_shape_label(Canvas *canvas, const Element *element, RECT area)
+{
+    if (!element->text || !element->text[0]) {
+        return;
+    }
+    Point origin = element_shape_text_origin(element);
+    Mask mask;
+    if (!text_make_mask_aligned(&mask, text_font_for_face(element->style.face), element->text,
+                                element->style.fontSize, (int)floorf(origin.x), (int)floorf(origin.y),
+                                TEXT_ALIGN_CENTER)) {
+        return;
+    }
+    RECT textArea = {mask.x, mask.y, mask.x + mask.width, mask.y + mask.height};
+    RECT visible;
+    if (rect_intersect(textArea, area, &visible)) {
+        mask_blend(canvas, &mask, with_opacity(element->style.stroke, element));
+    }
+    mask_destroy(&mask);
+}
+
 void render_element(Canvas *canvas, const Element *element, const RECT *clip)
 {
     RECT canvasRect = canvas_area(canvas);
@@ -426,6 +452,9 @@ void render_element(Canvas *canvas, const Element *element, const RECT *clip)
     case ELEMENT_TEXT:
         render_text(canvas, element, area);
         break;
+    }
+    if (element_is_shape(element)) {
+        render_shape_label(canvas, element, area);
     }
 }
 
@@ -522,13 +551,17 @@ void render_text_caret(Canvas *canvas, const Element *element, const RECT *clip)
     const wchar_t *text = element->text ? element->text : L"";
     const wchar_t *lastLine = wcsrchr(text, L'\n');
     lastLine = lastLine ? lastLine + 1 : text;
+    bool label = element_is_shape(element);
+    Point origin = label ? element_shape_text_origin(element) : element->from;
+    int fontSize = label ? element->style.fontSize : element->fontSize;
+    int align = label ? TEXT_ALIGN_CENTER : (int)element->style.align;
     TextFont font = text_font_for_face(element->style.face);
-    text_measure(font, text, element->fontSize, &width, &height);
+    text_measure(font, text, fontSize, &width, &height);
     int lineWidth = 0;
     int lineHeight = 0;
-    text_measure(font, lastLine, element->fontSize, &lineWidth, &lineHeight);
-    int lineTop = (int)element->from.y + height - lineHeight;
-    float lineLeft = element->from.x + (float)text_line_offset(width, lineWidth, element->style.align);
+    text_measure(font, lastLine, fontSize, &lineWidth, &lineHeight);
+    int lineTop = (int)origin.y + height - lineHeight;
+    float lineLeft = origin.x + (float)text_line_offset(width, lineWidth, align);
     Point top = {lineLeft + (float)lineWidth + 1.0f, (float)lineTop + 2.0f};
     Point bottom = {top.x, (float)(lineTop + (lineHeight > 4 ? lineHeight - 2 : lineHeight))};
     RECT area = {(int)top.x - 3, lineTop - 2, (int)top.x + 4, lineTop + lineHeight + 2};
