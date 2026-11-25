@@ -2232,9 +2232,9 @@ int app_run(HINSTANCE instance)
     app.ui = ui_create(instance, on_ui_event, NULL, &app.config.ui);
     if (app.ui) {
         ui_set_capture_excluded(app.ui, app.config.ui.excludeFromCapture);
+        app_sync_ui();
         ui_place_defaults(app.ui, app.monitors[panel_monitor()].work, false);
         ui_set_visible(app.ui, true, false);
-        app_sync_ui();
     } else {
         notify(L"PenPane", L"The toolbar could not be created. Use the tray menu instead.");
     }

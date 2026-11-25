@@ -602,12 +602,26 @@ static void island_set_hover(Island *island, int hover)
 }
 
 /**
+ * @brief Keeps the toolbar centered on the same point when tools are shown or hidden and its width changes.
+ * @param island Toolbar island that is open; its new width is already stored in island->layout.
+ * @param previousWidth Width of the toolbar before the change.
+ */
+static void island_keep_center(Island *island, int previousWidth)
+{
+    island->x += (previousWidth - island->layout.width) / 2;
+    if (island->ui->settings.placement[island->id].set) {
+        emit_moved(island);
+    }
+}
+
+/**
  * @brief Applies the model to one island, repainting only the items that changed.
  * @param island Island to update.
  */
 static void island_update(Island *island)
 {
     float previousScale = island->scale;
+    int previousWidth = island->layout.width;
     island_read_scale(island);
     UiLayout next;
     island_build_layout(island, &next);
@@ -623,6 +637,8 @@ static void island_update(Island *island)
         if (island->shown) {
             if (UI_PANEL_IS_DIALOG(island->id) && sizeChanged) {
                 island_center_dialog(island);
+            } else if (island->id == PANEL_TOOLBAR && !island->collapsed && previousScale == island->scale) {
+                island_keep_center(island, previousWidth);
             }
             island_apply_geometry(island);
         }
