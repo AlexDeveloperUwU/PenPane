@@ -4,6 +4,7 @@
 #include <math.h>
 #include <string.h>
 
+#include "hatch.h"
 #include "mask_scratch.h"
 #include "pen.h"
 #include "text.h"
@@ -263,6 +264,7 @@ static void render_rectangle(Canvas *canvas, const Element *element, RECT area)
     Mask mask;
     if (element_is_filled(element) && mask_scratch_acquire(&mask, area)) {
         mask_add_polygon_fill(&mask, points, count - 1);
+        mask_apply_hatch(&mask, (Point){box.left, box.top}, element->style.fillStyle, element->style.width);
         mask_blend(canvas, &mask, with_opacity(element->style.fill, element));
     }
     if (!mask_scratch_acquire(&mask, area)) {
@@ -290,6 +292,7 @@ static void render_ellipse(Canvas *canvas, const Element *element, RECT area)
     }
     if (element_is_filled(element) && mask_scratch_acquire(&mask, area)) {
         mask_add_ellipse_fill(&mask, center, rx, ry);
+        mask_apply_hatch(&mask, (Point){box.left, box.top}, element->style.fillStyle, element->style.width);
         mask_blend(canvas, &mask, with_opacity(element->style.fill, element));
     }
     if (!mask_scratch_acquire(&mask, area)) {
@@ -344,6 +347,7 @@ static void render_diamond(Canvas *canvas, const Element *element, RECT area)
     Mask mask;
     if (element_is_filled(element) && mask_scratch_acquire(&mask, area)) {
         mask_add_polygon_fill(&mask, points, 4);
+        mask_apply_hatch(&mask, (Point){box.left, box.top}, element->style.fillStyle, element->style.width);
         mask_blend(canvas, &mask, with_opacity(element->style.fill, element));
     }
     if (!mask_scratch_acquire(&mask, area)) {

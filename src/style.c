@@ -25,9 +25,18 @@ const int FONT_SIZES[FONT_SIZE_COUNT] = {16, 20, 28, 36};
 
 Style style_default(void)
 {
-    Style style = {
-        STROKE_PALETTE[0], 0,     WIDTH_PRESETS[1], 1.0f,         STROKE_SOLID, true, TEXT_FACE_HANDWRITTEN,
-        ARROW_HEAD_END,    false, FONT_SIZES[1],    CORNERS_ROUND};
+    Style style = {STROKE_PALETTE[0],
+                   0,
+                   WIDTH_PRESETS[1],
+                   1.0f,
+                   STROKE_SOLID,
+                   true,
+                   TEXT_FACE_HANDWRITTEN,
+                   ARROW_HEAD_END,
+                   false,
+                   FONT_SIZES[1],
+                   CORNERS_ROUND,
+                   FILL_STYLE_SOLID};
     return style;
 }
 

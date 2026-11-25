@@ -638,6 +638,24 @@ static bool draw_icon(Pen *pen, Icon icon)
         poly(pen, shape, 7, false);
         break;
     }
+    case ICON_FILL_SOLID: {
+        static const float shape[8] = {4.0f, 4.0f, 12.0f, 4.0f, 12.0f, 12.0f, 4.0f, 12.0f};
+        poly_fill(pen, shape, 4);
+        box(pen, 3.0f, 3.0f, 10.0f, 10.0f, 1.0f);
+        break;
+    }
+    case ICON_FILL_HACHURE:
+    case ICON_FILL_CROSS_HATCH:
+        box(pen, 3.0f, 3.0f, 10.0f, 10.0f, 1.0f);
+        line(pen, 3.0f, 8.0f, 8.0f, 3.0f);
+        line(pen, 3.0f, 13.0f, 13.0f, 3.0f);
+        line(pen, 8.0f, 13.0f, 13.0f, 8.0f);
+        if (icon == ICON_FILL_CROSS_HATCH) {
+            line(pen, 3.0f, 8.0f, 8.0f, 13.0f);
+            line(pen, 3.0f, 3.0f, 13.0f, 13.0f);
+            line(pen, 8.0f, 3.0f, 13.0f, 8.0f);
+        }
+        break;
     case ICON_CORNER_SHARP: {
         static const float shape[6] = {3.0f, 13.0f, 3.0f, 3.0f, 13.0f, 3.0f};
         poly(pen, shape, 3, false);

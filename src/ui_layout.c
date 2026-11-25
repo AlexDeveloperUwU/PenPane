@@ -708,6 +708,14 @@ static void build_properties(UiLayout *layout, const UiModel *model, bool pinned
                      UI_EVENT_SET_FILL);
         y += cell + gap;
     }
+    if (model->sections & UI_SECTION_FILL_STYLE) {
+        static const Icon fillIcons[FILL_STYLE_COUNT] = {ICON_FILL_SOLID, ICON_FILL_HACHURE,
+                                                         ICON_FILL_CROSS_HATCH};
+        y = title_add(layout, scale, y, L"Fill style");
+        choices_add(layout, scale, y, fillIcons, FILL_STYLE_COUNT, (int)style->fillStyle,
+                    UI_EVENT_SET_FILL_STYLE);
+        y += ui_px(scale, SMALL_BUTTON) + gap;
+    }
     if (model->sections & UI_SECTION_WIDTH) {
         y = title_add(layout, scale, y, L"Stroke width");
         bool variable = (model->sections & UI_SECTION_PRESSURE) != 0;

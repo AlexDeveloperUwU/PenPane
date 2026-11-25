@@ -41,8 +41,9 @@ static void test_properties_labels_do_not_overlap(void)
     memset(&model, 0, sizeof model);
     model.style = style_default();
     model.sections = UI_SECTION_STROKE | UI_SECTION_FILL | UI_SECTION_WIDTH | UI_SECTION_STROKE_STYLE |
-                     UI_SECTION_CORNERS | UI_SECTION_OPACITY;
+                     UI_SECTION_CORNERS | UI_SECTION_FILL_STYLE | UI_SECTION_OPACITY;
     ui_layout_build(PANEL_PROPERTIES, &model, false, 1.0f, &layout);
+    assert(count_labels(&layout, L"Fill style") == 1);
     assert(count_labels(&layout, L"Opacity") == 1);
     assert(count_labels(&layout, L"Corners") == 1);
     for (int i = 0; i < layout.count; i++) {

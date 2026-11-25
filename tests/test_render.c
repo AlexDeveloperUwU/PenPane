@@ -39,9 +39,53 @@ static void test_rectangle_corners(void)
     assert(corner_inked(CORNERS_SHARP));
 }
 
+/**
+ * @brief Counts transparent and inked pixels along a row inside a filled, hatched rectangle.
+ * @param fillStyle Fill style of the rectangle.
+ * @param empty Receives the number of transparent pixels on the row.
+ * @param inked Receives the number of inked pixels on the row.
+ */
+static void scan_fill_row(FillStyle fillStyle, int *empty, int *inked)
+{
+    Canvas canvas;
+    assert(canvas_create(&canvas, CANVAS_SIZE, CANVAS_SIZE));
+    Style style = style_default();
+    style.fill = FILL_PALETTE[1];
+    style.fillStyle = fillStyle;
+    Element element = element_make(ELEMENT_RECTANGLE, &style);
+    element.from = (Point){20.0f, 20.0f};
+    element.to = (Point){180.0f, 180.0f};
+    RECT clip = canvas_area(&canvas);
+    render_element(&canvas, &element, &clip);
+    *empty = 0;
+    *inked = 0;
+    for (int x = 40; x < 160; x++) {
+        uint32_t alpha = canvas.pixels[100 * CANVAS_SIZE + x] >> 24;
+        *empty += alpha == 0;
+        *inked += alpha != 0;
+    }
+    canvas_destroy(&canvas);
+}
+
+/**
+ * @brief Solid fills cover the interior; hachure and cross-hatch leave gaps between lines.
+ */
+static void test_fill_styles_render(void)
+{
+    int empty;
+    int inked;
+    scan_fill_row(FILL_STYLE_SOLID, &empty, &inked);
+    assert(empty == 0);
+    scan_fill_row(FILL_STYLE_HACHURE, &empty, &inked);
+    assert(empty > 0 && inked > 0);
+    scan_fill_row(FILL_STYLE_CROSS_HATCH, &empty, &inked);
+    assert(empty > 0 && inked > 0);
+}
+
 int main(void)
 {
     test_rectangle_corners();
+    test_fill_styles_render();
     printf("render tests passed\n");
     return 0;
 }

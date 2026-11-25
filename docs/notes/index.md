@@ -59,3 +59,4 @@ One note per non-obvious decision, written from `_template.md`.
 | [0091](0091-project-renamed-to-penpane.md) | The project is renamed from Ink to PenPane |
 | [0092](0092-legacy-ink-ini-is-adopted-once.md) | A legacy ink.ini is adopted once |
 | [0093](0093-gpl-3-or-later-licence.md) | PenPane is licensed under GPL-3.0-or-later |
+| [0094](0094-hatch-fills-are-stripes-cut-from-the-fill-mask.md) | Hatch fills are stripes cut from the fill mask |

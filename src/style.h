@@ -26,6 +26,14 @@ typedef enum ArrowHeads { ARROW_HEAD_END, ARROW_HEAD_BOTH, ARROW_HEAD_COUNT } Ar
 /** @brief Corner shape of rectangles. */
 typedef enum Corners { CORNERS_ROUND, CORNERS_SHARP, CORNERS_COUNT } Corners;
 
+/** @brief How the background of a filled shape is drawn. */
+typedef enum FillStyle {
+    FILL_STYLE_SOLID,
+    FILL_STYLE_HACHURE,
+    FILL_STYLE_CROSS_HATCH,
+    FILL_STYLE_COUNT
+} FillStyle;
+
 /** @brief Typeface of text elements. */
 typedef enum TextFace {
     TEXT_FACE_HANDWRITTEN,
@@ -47,6 +55,7 @@ typedef struct Style {
     bool highlighter;
     int fontSize;
     Corners corners;
+    FillStyle fillStyle;
 } Style;
 
 /** @brief The five stroke preset colors in dark theme. */

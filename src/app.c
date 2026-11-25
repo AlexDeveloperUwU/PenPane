@@ -361,12 +361,12 @@ static unsigned sections_for_state(void)
     }
     switch (type) {
     case ELEMENT_RECTANGLE:
-        return UI_SECTION_STROKE | UI_SECTION_FILL | UI_SECTION_WIDTH | UI_SECTION_STROKE_STYLE |
-               UI_SECTION_CORNERS | UI_SECTION_OPACITY;
+        return UI_SECTION_STROKE | UI_SECTION_FILL | UI_SECTION_FILL_STYLE | UI_SECTION_WIDTH |
+               UI_SECTION_STROKE_STYLE | UI_SECTION_CORNERS | UI_SECTION_OPACITY;
     case ELEMENT_ELLIPSE:
     case ELEMENT_DIAMOND:
-        return UI_SECTION_STROKE | UI_SECTION_FILL | UI_SECTION_WIDTH | UI_SECTION_STROKE_STYLE |
-               UI_SECTION_OPACITY;
+        return UI_SECTION_STROKE | UI_SECTION_FILL | UI_SECTION_FILL_STYLE | UI_SECTION_WIDTH |
+               UI_SECTION_STROKE_STYLE | UI_SECTION_OPACITY;
     case ELEMENT_ARROW:
         return UI_SECTION_STROKE | UI_SECTION_WIDTH | UI_SECTION_STROKE_STYLE | UI_SECTION_ARROWHEADS |
                UI_SECTION_OPACITY;
@@ -1350,6 +1350,10 @@ static void on_ui_event(void *user, const UiEvent *event)
         break;
     case UI_EVENT_SET_CORNERS:
         style.corners = (Corners)event->index;
+        change_style(style);
+        break;
+    case UI_EVENT_SET_FILL_STYLE:
+        style.fillStyle = (FillStyle)event->index;
         change_style(style);
         break;
     case UI_EVENT_RESET_OPTIONS:
