@@ -746,6 +746,14 @@ static void build_properties(UiLayout *layout, const UiModel *model, bool pinned
         }
         y += size + gap;
     }
+    if (model->sections & UI_SECTION_TEXT_ALIGN) {
+        static const Icon alignIcons[TEXT_ALIGN_COUNT] = {ICON_ALIGN_LEFT, ICON_ALIGN_CENTER,
+                                                          ICON_ALIGN_RIGHT};
+        y = title_add(layout, scale, y, L"Text align");
+        choices_add(layout, scale, y, alignIcons, TEXT_ALIGN_COUNT, (int)style->align,
+                    UI_EVENT_SET_TEXT_ALIGN);
+        y += ui_px(scale, SMALL_BUTTON) + gap;
+    }
     if (model->sections & UI_SECTION_LASER) {
         y = title_add(layout, scale, y, L"Laser");
         choices_add(layout, scale, y, laserIcons, 2, model->laserPointer ? 1 : 0, UI_EVENT_SET_LASER_MODE);

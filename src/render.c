@@ -386,8 +386,9 @@ static void render_text(Canvas *canvas, const Element *element, RECT area)
         return;
     }
     Mask mask;
-    if (!text_make_mask(&mask, text_font_for_face(element->style.face), element->text, element->fontSize,
-                        (int)element->from.x, (int)element->from.y)) {
+    if (!text_make_mask_aligned(&mask, text_font_for_face(element->style.face), element->text,
+                                element->fontSize, (int)element->from.x, (int)element->from.y,
+                                element->style.align)) {
         return;
     }
     RECT textArea = {mask.x, mask.y, mask.x + mask.width, mask.y + mask.height};
@@ -528,7 +529,8 @@ void render_text_caret(Canvas *canvas, const Element *element, const RECT *clip)
     int lineHeight = 0;
     text_measure(font, lastLine, element->fontSize, &lineWidth, &lineHeight);
     int lineTop = (int)element->from.y + height - lineHeight;
-    Point top = {element->from.x + (float)lineWidth + 1.0f, (float)lineTop + 2.0f};
+    float lineLeft = element->from.x + (float)text_line_offset(width, lineWidth, element->style.align);
+    Point top = {lineLeft + (float)lineWidth + 1.0f, (float)lineTop + 2.0f};
     Point bottom = {top.x, (float)(lineTop + (lineHeight > 4 ? lineHeight - 2 : lineHeight))};
     RECT area = {(int)top.x - 3, lineTop - 2, (int)top.x + 4, lineTop + lineHeight + 2};
     RECT visible;

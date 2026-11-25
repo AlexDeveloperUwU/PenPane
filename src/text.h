@@ -50,6 +50,29 @@ void text_measure(TextFont font, const wchar_t *text, int pixelSize, int *width,
 bool text_make_mask(Mask *mask, TextFont font, const wchar_t *text, int pixelSize, int x, int y);
 
 /**
+ * @brief Rasterizes text like text_make_mask, aligning each line inside the width of the widest one.
+ * @param mask Receives a newly allocated mask; release with mask_destroy.
+ * @param font Font role.
+ * @param text Text to draw, lines separated by '\n'.
+ * @param pixelSize Font height in pixels.
+ * @param x Canvas x of the text block's left edge.
+ * @param y Canvas y of the text block's top edge.
+ * @param align Value of the TextAlign enum of style.h; out-of-range values align left.
+ * @return true on success, false for empty text or allocation failure.
+ */
+bool text_make_mask_aligned(Mask *mask, TextFont font, const wchar_t *text, int pixelSize, int x, int y,
+                            int align);
+
+/**
+ * @brief Gives the horizontal offset of a line inside a text block.
+ * @param blockWidth Width of the widest line.
+ * @param lineWidth Width of the line.
+ * @param align Value of the TextAlign enum of style.h; out-of-range values align left.
+ * @return Offset in pixels from the block's left edge to the line's left edge.
+ */
+int text_line_offset(int blockWidth, int lineWidth, int align);
+
+/**
  * @brief Releases cached GDI fonts and scratch surfaces.
  */
 void text_shutdown(void);

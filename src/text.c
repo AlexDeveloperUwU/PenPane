@@ -5,6 +5,8 @@
 #include <string.h>
 #include <windows.h>
 
+#include "style.h"
+
 #define FONT_CACHE_SIZE 16
 #define SURFACE_TRIM_BYTES (4 * 1024 * 1024)
 #define SURFACE_ROUNDING 64
@@ -266,7 +268,19 @@ void text_measure(TextFont font, const wchar_t *text, int pixelSize, int *width,
     SelectObject(g_surface.dc, previous);
 }
 
+int text_line_offset(int blockWidth, int lineWidth, int align)
+{
+    int spare = blockWidth > lineWidth ? blockWidth - lineWidth : 0;
+    return align == TEXT_ALIGN_CENTER ? spare / 2 : (align == TEXT_ALIGN_RIGHT ? spare : 0);
+}
+
 bool text_make_mask(Mask *mask, TextFont font, const wchar_t *text, int pixelSize, int x, int y)
+{
+    return text_make_mask_aligned(mask, font, text, pixelSize, x, y, TEXT_ALIGN_LEFT);
+}
+
+bool text_make_mask_aligned(Mask *mask, TextFont font, const wchar_t *text, int pixelSize, int x, int y,
+                            int align)
 {
     memset(mask, 0, sizeof *mask);
     HFONT handle = font_get(font, pixelSize);
@@ -292,7 +306,9 @@ bool text_make_mask(Mask *mask, TextFont font, const wchar_t *text, int pixelSiz
             int length;
             const wchar_t *next = line_next(cursor, &length);
             if (length > 0) {
-                TextOutW(g_surface.dc, 0, top, cursor, length);
+                SIZE extent = {0, 0};
+                GetTextExtentPoint32W(g_surface.dc, cursor, length, &extent);
+                TextOutW(g_surface.dc, text_line_offset(textWidth, extent.cx, align), top, cursor, length);
             }
             top += lineHeight;
             cursor = next;

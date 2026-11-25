@@ -36,7 +36,8 @@ Style style_default(void)
                    false,
                    FONT_SIZES[1],
                    CORNERS_ROUND,
-                   FILL_STYLE_SOLID};
+                   FILL_STYLE_SOLID,
+                   TEXT_ALIGN_LEFT};
     return style;
 }
 

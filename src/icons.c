@@ -656,6 +656,15 @@ static bool draw_icon(Pen *pen, Icon icon)
             line(pen, 8.0f, 3.0f, 13.0f, 8.0f);
         }
         break;
+    case ICON_ALIGN_LEFT:
+    case ICON_ALIGN_CENTER:
+    case ICON_ALIGN_RIGHT: {
+        float shortStart = icon == ICON_ALIGN_LEFT ? 2.8f : (icon == ICON_ALIGN_CENTER ? 5.0f : 7.2f);
+        line(pen, 2.8f, 4.0f, 13.2f, 4.0f);
+        line(pen, shortStart, 8.0f, shortStart + 6.0f, 8.0f);
+        line(pen, 2.8f, 12.0f, 13.2f, 12.0f);
+        break;
+    }
     case ICON_CORNER_SHARP: {
         static const float shape[6] = {3.0f, 13.0f, 3.0f, 3.0f, 13.0f, 3.0f};
         poly(pen, shape, 3, false);

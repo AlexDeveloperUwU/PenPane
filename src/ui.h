@@ -38,6 +38,7 @@
 #define UI_SECTION_FONT_SIZE 0x200u
 #define UI_SECTION_CORNERS 0x400u
 #define UI_SECTION_FILL_STYLE 0x800u
+#define UI_SECTION_TEXT_ALIGN 0x1000u
 
 /** @brief Characters of the text that names a tool's extra shortcut, for example "Ctrl+F15 x2". */
 #define UI_SHORTCUT_CHARS 32
@@ -117,7 +118,8 @@ typedef enum UiEventKind {
     UI_EVENT_SET_EXPORT_FULL_SCREEN,
     UI_EVENT_SET_FONT_SIZE,
     UI_EVENT_SET_CORNERS,
-    UI_EVENT_SET_FILL_STYLE
+    UI_EVENT_SET_FILL_STYLE,
+    UI_EVENT_SET_TEXT_ALIGN
 } UiEventKind;
 
 /**
@@ -134,6 +136,7 @@ typedef enum UiEventKind {
  *  - UI_EVENT_SET_FONT_SIZE: index is the preset index in FONT_SIZES of style.h.
  *  - UI_EVENT_SET_CORNERS: index is a Corners value.
  *  - UI_EVENT_SET_FILL_STYLE: index is a FillStyle value.
+ *  - UI_EVENT_SET_TEXT_ALIGN: index is a TextAlign value.
  *  - UI_EVENT_SET_LASER_MODE: index is 0 for the fading trail and 1 for the pointer dot.
  *  - UI_EVENT_TOOL_MOVE: tool is moved one place in the toolbar; index is -1 (earlier) or 1 (later).
  *  - UI_EVENT_TOOL_VISIBLE: tool is shown (index 1) or hidden (index 0) in the toolbar.

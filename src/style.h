@@ -34,6 +34,9 @@ typedef enum FillStyle {
     FILL_STYLE_COUNT
 } FillStyle;
 
+/** @brief Horizontal alignment of the lines of a text element. */
+typedef enum TextAlign { TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER, TEXT_ALIGN_RIGHT, TEXT_ALIGN_COUNT } TextAlign;
+
 /** @brief Typeface of text elements. */
 typedef enum TextFace {
     TEXT_FACE_HANDWRITTEN,
@@ -56,6 +59,7 @@ typedef struct Style {
     int fontSize;
     Corners corners;
     FillStyle fillStyle;
+    TextAlign align;
 } Style;
 
 /** @brief The five stroke preset colors in dark theme. */
