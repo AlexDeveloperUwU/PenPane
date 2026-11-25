@@ -17,6 +17,7 @@
 #define SWITCH_WIDTH 36
 #define SWITCH_HEIGHT 20
 #define SLIDER_HEIGHT 22
+#define OPACITY_VALUE_WIDTH 40
 #define SLIDER_THUMB_RADIUS 7
 #define GRIP_WIDTH 18
 #define BUTTON_GAP 2
@@ -764,8 +765,11 @@ static void build_properties(UiLayout *layout, const UiModel *model, bool pinned
         UiItem *label = layout->count < UI_MAX_ITEMS ? &layout->items[layout->count] : NULL;
         y = title_add(layout, scale, y, L"Opacity");
         if (label) {
-            UiItem *value = item_add(layout, ITEM_LABEL, label->rect.left, label->rect.top,
-                                     ui_px(scale, SECTION_INNER), ui_px(scale, TITLE_HEIGHT));
+            int valueWidth = ui_px(scale, OPACITY_VALUE_WIDTH);
+            int valueLeft = label->rect.right - valueWidth;
+            label->rect.right = valueLeft;
+            UiItem *value = item_add(layout, ITEM_LABEL, valueLeft, label->rect.top, valueWidth,
+                                     ui_px(scale, TITLE_HEIGHT));
             value->alignRight = true;
             value->color = COLOR_ICON;
             swprintf(value->text, UI_ITEM_TEXT_CHARS, L"%d", (int)lroundf(opacity * 100.0f));
