@@ -32,6 +32,14 @@
 #define SHORTCUT_WIDTH 140
 #define SHORTCUT_HEIGHT 24
 #define SETTINGS_ROW 38
+#define SETTINGS_GAP 8
+#define SETTINGS_SECTION_GAP 20
+#define SETTINGS_TAB_HEIGHT 34
+#define SETTINGS_HINT_HEIGHT 34
+#define SETTINGS_HINT_LINE 24
+#define SETTINGS_ACTION_HEIGHT 38
+#define SETTINGS_LABEL_FONT 13
+#define SETTINGS_HINT_FONT 12
 #define CONFIRM_WIDTH 420
 #define PICKER_WIDTH 320
 #define PICKER_SQUARE_HEIGHT 160
@@ -313,53 +321,114 @@ static int dialog_header_add(UiLayout *layout, float scale, int width, PanelId p
     return band + ui_px(scale, 20);
 }
 
+/** @brief Tool names shown in the settings tabs, indexed by Tool. */
+static const wchar_t *const TOOL_LABELS[TOOL_COUNT] = {L"Select",  L"Rectangle",  L"Ellipse", L"Line",
+                                                       L"Pen",     L"Laser",      L"Text",    L"Eraser",
+                                                       L"Diamond", L"Highlighter"};
+
+/** @brief Sizes and positions shared by every tab of the settings dialog, in device pixels. */
+typedef struct SettingsMetrics {
+    int width;
+    int pad;
+    int row;
+    int button;
+    int gap;
+    int switchWidth;
+    int switchHeight;
+    int switchX;
+    int downX;
+    int upX;
+    int hintHeight;
+    int section;
+    int actionHeight;
+    int visibleCount;
+    Tool order[TOOL_COUNT];
+} SettingsMetrics;
+
+static int settings_general(UiLayout *layout, const UiModel *model, const SettingsMetrics *m, int y,
+                            float scale);
+static int settings_toolbar(UiLayout *layout, const UiModel *model, const SettingsMetrics *m, int y);
+static int settings_shortcuts(UiLayout *layout, const UiModel *model, const SettingsMetrics *m, int y,
+                              float scale);
+static int settings_pen_keys(UiLayout *layout, const SettingsMetrics *m, int y, float scale);
+
 /**
- * @brief Builds the settings dialog: toolbar tools (order and visibility) and general switches.
+ * @brief Builds the settings dialog: a title, the tab strip and the body of the chosen tab.
+ *
+ * The dialog keeps the height of its tallest tab (the tool lists) so it does not resize and move when the
+ * tab changes.
  * @param layout Layout to fill.
  * @param model Application state.
  * @param scale Scale factor.
  */
 static void build_settings(UiLayout *layout, const UiModel *model, float scale)
 {
-    static const wchar_t *const TOOL_LABELS[TOOL_COUNT] = {L"Select",  L"Rectangle",  L"Ellipse", L"Line",
-                                                           L"Pen",     L"Laser",      L"Text",    L"Eraser",
-                                                           L"Diamond", L"Highlighter"};
-    int width = ui_px(scale, SETTINGS_WIDTH);
-    int pad = ui_px(scale, DIALOG_PAD);
-    int row = ui_px(scale, SETTINGS_ROW);
-    int button = ui_px(scale, DIALOG_ROW_BUTTON);
-    int gap = ui_px(scale, 8);
-    int switchWidth = ui_px(scale, SWITCH_WIDTH);
-    int switchHeight = ui_px(scale, SWITCH_HEIGHT);
-    Tool order[TOOL_COUNT];
+    SettingsMetrics m;
+    m.width = ui_px(scale, SETTINGS_WIDTH);
+    m.pad = ui_px(scale, DIALOG_PAD);
+    m.row = ui_px(scale, SETTINGS_ROW);
+    m.button = ui_px(scale, DIALOG_ROW_BUTTON);
+    m.gap = ui_px(scale, SETTINGS_GAP);
+    m.switchWidth = ui_px(scale, SWITCH_WIDTH);
+    m.switchHeight = ui_px(scale, SWITCH_HEIGHT);
+    m.hintHeight = ui_px(scale, SETTINGS_HINT_HEIGHT);
+    m.section = ui_px(scale, SETTINGS_SECTION_GAP);
+    m.actionHeight = ui_px(scale, SETTINGS_ACTION_HEIGHT);
     if (tool_order_valid(model->toolOrder)) {
-        memcpy(order, model->toolOrder, sizeof order);
+        memcpy(m.order, model->toolOrder, sizeof m.order);
     } else {
-        tool_order_default(order);
+        tool_order_default(m.order);
     }
-    int visibleCount = 0;
+    m.visibleCount = 0;
     for (int i = 0; i < TOOL_COUNT; i++) {
-        visibleCount += (model->hiddenTools & (1u << i)) == 0 ? 1 : 0;
+        m.visibleCount += (model->hiddenTools & (1u << i)) == 0 ? 1 : 0;
     }
-    int y = dialog_header_add(layout, scale, width, PANEL_SETTINGS, L"Settings");
-    int switchX = width - pad - switchWidth;
-    int downX = switchX - 2 * gap - button;
-    int upX = downX - ui_px(scale, 2) - button;
+    m.switchX = m.width - m.pad - m.switchWidth;
+    m.downX = m.switchX - 2 * m.gap - m.button;
+    m.upX = m.downX - ui_px(scale, BUTTON_GAP) - m.button;
+    int y = dialog_header_add(layout, scale, m.width, PANEL_SETTINGS, L"Settings");
     static const wchar_t *const TABS[SETTINGS_TABS] = {L"General", L"Toolbar", L"Shortcuts", L"Pen keys"};
     int tab = model->settingsTab >= 0 && model->settingsTab < SETTINGS_TABS ? model->settingsTab : 0;
-    int tabWidth = (width - 2 * pad - (SETTINGS_TABS - 1) * gap) / SETTINGS_TABS;
-    int tabHeight = ui_px(scale, 34);
+    int tabWidth = (m.width - 2 * m.pad - (SETTINGS_TABS - 1) * m.gap) / SETTINGS_TABS;
+    int tabHeight = ui_px(scale, SETTINGS_TAB_HEIGHT);
     for (int i = 0; i < SETTINGS_TABS; i++) {
-        UiItem *item = item_add(layout, ITEM_TEXT_BUTTON, pad + i * (tabWidth + gap), y, tabWidth, tabHeight);
+        UiItem *item =
+            item_add(layout, ITEM_TEXT_BUTTON, m.pad + i * (tabWidth + m.gap), y, tabWidth, tabHeight);
         wcscpy(item->text, TABS[i]);
         item->selected = i == tab;
         item->event.kind = UI_EVENT_SETTINGS_TAB;
         item->event.index = i;
     }
-    y += tabHeight + ui_px(scale, 18);
-    int hintHeight = ui_px(scale, 34);
-    int bodyHeight = y + hintHeight + TOOL_COUNT * row + pad;
-    if (tab == 0) {
+    y += tabHeight + m.section;
+    int tallest = y + m.hintHeight + TOOL_COUNT * m.row;
+    y = tab == 0   ? settings_general(layout, model, &m, y, scale)
+        : tab == 1 ? settings_toolbar(layout, model, &m, y)
+        : tab == 2 ? settings_shortcuts(layout, model, &m, y, scale)
+                   : settings_pen_keys(layout, &m, y, scale);
+    layout->width = m.width;
+    layout->height = (y > tallest ? y : tallest) + m.pad;
+}
+
+/**
+ * @brief Builds the General tab: switches and the reset buttons.
+ * @param layout Layout to extend.
+ * @param model Application state.
+ * @param m Shared dialog metrics.
+ * @param y Top of the tab body.
+ * @param scale Scale factor.
+ * @return y below the tab body.
+ */
+static int settings_general(UiLayout *layout, const UiModel *model, const SettingsMetrics *m, int y,
+                            float scale)
+{
+    int width = m->width;
+    int pad = m->pad;
+    int row = m->row;
+    int gap = m->gap;
+    int switchWidth = m->switchWidth;
+    int switchHeight = m->switchHeight;
+    int switchX = m->switchX;
+    {
         static const wchar_t *const GENERAL_LABELS[6] = {
             L"Auto-hide panels",  L"Hide panels from screenshots", L"Pastel color row",
             L"Write a debug log", L"Add desktop to exports",       L"Export the full screen"};
@@ -369,7 +438,8 @@ static void build_settings(UiLayout *layout, const UiModel *model, float scale)
             UI_EVENT_SET_AUTO_HIDE, UI_EVENT_SET_EXCLUDE_CAPTURE,   UI_EVENT_SET_PASTEL,
             UI_EVENT_SET_DEBUG_LOG, UI_EVENT_SET_EXPORT_BACKGROUND, UI_EVENT_SET_EXPORT_FULL_SCREEN};
         for (int i = 0; i < 6; i++) {
-            label_add(layout, pad, y, switchX - gap - pad, row, GENERAL_LABELS[i], 13, COLOR_ICON);
+            label_add(layout, pad, y, switchX - gap - pad, row, GENERAL_LABELS[i], SETTINGS_LABEL_FONT,
+                      COLOR_ICON);
             UiItem *toggle = item_add(layout, ITEM_SWITCH, switchX, y + (row - switchHeight) / 2, switchWidth,
                                       switchHeight);
             toggle->value = generalValues[i] ? 1.0f : 0.0f;
@@ -377,28 +447,54 @@ static void build_settings(UiLayout *layout, const UiModel *model, float scale)
             toggle->event.index = generalValues[i] ? 0 : 1;
             y += row;
         }
-        y += ui_px(scale, 18);
+        y += m->section;
         rule_add(layout, scale, y, width);
-        y += ui_px(scale, 22);
+        y += m->section;
         static const wchar_t *const RESET_LABELS[2] = {L"Reset all options", L"Reset menu positions"};
         const UiEventKind resetKinds[2] = {UI_EVENT_RESET_OPTIONS, UI_EVENT_RESET_POSITIONS};
         int resetWidth = (width - 2 * pad - gap) / 2;
-        int resetHeight = ui_px(scale, 38);
         for (int i = 0; i < 2; i++) {
-            UiItem *reset =
-                item_add(layout, ITEM_TEXT_BUTTON, pad + i * (resetWidth + gap), y, resetWidth, resetHeight);
+            UiItem *reset = item_add(layout, ITEM_TEXT_BUTTON, pad + i * (resetWidth + gap), y, resetWidth,
+                                     m->actionHeight);
             wcscpy(reset->text, RESET_LABELS[i]);
             reset->event.kind = resetKinds[i];
         }
-    } else if (tab == 1) {
-        label_add(layout, pad, y, width - 2 * pad, hintHeight, L"Order and visibility of the tools.", 12, 0);
-        y += hintHeight;
+        y += m->actionHeight;
+    }
+    return y;
+}
+
+/**
+ * @brief Builds the Toolbar tab: order and visibility of every tool.
+ * @param layout Layout to extend.
+ * @param model Application state.
+ * @param m Shared dialog metrics.
+ * @param y Top of the tab body.
+ * @return y below the tab body.
+ */
+static int settings_toolbar(UiLayout *layout, const UiModel *model, const SettingsMetrics *m, int y)
+{
+    int pad = m->pad;
+    int row = m->row;
+    int button = m->button;
+    int gap = m->gap;
+    int switchWidth = m->switchWidth;
+    int switchHeight = m->switchHeight;
+    int switchX = m->switchX;
+    int upX = m->upX;
+    int downX = m->downX;
+    int visibleCount = m->visibleCount;
+    const Tool *order = m->order;
+    {
+        label_add(layout, pad, y, m->width - 2 * pad, m->hintHeight, L"Order and visibility of the tools.",
+                  SETTINGS_HINT_FONT, 0);
+        y += m->hintHeight;
         for (int i = 0; i < TOOL_COUNT; i++) {
             Tool tool = order[i];
             bool visible = (model->hiddenTools & (1u << tool)) == 0;
             item_add(layout, ITEM_ICON, pad, y, button, row)->icon = icon_for_tool(tool);
-            label_add(layout, pad + button + gap, y, upX - 2 * gap - pad - button, row, TOOL_LABELS[tool], 13,
-                      visible ? COLOR_ICON : 0);
+            label_add(layout, pad + button + gap, y, upX - 2 * gap - pad - button, row, TOOL_LABELS[tool],
+                      SETTINGS_LABEL_FONT, visible ? COLOR_ICON : 0);
             UiItem *up = item_add(layout, ITEM_BUTTON, upX, y + (row - button) / 2, button, button);
             up->icon = ICON_CHEVRON_UP;
             up->enabled = i > 0;
@@ -420,10 +516,33 @@ static void build_settings(UiLayout *layout, const UiModel *model, float scale)
             toggle->event.index = visible ? 0 : 1;
             y += row;
         }
-    } else if (tab == 2) {
+    }
+    return y;
+}
+
+/**
+ * @brief Builds the Shortcuts tab: one extra key or pen button per tool.
+ * @param layout Layout to extend.
+ * @param model Application state.
+ * @param m Shared dialog metrics.
+ * @param y Top of the tab body.
+ * @param scale Scale factor.
+ * @return y below the tab body.
+ */
+static int settings_shortcuts(UiLayout *layout, const UiModel *model, const SettingsMetrics *m, int y,
+                              float scale)
+{
+    int width = m->width;
+    int pad = m->pad;
+    int row = m->row;
+    int button = m->button;
+    int gap = m->gap;
+    int hintHeight = m->hintHeight;
+    const Tool *order = m->order;
+    {
         if (model->learningTool >= 0) {
             int labelWidth = ui_px(scale, 44);
-            label_add(layout, pad, y, labelWidth, hintHeight, L"Or pick", 12, 0);
+            label_add(layout, pad, y, labelWidth, hintHeight, L"Or pick", SETTINGS_HINT_FONT, 0);
             int keys = 6;
             int keyGap = ui_px(scale, 4);
             int keyWidth = (width - 2 * pad - labelWidth - keys * keyGap) / keys;
@@ -438,7 +557,7 @@ static void build_settings(UiLayout *layout, const UiModel *model, float scale)
             }
         } else {
             label_add(layout, pad, y, width - 2 * pad, hintHeight, L"One extra key or pen button per tool.",
-                      12, 0);
+                      SETTINGS_HINT_FONT, 0);
         }
         y += hintHeight;
         int clearX = width - pad - button;
@@ -448,7 +567,7 @@ static void build_settings(UiLayout *layout, const UiModel *model, float scale)
             Tool tool = order[i];
             item_add(layout, ITEM_ICON, pad, y, button, row)->icon = icon_for_tool(tool);
             label_add(layout, pad + button + gap, y, shortcutX - 2 * gap - pad - button, row,
-                      TOOL_LABELS[tool], 13, COLOR_ICON);
+                      TOOL_LABELS[tool], SETTINGS_LABEL_FONT, COLOR_ICON);
             bool learning = model->learningTool == (int)tool;
             const wchar_t *shortcut = model->toolShortcut[tool];
             UiItem *extra =
@@ -467,27 +586,39 @@ static void build_settings(UiLayout *layout, const UiModel *model, float scale)
             }
             y += row;
         }
-    } else {
-        int hintLine = ui_px(scale, 24);
-        static const wchar_t *const PEN_HINTS[3] = {L"Drivers often cannot record F13 to F24.",
-                                                    L"Click the driver's key box, then a key",
-                                                    L"below: PenPane types it there."};
-        for (int i = 0; i < 3; i++) {
-            label_add(layout, pad, y, width - 2 * pad, hintLine, PEN_HINTS[i], 13, i == 1 ? COLOR_ICON : 0);
-            y += hintLine;
-        }
-        y += ui_px(scale, 20);
-        int keyWidth = (width - 2 * pad - 3 * gap) / 4;
-        for (int i = 0; i < 4; i++) {
-            UiItem *key =
-                item_add(layout, ITEM_TEXT_BUTTON, pad + i * (keyWidth + gap), y, keyWidth, ui_px(scale, 38));
-            swprintf(key->text, UI_ITEM_TEXT_CHARS, L"F%d", 13 + i);
-            key->event.kind = UI_EVENT_SEND_KEY;
-            key->event.index = VK_F13 + i;
-        }
     }
-    layout->width = width;
-    layout->height = bodyHeight;
+    return y;
+}
+
+/**
+ * @brief Builds the Pen keys tab: explanation and the F13 to F16 buttons that type a key.
+ * @param layout Layout to extend.
+ * @param m Shared dialog metrics.
+ * @param y Top of the tab body.
+ * @param scale Scale factor.
+ * @return y below the tab body.
+ */
+static int settings_pen_keys(UiLayout *layout, const SettingsMetrics *m, int y, float scale)
+{
+    static const wchar_t *const PEN_HINTS[3] = {L"Drivers often cannot record F13 to F24.",
+                                                L"Click the driver's key box, then a key",
+                                                L"below: PenPane types it there."};
+    int hintLine = ui_px(scale, SETTINGS_HINT_LINE);
+    for (int i = 0; i < 3; i++) {
+        label_add(layout, m->pad, y, m->width - 2 * m->pad, hintLine, PEN_HINTS[i], SETTINGS_HINT_FONT,
+                  i == 1 ? COLOR_ICON : 0);
+        y += hintLine;
+    }
+    y += m->section;
+    int keyWidth = (m->width - 2 * m->pad - 3 * m->gap) / 4;
+    for (int i = 0; i < 4; i++) {
+        UiItem *key = item_add(layout, ITEM_TEXT_BUTTON, m->pad + i * (keyWidth + m->gap), y, keyWidth,
+                               m->actionHeight);
+        swprintf(key->text, UI_ITEM_TEXT_CHARS, L"F%d", 13 + i);
+        key->event.kind = UI_EVENT_SEND_KEY;
+        key->event.index = VK_F13 + i;
+    }
+    return y + m->actionHeight;
 }
 
 /**

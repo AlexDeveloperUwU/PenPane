@@ -22,7 +22,7 @@ The application starts on the select tool, so nothing is drawn until you choose 
 | Line and arrow | L | Shift snaps to 15 degrees; the properties panel chooses no head, one head or two |
 | Pen | P or X | pressure when the tablet reports it, speed based otherwise |
 | Laser | K | fading red trail, leaves nothing behind; after you lift the pen every stroke fades tail first, short ones too |
-| Text | T | Enter adds a line, Esc finishes |
+| Text | T | Enter adds a line, Esc finishes; pressing inside a shape (or double-clicking it with the select tool) types a label centered in the shape |
 | Eraser | E | removes whole elements |
 | Tool lock | Q | keep the tool after each stroke (on by default); turn it off to return to the select tool after every stroke, with every tool (pen, eraser and laser included) |
 

@@ -63,8 +63,37 @@ static void test_properties_labels_do_not_overlap(void)
     }
 }
 
+/**
+ * @brief Every settings tab has the same size, fits its items and keeps labels apart.
+ */
+static void test_settings_tabs(void)
+{
+    static UiLayout layout;
+    UiModel model;
+    memset(&model, 0, sizeof model);
+    model.style = style_default();
+    int height = 0;
+    for (int tab = 0; tab < 4; tab++) {
+        model.settingsTab = tab;
+        ui_layout_build(PANEL_SETTINGS, &model, false, 1.0f, &layout);
+        assert(layout.count > 0 && layout.count < UI_MAX_ITEMS);
+        height = height ? height : layout.height;
+        assert(layout.height == height);
+        for (int i = 0; i < layout.count; i++) {
+            assert(layout.items[i].rect.bottom <= layout.height &&
+                   layout.items[i].rect.right <= layout.width);
+            for (int j = i + 1; j < layout.count; j++) {
+                if (layout.items[i].kind == ITEM_LABEL && layout.items[j].kind == ITEM_LABEL) {
+                    assert(!overlaps(&layout.items[i].rect, &layout.items[j].rect));
+                }
+            }
+        }
+    }
+}
+
 int main(void)
 {
+    test_settings_tabs();
     test_properties_labels_do_not_overlap();
     printf("layout tests passed\n");
     return 0;
