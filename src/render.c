@@ -257,7 +257,7 @@ static void render_rectangle(Canvas *canvas, const Element *element, RECT area)
     FloatRect box = element_box(element);
     float width = box.right - box.left;
     float height = box.bottom - box.top;
-    float radius = corner_radius(width, height);
+    float radius = element->style.corners == CORNERS_SHARP ? 0.0f : corner_radius(width, height);
     Point points[RECT_PATH_POINTS];
     int count = rect_path(points, box, radius);
     Mask mask;

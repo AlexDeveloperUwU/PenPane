@@ -372,6 +372,12 @@ static void test_style_change_undo(void)
     assert(fixture.scene.items[0].style.stroke == 0xFFFF0000u);
     assert(scene_undo(&fixture.scene));
     assert(fixture.scene.items[0].style.stroke == original);
+    assert(fixture.scene.items[0].style.corners == CORNERS_ROUND);
+    style.corners = CORNERS_SHARP;
+    controller_apply_style_to_selection(&fixture.controller, &style);
+    assert(fixture.scene.items[0].style.corners == CORNERS_SHARP);
+    assert(scene_undo(&fixture.scene));
+    assert(fixture.scene.items[0].style.corners == CORNERS_ROUND);
     fixture_destroy(&fixture);
 }
 

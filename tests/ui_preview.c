@@ -136,6 +136,9 @@ static void on_event(void *user, const UiEvent *event)
     case UI_EVENT_SET_ARROWHEADS:
         model->style.arrowHeads = (ArrowHeads)event->index;
         break;
+    case UI_EVENT_SET_CORNERS:
+        model->style.corners = (Corners)event->index;
+        break;
     case UI_EVENT_SET_DEBUG_LOG:
         model->debugLog = event->index != 0;
         break;

@@ -753,6 +753,12 @@ static void build_properties(UiLayout *layout, const UiModel *model, bool pinned
                     UI_EVENT_SET_ARROWHEADS);
         y += ui_px(scale, SMALL_BUTTON) + gap;
     }
+    if (model->sections & UI_SECTION_CORNERS) {
+        static const Icon cornerIcons[CORNERS_COUNT] = {ICON_CORNER_ROUND, ICON_CORNER_SHARP};
+        y = title_add(layout, scale, y, L"Corners");
+        choices_add(layout, scale, y, cornerIcons, CORNERS_COUNT, (int)style->corners, UI_EVENT_SET_CORNERS);
+        y += ui_px(scale, SMALL_BUTTON) + gap;
+    }
     if (model->sections & UI_SECTION_OPACITY) {
         float opacity = roundf(fminf(fmaxf(style->opacity, 0.0f), 1.0f) * UI_SLIDER_STEPS) / UI_SLIDER_STEPS;
         UiItem *label = layout->count < UI_MAX_ITEMS ? &layout->items[layout->count] : NULL;

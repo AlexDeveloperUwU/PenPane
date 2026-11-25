@@ -23,6 +23,9 @@ typedef enum StrokeStyle { STROKE_SOLID, STROKE_DASHED, STROKE_DOTTED } StrokeSt
 /** @brief Whether an arrow has a head at its end only or at both ends. */
 typedef enum ArrowHeads { ARROW_HEAD_END, ARROW_HEAD_BOTH, ARROW_HEAD_COUNT } ArrowHeads;
 
+/** @brief Corner shape of rectangles. */
+typedef enum Corners { CORNERS_ROUND, CORNERS_SHARP, CORNERS_COUNT } Corners;
+
 /** @brief Typeface of text elements. */
 typedef enum TextFace {
     TEXT_FACE_HANDWRITTEN,
@@ -43,6 +46,7 @@ typedef struct Style {
     ArrowHeads arrowHeads;
     bool highlighter;
     int fontSize;
+    Corners corners;
 } Style;
 
 /** @brief The five stroke preset colors in dark theme. */

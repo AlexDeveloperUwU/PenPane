@@ -632,6 +632,17 @@ static bool draw_icon(Pen *pen, Icon icon)
         }
         break;
     }
+    case ICON_CORNER_ROUND: {
+        static const float shape[] = {3.0f, 13.0f, 3.0f, 8.0f, 3.3f, 6.1f,  4.4f,
+                                      4.5f, 6.1f,  3.3f, 8.0f, 3.0f, 13.0f, 3.0f};
+        poly(pen, shape, 7, false);
+        break;
+    }
+    case ICON_CORNER_SHARP: {
+        static const float shape[6] = {3.0f, 13.0f, 3.0f, 3.0f, 13.0f, 3.0f};
+        poly(pen, shape, 3, false);
+        break;
+    }
     default:
         return false;
     }
